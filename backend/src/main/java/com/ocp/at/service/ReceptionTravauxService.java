@@ -1,11 +1,13 @@
 package com.ocp.at.service;
 
-import com.ocp.at.dto.request.EssaiRequest;
+import com.ocp.at.dto.request.PhotoReceptionRequest;
 import com.ocp.at.dto.request.ReceptionTravauxRequest;
-import com.ocp.at.dto.response.EssaiResponse;
+import com.ocp.at.dto.response.PhotoReceptionResponse;
 import com.ocp.at.dto.response.ReceptionTravauxResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface ReceptionTravauxService {
 
@@ -17,7 +19,7 @@ public interface ReceptionTravauxService {
     ReceptionTravauxResponse create(ReceptionTravauxRequest request);
 
     /**
-     * Met à jour une réception non encore validée.
+     * Met à jour une réception non encore clôturée.
      */
     ReceptionTravauxResponse update(String id, ReceptionTravauxRequest request);
 
@@ -37,32 +39,41 @@ public interface ReceptionTravauxService {
     Page<ReceptionTravauxResponse> getAll(Pageable pageable);
 
     /**
-     * Supprime une réception non validée.
+     * Supprime une réception non clôturée.
      */
     void delete(String id);
 
     /**
-     * Ajoute un essai à une réception.
+     * Signe la réception avec la signature manuscrite du responsable.
+     * Réutilise le système de signature du Module 8.
      */
-    EssaiResponse ajouterEssai(String receptionId, EssaiRequest request);
+    ReceptionTravauxResponse signer(String id, String signaturePath);
 
     /**
-     * Modifie un essai existant.
+     * Clôture l'AT associée à la réception.
+     * Vérifie :
+     * - réception existante
+     * - travaux conformes
+     * - zone nettoyée
+     * - consignation retirée
+     * - équipement remis en service
+     * - essais réalisés
+     * - signature présente
      */
-    EssaiResponse modifierEssai(String receptionId, String essaiId, EssaiRequest request);
+    ReceptionTravauxResponse cloturerAT(String id);
 
     /**
-     * Supprime un essai.
+     * Ajoute une photo à une réception.
      */
-    void supprimerEssai(String receptionId, String essaiId);
+    PhotoReceptionResponse ajouterPhoto(String receptionId, PhotoReceptionRequest request);
 
     /**
-     * Valide la réception.
-     * Règles :
-     * - travauxConformes doit être true
-     * - installationRemiseEnEtat doit être true
-     * - essaisEffectues doit être true
-     * - Tous les essais doivent être conformes (conforme = true)
+     * Supprime une photo.
      */
-    ReceptionTravauxResponse validerReception(String id);
+    void supprimerPhoto(String receptionId, String photoId);
+
+    /**
+     * Récupère toutes les photos d'une réception.
+     */
+    List<PhotoReceptionResponse> getPhotos(String receptionId);
 }

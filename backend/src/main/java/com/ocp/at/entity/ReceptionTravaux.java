@@ -30,10 +30,18 @@ public class ReceptionTravaux {
     @JoinColumn(name = "autorisation_travail_id", nullable = false, unique = true)
     private AutorisationTravail autorisationTravail;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responsable_id")
+    private Utilisateur responsable;
+
     private LocalDateTime dateReception;
 
+    private LocalDateTime dateDebutTravauxReelle;
+
+    private LocalDateTime dateFinTravauxReelle;
+
     @Column(columnDefinition = "TEXT")
-    private String commentaire;
+    private String travauxRealises;
 
     @Column(nullable = false)
     @Builder.Default
@@ -41,23 +49,33 @@ public class ReceptionTravaux {
 
     @Column(nullable = false)
     @Builder.Default
-    private Boolean installationRemiseEnEtat = false;
+    private Boolean equipementRemisEnService = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean zoneNettoyee = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean consignationRetiree = false;
 
     @Column(nullable = false)
     @Builder.Default
     private Boolean essaisEffectues = false;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean essaisConformes = false;
+    @Column(columnDefinition = "TEXT")
+    private String resultatEssais;
 
-    private LocalDateTime dateValidation;
+    @Column(columnDefinition = "TEXT")
+    private String observations;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean validee = false;
+    @Column(columnDefinition = "TEXT")
+    private String commentaireResponsable;
 
-    private String createdBy;
+    // Signature manuscrite du responsable (réutilisé depuis Module 8)
+    private String signatureResponsable;
+
+    private LocalDateTime dateSignature;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -67,8 +85,9 @@ public class ReceptionTravaux {
 
     @OneToMany(mappedBy = "receptionTravaux", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<Essai> essais = new ArrayList<>();
+    private List<PhotoReception> photos = new ArrayList<>();
 
-    @OneToOne(mappedBy = "receptionTravaux", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private RemiseEtat remiseEtat;
+    @OneToMany(mappedBy = "receptionTravaux", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<HistoriqueReception> historiques = new ArrayList<>();
 }

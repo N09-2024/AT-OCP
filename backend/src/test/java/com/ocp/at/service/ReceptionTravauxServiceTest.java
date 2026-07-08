@@ -1,16 +1,16 @@
 package com.ocp.at.service;
 
-import com.ocp.at.dto.request.EssaiRequest;
+import com.ocp.at.dto.request.PhotoReceptionRequest;
 import com.ocp.at.dto.request.ReceptionTravauxRequest;
-import com.ocp.at.dto.response.EssaiResponse;
+import com.ocp.at.dto.response.PhotoReceptionResponse;
 import com.ocp.at.dto.response.ReceptionTravauxResponse;
 import com.ocp.at.entity.*;
 import com.ocp.at.entity.enums.StatutAT;
+import com.ocp.at.entity.enums.StatutVisa;
 import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
-import com.ocp.at.mapper.EssaiMapper;
+import com.ocp.at.mapper.PhotoReceptionMapper;
 import com.ocp.at.mapper.ReceptionTravauxMapper;
-import com.ocp.at.mapper.RemiseEtatMapper;
 import com.ocp.at.repository.*;
 import com.ocp.at.service.impl.ReceptionTravauxServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,25 +35,28 @@ import static org.mockito.Mockito.*;
 class ReceptionTravauxServiceTest {
 
     @Mock private ReceptionTravauxRepository receptionRepository;
-    @Mock private EssaiRepository essaiRepository;
-    @Mock private RemiseEtatRepository remiseEtatRepository;
+    @Mock private PhotoReceptionRepository photoRepository;
+    @Mock private HistoriqueReceptionRepository historiqueReceptionRepository;
     @Mock private AutorisationTravailRepository atRepository;
     @Mock private HistoriqueATRepository historiqueRepository;
     @Mock private UtilisateurRepository utilisateurRepository;
+    @Mock private VisaRepository visaRepository;
+    @Mock private PermisRepository permisRepository;
     @Mock private NotificationService notificationService;
     @Mock private AuditService auditService;
     @Mock private ReceptionTravauxMapper receptionMapper;
-    @Mock private EssaiMapper essaiMapper;
-    @Mock private RemiseEtatMapper remiseEtatMapper;
+    @Mock private PhotoReceptionMapper photoMapper;
 
     @InjectMocks
     private ReceptionTravauxServiceImpl service;
 
     private AutorisationTravail atValidee;
     private AutorisationTravail atBrouillon;
+    private AutorisationTravail atCloturee;
     private ReceptionTravaux reception;
     private ReceptionTravauxRequest request;
     private ReceptionTravauxResponse response;
+    private Utilisateur utilisateur;
 
     @BeforeEach
     void setUp() {
@@ -69,20 +72,34 @@ class ReceptionTravauxServiceTest {
                 .statut(StatutAT.BROUILLON)
                 .build();
 
+        atCloturee = AutorisationTravail.builder()
+                .id("at-cloturee-001")
+                .numero("AT-2026-000003")
+                .statut(StatutAT.CLOTUREE)
+                .build();
+
+        utilisateur = Utilisateur.builder()
+                .id("user-001")
+                .matricule("MAT001")
+                .nom("Doe")
+                .prenom("John")
+                .build();
+
         reception = ReceptionTravaux.builder()
                 .id("reception-001")
                 .autorisationTravail(atValidee)
                 .travauxConformes(false)
-                .installationRemiseEnEtat(false)
+                .equipementRemisEnService(false)
+                .zoneNettoyee(false)
+                .consignationRetiree(false)
                 .essaisEffectues(false)
-                .essaisConformes(false)
-                .validee(false)
-                .essais(new ArrayList<>())
+                .photos(new ArrayList<>())
+                .historiques(new ArrayList<>())
                 .build();
 
         request = new ReceptionTravauxRequest();
         request.setAutorisationTravailId("at-validee-001");
-        request.setCommentaire("Réception initiale");
+        request.setTravauxRealises("Travaux terminés");
 
         response = new ReceptionTravauxResponse();
         response.setId("reception-001");
@@ -91,6 +108,7 @@ class ReceptionTravauxServiceTest {
         // Stubs communs
         when(utilisateurRepository.findById(any())).thenReturn(Optional.empty());
         when(historiqueRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(historiqueReceptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         doNothing().when(notificationService).createNotification(any(), any(), any(), any(), any());
         doNothing().when(notificationService).sendNotificationToRole(any(), any(), any(), any(), any());
         doNothing().when(auditService).logAction(any(), any(), any(), any(), any());
@@ -113,8 +131,31 @@ class ReceptionTravauxServiceTest {
     }
 
     @Test
+    void create_Doit_LancerException_SiVisasNonValides() {
+        when(atRepository.findById("at-validee-001")).thenReturn(Optional.of(atValidee));
+        when(visaRepository.existsByAutorisationTravailIdAndStatut("at-validee-001", StatutVisa.VALIDE)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("visas doivent être validés");
+    }
+
+    @Test
+    void create_Doit_LancerException_SiAucunPermis() {
+        when(atRepository.findById("at-validee-001")).thenReturn(Optional.of(atValidee));
+        when(visaRepository.existsByAutorisationTravailIdAndStatut("at-validee-001", StatutVisa.VALIDE)).thenReturn(true);
+        when(permisRepository.existsByAutorisationTravailId("at-validee-001")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("permis est requis");
+    }
+
+    @Test
     void create_Doit_LancerException_SiReceptionDejaExistante() {
         when(atRepository.findById("at-validee-001")).thenReturn(Optional.of(atValidee));
+        when(visaRepository.existsByAutorisationTravailIdAndStatut("at-validee-001", StatutVisa.VALIDE)).thenReturn(true);
+        when(permisRepository.existsByAutorisationTravailId("at-validee-001")).thenReturn(true);
         when(receptionRepository.existsByAutorisationTravailId("at-validee-001")).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(request))
@@ -125,6 +166,8 @@ class ReceptionTravauxServiceTest {
     @Test
     void create_Doit_Reussir_EtCreerHistoriqueEtNotification() {
         when(atRepository.findById("at-validee-001")).thenReturn(Optional.of(atValidee));
+        when(visaRepository.existsByAutorisationTravailIdAndStatut("at-validee-001", StatutVisa.VALIDE)).thenReturn(true);
+        when(permisRepository.existsByAutorisationTravailId("at-validee-001")).thenReturn(true);
         when(receptionRepository.existsByAutorisationTravailId("at-validee-001")).thenReturn(false);
         when(receptionMapper.toEntity(any())).thenReturn(reception);
         when(receptionRepository.save(any())).thenReturn(reception);
@@ -135,151 +178,265 @@ class ReceptionTravauxServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo("reception-001");
 
-        // Historique créé
-        verify(historiqueRepository, times(1)).save(argThat(h ->
-                h instanceof HistoriqueAT && ((HistoriqueAT) h).getAction().name().equals("RECEPTION_TRAVAUX")));
-
-        // Notifications envoyées
+        verify(historiqueReceptionRepository, times(1)).save(any());
+        verify(historiqueRepository, times(1)).save(any());
         verify(notificationService, atLeastOnce()).sendNotificationToRole(eq("RESPONSABLE_OCP"), any(), any(), any(), any());
-        verify(notificationService, atLeastOnce()).sendNotificationToRole(eq("RESPONSABLE_ENTREPRISE"), any(), any(), any(), any());
-
-        // Audit logué
         verify(auditService, times(1)).logAction(eq("CREATION_RECEPTION"), eq("SUCCES"), any(), any(), any());
     }
 
     // ===================================================================
-    // VALIDER — Règles métier
+    // UPDATE
     // ===================================================================
 
     @Test
-    void validerReception_Doit_LancerException_SiTravauxNonConformes() {
+    void update_Doit_LancerException_SiATCloturee() {
+        reception.setAutorisationTravail(atCloturee);
+        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+
+        assertThatThrownBy(() -> service.update("reception-001", request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("clôturée");
+    }
+
+    // ===================================================================
+    // DELETE
+    // ===================================================================
+
+    @Test
+    void delete_Doit_LancerException_SiATCloturee() {
+        reception.setAutorisationTravail(atCloturee);
+        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+
+        assertThatThrownBy(() -> service.delete("reception-001"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("clôturée");
+    }
+
+    // ===================================================================
+    // SIGNATURE
+    // ===================================================================
+
+    @Test
+    void signer_Doit_LancerException_SiATCloturee() {
+        reception.setAutorisationTravail(atCloturee);
+        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+
+        assertThatThrownBy(() -> service.signer("reception-001", "/path/signature.png"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("clôturée");
+    }
+
+    @Test
+    void signer_Doit_Reussir() {
+        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+        when(receptionRepository.save(any())).thenReturn(reception);
+        when(receptionMapper.toResponse(any())).thenReturn(response);
+
+        ReceptionTravauxResponse result = service.signer("reception-001", "/path/signature.png");
+
+        assertThat(result).isNotNull();
+        assertThat(reception.getSignatureResponsable()).isEqualTo("/path/signature.png");
+        assertThat(reception.getDateSignature()).isNotNull();
+
+        verify(historiqueReceptionRepository, times(1)).save(any());
+        verify(auditService, times(1)).logAction(eq("SIGNATURE_RECEPTION"), eq("SUCCES"), any(), any(), any());
+    }
+
+    // ===================================================================
+    // CLOTURE AT
+    // ===================================================================
+
+    @Test
+    void cloturerAT_Doit_LancerException_SiATDejaCloturee() {
+        reception.setAutorisationTravail(atCloturee);
+        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+
+        assertThatThrownBy(() -> service.cloturerAT("reception-001"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("déjà clôturée");
+    }
+
+    @Test
+    void cloturerAT_Doit_LancerException_SiTravauxNonConformes() {
         reception.setTravauxConformes(false);
         when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
 
-        assertThatThrownBy(() -> service.validerReception("reception-001"))
+        assertThatThrownBy(() -> service.cloturerAT("reception-001"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("travaux ne sont pas déclarés conformes");
+                .hasMessageContaining("travaux ne sont pas conformes");
     }
 
     @Test
-    void validerReception_Doit_LancerException_SiInstallationNonRemise() {
+    void cloturerAT_Doit_LancerException_SiZoneNonNettoyee() {
         reception.setTravauxConformes(true);
-        reception.setInstallationRemiseEnEtat(false);
+        reception.setZoneNettoyee(false);
         when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
 
-        assertThatThrownBy(() -> service.validerReception("reception-001"))
+        assertThatThrownBy(() -> service.cloturerAT("reception-001"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("remise en état");
+                .hasMessageContaining("zone n'est pas nettoyée");
     }
 
     @Test
-    void validerReception_Doit_LancerException_SiEssaisNonEffectues() {
+    void cloturerAT_Doit_LancerException_SiConsignationNonRetiree() {
         reception.setTravauxConformes(true);
-        reception.setInstallationRemiseEnEtat(true);
+        reception.setZoneNettoyee(true);
+        reception.setConsignationRetiree(false);
+        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+
+        assertThatThrownBy(() -> service.cloturerAT("reception-001"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("consignation n'est pas retirée");
+    }
+
+    @Test
+    void cloturerAT_Doit_LancerException_SiEquipementNonRemisEnService() {
+        reception.setTravauxConformes(true);
+        reception.setZoneNettoyee(true);
+        reception.setConsignationRetiree(true);
+        reception.setEquipementRemisEnService(false);
+        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+
+        assertThatThrownBy(() -> service.cloturerAT("reception-001"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("équipement n'est pas remis en service");
+    }
+
+    @Test
+    void cloturerAT_Doit_LancerException_SiEssaisNonEffectues() {
+        reception.setTravauxConformes(true);
+        reception.setZoneNettoyee(true);
+        reception.setConsignationRetiree(true);
+        reception.setEquipementRemisEnService(true);
         reception.setEssaisEffectues(false);
         when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
 
-        assertThatThrownBy(() -> service.validerReception("reception-001"))
+        assertThatThrownBy(() -> service.cloturerAT("reception-001"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("essais n'ont pas été effectués");
     }
 
     @Test
-    void validerReception_Doit_LancerException_SiUnEssaiNonConforme() {
+    void cloturerAT_Doit_LancerException_SiSignatureAbsente() {
         reception.setTravauxConformes(true);
-        reception.setInstallationRemiseEnEtat(true);
+        reception.setZoneNettoyee(true);
+        reception.setConsignationRetiree(true);
+        reception.setEquipementRemisEnService(true);
         reception.setEssaisEffectues(true);
+        reception.setSignatureResponsable(null);
         when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
-        when(essaiRepository.existsByReceptionTravauxIdAndConformeIsFalse("reception-001")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.validerReception("reception-001"))
+        assertThatThrownBy(() -> service.cloturerAT("reception-001"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("essais ne sont pas conformes");
+                .hasMessageContaining("signature du responsable est obligatoire");
     }
 
     @Test
-    void validerReception_Doit_Reussir_EtCreerHistoriqueEtNotification() {
+    void cloturerAT_Doit_Reussir_EtCloturerAT() {
         reception.setTravauxConformes(true);
-        reception.setInstallationRemiseEnEtat(true);
+        reception.setZoneNettoyee(true);
+        reception.setConsignationRetiree(true);
+        reception.setEquipementRemisEnService(true);
         reception.setEssaisEffectues(true);
-
-        ReceptionTravaux saved = ReceptionTravaux.builder()
-                .id("reception-001")
-                .autorisationTravail(atValidee)
-                .travauxConformes(true)
-                .installationRemiseEnEtat(true)
-                .essaisEffectues(true)
-                .essaisConformes(true)
-                .validee(true)
-                .essais(new ArrayList<>())
-                .build();
+        reception.setSignatureResponsable("/path/signature.png");
 
         when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
-        when(essaiRepository.existsByReceptionTravauxIdAndConformeIsFalse("reception-001")).thenReturn(false);
-        when(receptionRepository.save(any())).thenReturn(saved);
+        when(atRepository.save(any())).thenReturn(atValidee);
         when(receptionMapper.toResponse(any())).thenReturn(response);
 
-        ReceptionTravauxResponse result = service.validerReception("reception-001");
+        ReceptionTravauxResponse result = service.cloturerAT("reception-001");
 
         assertThat(result).isNotNull();
+        assertThat(atValidee.getStatut()).isEqualTo(StatutAT.CLOTUREE);
 
-        // Historique VALIDATION_RECEPTION créé
-        verify(historiqueRepository, times(1)).save(argThat(h ->
-                h instanceof HistoriqueAT && ((HistoriqueAT) h).getAction().name().equals("VALIDATION_RECEPTION")));
-
-        // Notifications
+        verify(historiqueReceptionRepository, times(1)).save(any());
+        verify(historiqueRepository, times(1)).save(any());
         verify(notificationService, atLeastOnce()).sendNotificationToRole(eq("RESPONSABLE_OCP"), any(), any(), any(), any());
-
-        // Audit
-        verify(auditService, times(1)).logAction(eq("VALIDATION_RECEPTION"), eq("SUCCES"), any(), any(), any());
+        verify(auditService, times(1)).logAction(eq("CLOTURE_AT"), eq("SUCCES"), any(), any(), any());
     }
 
+    // ===================================================================
+    // PHOTOS
+    // ===================================================================
+
     @Test
-    void validerReception_Doit_LancerException_SiDejaValidee() {
-        reception.setValidee(true);
+    void ajouterPhoto_Doit_LancerException_SiATCloturee() {
+        reception.setAutorisationTravail(atCloturee);
         when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
 
-        assertThatThrownBy(() -> service.validerReception("reception-001"))
+        PhotoReceptionRequest photoReq = new PhotoReceptionRequest();
+        photoReq.setNom("photo1.jpg");
+        photoReq.setPath("/uploads/photo1.jpg");
+
+        assertThatThrownBy(() -> service.ajouterPhoto("reception-001", photoReq))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("déjà validée");
+                .hasMessageContaining("clôturée");
     }
 
-    // ===================================================================
-    // ESSAIS
-    // ===================================================================
-
     @Test
-    void ajouterEssai_Doit_Reussir() {
-        reception.setValidee(false);
+    void ajouterPhoto_Doit_Reussir() {
+        PhotoReception photo = PhotoReception.builder()
+                .id("photo-001")
+                .nom("photo1.jpg")
+                .path("/uploads/photo1.jpg")
+                .build();
+
+        PhotoReceptionRequest photoReq = new PhotoReceptionRequest();
+        photoReq.setNom("photo1.jpg");
+        photoReq.setPath("/uploads/photo1.jpg");
+
+        PhotoReceptionResponse photoResp = new PhotoReceptionResponse();
+        photoResp.setId("photo-001");
+        photoResp.setNom("photo1.jpg");
+
         when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+        when(photoMapper.toEntity(any())).thenReturn(photo);
+        when(photoRepository.save(any())).thenReturn(photo);
+        when(photoMapper.toResponse(any())).thenReturn(photoResp);
 
-        Essai essai = Essai.builder().id("essai-001").nom("Test pression").conforme(true).build();
-        EssaiRequest req = new EssaiRequest();
-        req.setNom("Test pression");
-        req.setConforme(true);
-
-        EssaiResponse essaiResp = new EssaiResponse();
-        essaiResp.setId("essai-001");
-        essaiResp.setNom("Test pression");
-
-        when(essaiMapper.toEntity(any())).thenReturn(essai);
-        when(essaiRepository.save(any())).thenReturn(essai);
-        when(essaiMapper.toResponse(any())).thenReturn(essaiResp);
-
-        EssaiResponse result = service.ajouterEssai("reception-001", req);
+        PhotoReceptionResponse result = service.ajouterPhoto("reception-001", photoReq);
 
         assertThat(result).isNotNull();
-        assertThat(result.getNom()).isEqualTo("Test pression");
+        assertThat(result.getNom()).isEqualTo("photo1.jpg");
+
+        verify(historiqueReceptionRepository, times(1)).save(any());
+        verify(auditService, times(1)).logAction(eq("AJOUT_PHOTO_RECEPTION"), eq("SUCCES"), any(), any(), any());
     }
 
     @Test
-    void ajouterEssai_Doit_LancerException_SiReceptionValidee() {
-        reception.setValidee(true);
+    void supprimerPhoto_Doit_LancerException_SiATCloturee() {
+        reception.setAutorisationTravail(atCloturee);
         when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
 
-        assertThatThrownBy(() -> service.ajouterEssai("reception-001", new EssaiRequest()))
+        assertThatThrownBy(() -> service.supprimerPhoto("reception-001", "photo-001"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("déjà validée");
+                .hasMessageContaining("clôturée");
+    }
+
+    @Test
+    void getPhotos_Doit_RetournerListe() {
+        PhotoReception photo1 = PhotoReception.builder().id("photo-001").nom("photo1.jpg").build();
+        PhotoReception photo2 = PhotoReception.builder().id("photo-002").nom("photo2.jpg").build();
+
+        PhotoReceptionResponse resp1 = new PhotoReceptionResponse();
+        resp1.setId("photo-001");
+        resp1.setNom("photo1.jpg");
+
+        PhotoReceptionResponse resp2 = new PhotoReceptionResponse();
+        resp2.setId("photo-002");
+        resp2.setNom("photo2.jpg");
+
+        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
+        when(photoRepository.findByReceptionTravauxIdOrderByOrdreAsc("reception-001"))
+                .thenReturn(List.of(photo1, photo2));
+        when(photoMapper.toResponse(photo1)).thenReturn(resp1);
+        when(photoMapper.toResponse(photo2)).thenReturn(resp2);
+
+        List<PhotoReceptionResponse> result = service.getPhotos("reception-001");
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getNom()).isEqualTo("photo1.jpg");
+        assertThat(result.get(1).getNom()).isEqualTo("photo2.jpg");
     }
 
     // ===================================================================
@@ -300,19 +457,5 @@ class ReceptionTravauxServiceTest {
 
         assertThatThrownBy(() -> service.getByAutorisationTravailId("at-sans-reception"))
                 .isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    // ===================================================================
-    // DELETE
-    // ===================================================================
-
-    @Test
-    void delete_Doit_LancerException_SiReceptionValidee() {
-        reception.setValidee(true);
-        when(receptionRepository.findById("reception-001")).thenReturn(Optional.of(reception));
-
-        assertThatThrownBy(() -> service.delete("reception-001"))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("supprimer une réception déjà validée");
     }
 }

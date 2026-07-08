@@ -1,8 +1,8 @@
 package com.ocp.at.controller;
 
-import com.ocp.at.dto.request.EssaiRequest;
+import com.ocp.at.dto.request.PhotoReceptionRequest;
 import com.ocp.at.dto.request.ReceptionTravauxRequest;
-import com.ocp.at.dto.response.EssaiResponse;
+import com.ocp.at.dto.response.PhotoReceptionResponse;
 import com.ocp.at.dto.response.ReceptionTravauxResponse;
 import com.ocp.at.service.ReceptionTravauxService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/receptions")
@@ -89,7 +91,7 @@ public class ReceptionTravauxController {
     @PreAuthorize("hasAuthority('CREATE_RECEPTION')")
     @Operation(
             summary = "Créer une réception des travaux",
-            description = "L'AT doit être en statut VALIDÉE. Une seule réception par AT est autorisée."
+            description = "L'AT doit être en statut VALIDÉE, tous les visas validés, tous les permis conformes. Une seule réception par AT est autorisée."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Réception créée avec succès"),
@@ -110,10 +112,10 @@ public class ReceptionTravauxController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
-    @Operation(summary = "Mettre à jour une réception", description = "Impossible de modifier une réception déjà validée")
+    @Operation(summary = "Mettre à jour une réception", description = "Impossible de modifier une réception d'une AT clôturée")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Réception mise à jour"),
-            @ApiResponse(responseCode = "400", description = "Réception déjà validée ou données invalides"),
+            @ApiResponse(responseCode = "400", description = "AT clôturée ou données invalides"),
             @ApiResponse(responseCode = "404", description = "Réception introuvable")
     })
     public ResponseEntity<ReceptionTravauxResponse> update(
@@ -128,10 +130,10 @@ public class ReceptionTravauxController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('DELETE_RECEPTION')")
-    @Operation(summary = "Supprimer une réception", description = "Impossible de supprimer une réception validée")
+    @Operation(summary = "Supprimer une réception", description = "Impossible de supprimer une réception d'une AT clôturée")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Réception supprimée"),
-            @ApiResponse(responseCode = "400", description = "Réception déjà validée"),
+            @ApiResponse(responseCode = "400", description = "AT clôturée"),
             @ApiResponse(responseCode = "404", description = "Réception introuvable")
     })
     public ResponseEntity<Void> delete(@PathVariable String id) {
@@ -140,77 +142,104 @@ public class ReceptionTravauxController {
     }
 
     // =====================================================================
-    // ESSAIS
+    // SIGNATURE
     // =====================================================================
 
-    @PostMapping("/{id}/essais")
-    @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
-    @Operation(summary = "Ajouter un essai à une réception")
+    @PutMapping("/{id}/signer")
+    @PreAuthorize("hasAuthority('SIGN_RECEPTION')")
+    @Operation(
+            summary = "Signer la réception",
+            description = "Ajoute la signature manuscrite du responsable. Réutilise le système de signature du Module 8."
+    )
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Essai ajouté"),
-            @ApiResponse(responseCode = "400", description = "Réception validée ou données invalides"),
+            @ApiResponse(responseCode = "200", description = "Réception signée avec succès"),
+            @ApiResponse(responseCode = "400", description = "AT clôturée"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Permission SIGN_RECEPTION requise"),
             @ApiResponse(responseCode = "404", description = "Réception introuvable")
     })
-    public ResponseEntity<EssaiResponse> ajouterEssai(
+    public ResponseEntity<ReceptionTravauxResponse> signer(
             @PathVariable String id,
-            @Valid @RequestBody EssaiRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(receptionService.ajouterEssai(id, request));
-    }
-
-    @PutMapping("/{id}/essais/{essaiId}")
-    @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
-    @Operation(summary = "Modifier un essai")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Essai modifié"),
-            @ApiResponse(responseCode = "400", description = "Réception validée ou essai non trouvé"),
-            @ApiResponse(responseCode = "404", description = "Essai ou réception introuvable")
-    })
-    public ResponseEntity<EssaiResponse> modifierEssai(
-            @PathVariable String id,
-            @PathVariable String essaiId,
-            @Valid @RequestBody EssaiRequest request) {
-        return ResponseEntity.ok(receptionService.modifierEssai(id, essaiId, request));
-    }
-
-    @DeleteMapping("/{id}/essais/{essaiId}")
-    @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
-    @Operation(summary = "Supprimer un essai")
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Essai supprimé"),
-            @ApiResponse(responseCode = "400", description = "Réception validée"),
-            @ApiResponse(responseCode = "404", description = "Essai ou réception introuvable")
-    })
-    public ResponseEntity<Void> supprimerEssai(
-            @PathVariable String id,
-            @PathVariable String essaiId) {
-        receptionService.supprimerEssai(id, essaiId);
-        return ResponseEntity.noContent().build();
+            @RequestBody String signaturePath) {
+        return ResponseEntity.ok(receptionService.signer(id, signaturePath));
     }
 
     // =====================================================================
-    // VALIDATION
+    // CLOTURE AT
     // =====================================================================
 
-    @PutMapping("/{id}/valider")
-    @PreAuthorize("hasAuthority('VALIDATE_RECEPTION')")
+    @PutMapping("/{id}/cloturer")
+    @PreAuthorize("hasAuthority('CLOSE_AT')")
     @Operation(
-            summary = "Valider une réception des travaux",
+            summary = "Clôturer l'AT",
             description = """
-                    Conditions requises :
-                    - travauxConformes = true
-                    - installationRemiseEnEtat = true
-                    - essaisEffectues = true
-                    - Tous les essais doivent être conformes (conforme = true)
+                    Clôture l'AT associée à la réception. Conditions requises :
+                    - travaux conformes
+                    - zone nettoyée
+                    - consignation retirée
+                    - équipement remis en service
+                    - essais réalisés
+                    - signature présente
                     """
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Réception validée avec succès"),
-            @ApiResponse(responseCode = "400", description = "Conditions de validation non remplies"),
+            @ApiResponse(responseCode = "200", description = "AT clôturée avec succès"),
+            @ApiResponse(responseCode = "400", description = "Conditions de clôture non remplies"),
             @ApiResponse(responseCode = "401", description = "Non authentifié"),
-            @ApiResponse(responseCode = "403", description = "Permission VALIDATE_RECEPTION requise"),
+            @ApiResponse(responseCode = "403", description = "Permission CLOSE_AT requise"),
             @ApiResponse(responseCode = "404", description = "Réception introuvable")
     })
-    public ResponseEntity<ReceptionTravauxResponse> valider(@PathVariable String id) {
-        return ResponseEntity.ok(receptionService.validerReception(id));
+    public ResponseEntity<ReceptionTravauxResponse> cloturer(@PathVariable String id) {
+        return ResponseEntity.ok(receptionService.cloturerAT(id));
+    }
+
+    // =====================================================================
+    // PHOTOS
+    // =====================================================================
+
+    @GetMapping("/{id}/photos")
+    @PreAuthorize("hasAuthority('VIEW_RECEPTION')")
+    @Operation(summary = "Lister les photos d'une réception")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Liste des photos retournée"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Accès non autorisé"),
+            @ApiResponse(responseCode = "404", description = "Réception introuvable")
+    })
+    public ResponseEntity<List<PhotoReceptionResponse>> getPhotos(@PathVariable String id) {
+        return ResponseEntity.ok(receptionService.getPhotos(id));
+    }
+
+    @PostMapping("/{id}/photos")
+    @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
+    @Operation(summary = "Ajouter une photo à une réception")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Photo ajoutée"),
+            @ApiResponse(responseCode = "400", description = "AT clôturée ou données invalides"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Accès non autorisé"),
+            @ApiResponse(responseCode = "404", description = "Réception introuvable")
+    })
+    public ResponseEntity<PhotoReceptionResponse> ajouterPhoto(
+            @PathVariable String id,
+            @Valid @RequestBody PhotoReceptionRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(receptionService.ajouterPhoto(id, request));
+    }
+
+    @DeleteMapping("/{id}/photos/{photoId}")
+    @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
+    @Operation(summary = "Supprimer une photo")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Photo supprimée"),
+            @ApiResponse(responseCode = "400", description = "AT clôturée"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Accès non autorisé"),
+            @ApiResponse(responseCode = "404", description = "Photo ou réception introuvable")
+    })
+    public ResponseEntity<Void> supprimerPhoto(
+            @PathVariable String id,
+            @PathVariable String photoId) {
+        receptionService.supprimerPhoto(id, photoId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,17 +1,16 @@
 package com.ocp.at.service.impl;
 
-import com.ocp.at.dto.request.EssaiRequest;
+import com.ocp.at.dto.request.PhotoReceptionRequest;
 import com.ocp.at.dto.request.ReceptionTravauxRequest;
-import com.ocp.at.dto.response.EssaiResponse;
+import com.ocp.at.dto.response.PhotoReceptionResponse;
 import com.ocp.at.dto.response.ReceptionTravauxResponse;
 import com.ocp.at.entity.*;
 import com.ocp.at.entity.enums.StatutAT;
 import com.ocp.at.entity.enums.TypeActionAT;
 import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
-import com.ocp.at.mapper.EssaiMapper;
+import com.ocp.at.mapper.PhotoReceptionMapper;
 import com.ocp.at.mapper.ReceptionTravauxMapper;
-import com.ocp.at.mapper.RemiseEtatMapper;
 import com.ocp.at.repository.*;
 import com.ocp.at.security.SecurityUtils;
 import com.ocp.at.service.AuditService;
@@ -33,18 +32,19 @@ import java.util.List;
 public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
 
     private final ReceptionTravauxRepository receptionRepository;
-    private final EssaiRepository essaiRepository;
-    private final RemiseEtatRepository remiseEtatRepository;
+    private final PhotoReceptionRepository photoRepository;
+    private final HistoriqueReceptionRepository historiqueReceptionRepository;
     private final AutorisationTravailRepository atRepository;
     private final HistoriqueATRepository historiqueRepository;
     private final UtilisateurRepository utilisateurRepository;
+    private final VisaRepository visaRepository;
+    private final PermisRepository permisRepository;
 
     private final NotificationService notificationService;
     private final AuditService auditService;
 
     private final ReceptionTravauxMapper receptionMapper;
-    private final EssaiMapper essaiMapper;
-    private final RemiseEtatMapper remiseEtatMapper;
+    private final PhotoReceptionMapper photoMapper;
 
     // =================================================================
     // CREATE
@@ -63,45 +63,47 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
             );
         }
 
-        // 2. Vérifier qu'il n'existe pas déjà une réception pour cette AT
+        // 2. Vérifier que tous les visas sont validés
+        if (!visaRepository.existsByAutorisationTravailIdAndStatut(at.getId(), com.ocp.at.entity.enums.StatutVisa.VALIDE)) {
+            throw new BusinessException("Tous les visas doivent être validés avant de créer une réception.");
+        }
+
+        // 3. Vérifier que tous les permis sont conformes
+        if (!permisRepository.existsByAutorisationTravailId(at.getId())) {
+            throw new BusinessException("Au moins un permis est requis pour créer une réception.");
+        }
+
+        // 4. Vérifier qu'il n'existe pas déjà une réception pour cette AT
         if (receptionRepository.existsByAutorisationTravailId(at.getId())) {
             throw new BusinessException("Une réception des travaux existe déjà pour l'AT " + at.getNumero());
         }
 
-        // 3. Construire l'entité
+        // 5. Construire l'entité
         ReceptionTravaux reception = receptionMapper.toEntity(request);
         reception.setAutorisationTravail(at);
         reception.setDateReception(request.getDateReception() != null ? request.getDateReception() : LocalDateTime.now());
-        reception.setCreatedBy(getCurrentMatricule());
 
-        // 4. Essais initiaux
-        if (request.getEssais() != null) {
-            List<Essai> essais = request.getEssais().stream().map(req -> {
-                Essai e = essaiMapper.toEntity(req);
-                e.setReceptionTravaux(reception);
-                return e;
-            }).toList();
-            reception.getEssais().addAll(essais);
-        }
-
-        // 5. Remise en état initiale
-        if (request.getRemiseEtat() != null) {
-            RemiseEtat remise = remiseEtatMapper.toEntity(request.getRemiseEtat());
-            remise.setReceptionTravaux(reception);
-            reception.setRemiseEtat(remise);
+        // 6. Responsable
+        if (request.getResponsableId() != null) {
+            Utilisateur responsable = utilisateurRepository.findById(request.getResponsableId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur", "id", request.getResponsableId()));
+            reception.setResponsable(responsable);
         }
 
         ReceptionTravaux saved = receptionRepository.save(reception);
 
-        // 6. Historique
-        enregistrerHistorique(saved, TypeActionAT.RECEPTION_TRAVAUX, at.getStatut(), at.getStatut(),
+        // 7. Historique réception
+        enregistrerHistoriqueReception(saved, "CREATION", "Réception des travaux créée");
+
+        // 8. Historique AT
+        enregistrerHistoriqueAT(saved, TypeActionAT.RECEPTION_TRAVAUX, at.getStatut(), at.getStatut(),
                 "Réception des travaux créée");
 
-        // 7. Notifications
+        // 9. Notifications
         notifierParticipants(at, "Réception des travaux créée",
                 "La réception des travaux pour l'AT " + at.getNumero() + " a été créée.", "INFO");
 
-        // 8. Audit
+        // 10. Audit
         logAudit("CREATION_RECEPTION", "SUCCES");
 
         log.info("Réception créée pour AT {} par {}", at.getNumero(), getCurrentMatricule());
@@ -117,35 +119,21 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     public ReceptionTravauxResponse update(String id, ReceptionTravauxRequest request) {
         ReceptionTravaux reception = getEntityById(id);
 
-        if (Boolean.TRUE.equals(reception.getValidee())) {
-            throw new BusinessException("Impossible de modifier une réception déjà validée.");
+        if (isATCloturee(reception)) {
+            throw new BusinessException("Impossible de modifier une réception d'une AT clôturée.");
         }
 
         receptionMapper.updateFromRequest(request, reception);
 
-        // Mise à jour des essais : on remplace si la liste est fournie
-        if (request.getEssais() != null) {
-            reception.getEssais().clear();
-            List<Essai> essais = request.getEssais().stream().map(req -> {
-                Essai e = essaiMapper.toEntity(req);
-                e.setReceptionTravaux(reception);
-                return e;
-            }).toList();
-            reception.getEssais().addAll(essais);
-        }
-
-        // Mise à jour de la remise en état
-        if (request.getRemiseEtat() != null) {
-            if (reception.getRemiseEtat() != null) {
-                remiseEtatMapper.updateFromRequest(request.getRemiseEtat(), reception.getRemiseEtat());
-            } else {
-                RemiseEtat remise = remiseEtatMapper.toEntity(request.getRemiseEtat());
-                remise.setReceptionTravaux(reception);
-                reception.setRemiseEtat(remise);
-            }
+        // Mise à jour du responsable si fourni
+        if (request.getResponsableId() != null) {
+            Utilisateur responsable = utilisateurRepository.findById(request.getResponsableId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur", "id", request.getResponsableId()));
+            reception.setResponsable(responsable);
         }
 
         ReceptionTravaux saved = receptionRepository.save(reception);
+        enregistrerHistoriqueReception(saved, "MODIFICATION", "Réception modifiée");
         logAudit("MODIFICATION_RECEPTION", "SUCCES");
         return receptionMapper.toResponse(saved);
     }
@@ -182,8 +170,8 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     @Transactional
     public void delete(String id) {
         ReceptionTravaux reception = getEntityById(id);
-        if (Boolean.TRUE.equals(reception.getValidee())) {
-            throw new BusinessException("Impossible de supprimer une réception déjà validée.");
+        if (isATCloturee(reception)) {
+            throw new BusinessException("Impossible de supprimer une réception d'une AT clôturée.");
         }
         receptionRepository.delete(reception);
         logAudit("SUPPRESSION_RECEPTION", "SUCCES");
@@ -191,119 +179,140 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     }
 
     // =================================================================
-    // ESSAIS
+    // SIGNATURE
     // =================================================================
 
     @Override
     @Transactional
-    public EssaiResponse ajouterEssai(String receptionId, EssaiRequest request) {
-        ReceptionTravaux reception = getEntityById(receptionId);
-
-        if (Boolean.TRUE.equals(reception.getValidee())) {
-            throw new BusinessException("Impossible d'ajouter un essai à une réception déjà validée.");
-        }
-
-        Essai essai = essaiMapper.toEntity(request);
-        essai.setReceptionTravaux(reception);
-        Essai saved = essaiRepository.save(essai);
-        return essaiMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional
-    public EssaiResponse modifierEssai(String receptionId, String essaiId, EssaiRequest request) {
-        ReceptionTravaux reception = getEntityById(receptionId);
-
-        if (Boolean.TRUE.equals(reception.getValidee())) {
-            throw new BusinessException("Impossible de modifier un essai d'une réception déjà validée.");
-        }
-
-        Essai essai = essaiRepository.findById(essaiId)
-                .orElseThrow(() -> new ResourceNotFoundException("Essai", "id", essaiId));
-
-        if (!essai.getReceptionTravaux().getId().equals(receptionId)) {
-            throw new BusinessException("Cet essai n'appartient pas à la réception spécifiée.");
-        }
-
-        essaiMapper.updateFromRequest(request, essai);
-        return essaiMapper.toResponse(essaiRepository.save(essai));
-    }
-
-    @Override
-    @Transactional
-    public void supprimerEssai(String receptionId, String essaiId) {
-        ReceptionTravaux reception = getEntityById(receptionId);
-
-        if (Boolean.TRUE.equals(reception.getValidee())) {
-            throw new BusinessException("Impossible de supprimer un essai d'une réception déjà validée.");
-        }
-
-        Essai essai = essaiRepository.findById(essaiId)
-                .orElseThrow(() -> new ResourceNotFoundException("Essai", "id", essaiId));
-
-        if (!essai.getReceptionTravaux().getId().equals(receptionId)) {
-            throw new BusinessException("Cet essai n'appartient pas à la réception spécifiée.");
-        }
-
-        essaiRepository.delete(essai);
-    }
-
-    // =================================================================
-    // VALIDATION
-    // =================================================================
-
-    @Override
-    @Transactional
-    public ReceptionTravauxResponse validerReception(String id) {
+    public ReceptionTravauxResponse signer(String id, String signaturePath) {
         ReceptionTravaux reception = getEntityById(id);
 
-        if (Boolean.TRUE.equals(reception.getValidee())) {
-            throw new BusinessException("Cette réception est déjà validée.");
+        if (isATCloturee(reception)) {
+            throw new BusinessException("Impossible de signer une réception d'une AT clôturée.");
         }
 
-        // Règle 1 : travaux conformes
-        if (!Boolean.TRUE.equals(reception.getTravauxConformes())) {
-            throw new BusinessException("Validation impossible : les travaux ne sont pas déclarés conformes.");
-        }
-
-        // Règle 2 : installation remise en état
-        if (!Boolean.TRUE.equals(reception.getInstallationRemiseEnEtat())) {
-            throw new BusinessException("Validation impossible : l'installation n'est pas remise en état.");
-        }
-
-        // Règle 3 : essais effectués
-        if (!Boolean.TRUE.equals(reception.getEssaisEffectues())) {
-            throw new BusinessException("Validation impossible : les essais n'ont pas été effectués.");
-        }
-
-        // Règle 4 : tous les essais doivent être conformes
-        if (essaiRepository.existsByReceptionTravauxIdAndConformeIsFalse(id)) {
-            throw new BusinessException("Validation impossible : un ou plusieurs essais ne sont pas conformes.");
-        }
-
-        // Validation
-        reception.setValidee(true);
-        reception.setDateValidation(LocalDateTime.now());
-        reception.setEssaisConformes(true);
+        reception.setSignatureResponsable(signaturePath);
+        reception.setDateSignature(LocalDateTime.now());
 
         ReceptionTravaux saved = receptionRepository.save(reception);
+        enregistrerHistoriqueReception(saved, "SIGNATURE", "Réception signée par le responsable");
+        logAudit("SIGNATURE_RECEPTION", "SUCCES");
 
-        AutorisationTravail at = saved.getAutorisationTravail();
+        log.info("Réception {} signée par {}", id, getCurrentMatricule());
+        return receptionMapper.toResponse(saved);
+    }
+
+    // =================================================================
+    // CLOTURE AT
+    // =================================================================
+
+    @Override
+    @Transactional
+    public ReceptionTravauxResponse cloturerAT(String id) {
+        ReceptionTravaux reception = getEntityById(id);
+        AutorisationTravail at = reception.getAutorisationTravail();
+
+        if (isATCloturee(reception)) {
+            throw new BusinessException("L'AT est déjà clôturée.");
+        }
+
+        // Vérifications métier
+        if (!Boolean.TRUE.equals(reception.getTravauxConformes())) {
+            throw new BusinessException("Clôture impossible : les travaux ne sont pas conformes.");
+        }
+
+        if (!Boolean.TRUE.equals(reception.getZoneNettoyee())) {
+            throw new BusinessException("Clôture impossible : la zone n'est pas nettoyée.");
+        }
+
+        if (!Boolean.TRUE.equals(reception.getConsignationRetiree())) {
+            throw new BusinessException("Clôture impossible : la consignation n'est pas retirée.");
+        }
+
+        if (!Boolean.TRUE.equals(reception.getEquipementRemisEnService())) {
+            throw new BusinessException("Clôture impossible : l'équipement n'est pas remis en service.");
+        }
+
+        if (!Boolean.TRUE.equals(reception.getEssaisEffectues())) {
+            throw new BusinessException("Clôture impossible : les essais n'ont pas été effectués.");
+        }
+
+        if (reception.getSignatureResponsable() == null) {
+            throw new BusinessException("Clôture impossible : la signature du responsable est obligatoire.");
+        }
+
+        // Clôture de l'AT
+        at.setStatut(StatutAT.CLOTUREE);
+        atRepository.save(at);
 
         // Historique
-        enregistrerHistorique(saved, TypeActionAT.VALIDATION_RECEPTION, at.getStatut(), at.getStatut(),
-                "Réception des travaux validée — AT prête pour clôture");
+        enregistrerHistoriqueReception(reception, "CLOTURE", "AT clôturée suite à réception validée");
+        enregistrerHistoriqueAT(reception, TypeActionAT.CLOTURE, StatutAT.VALIDEE, StatutAT.CLOTUREE,
+                "AT clôturée suite à réception des travaux");
 
         // Notifications
-        notifierParticipants(at, "Réception validée",
-                "La réception des travaux pour l'AT " + at.getNumero() +
-                        " est validée. L'AT peut maintenant être clôturée.", "SUCCESS");
+        notifierParticipants(at, "AT Clôturée",
+                "L'AT " + at.getNumero() + " a été clôturée suite à la réception des travaux.", "SUCCESS");
 
         // Audit
-        logAudit("VALIDATION_RECEPTION", "SUCCES");
+        logAudit("CLOTURE_AT", "SUCCES");
 
-        log.info("Réception {} validée par {}", id, getCurrentMatricule());
-        return receptionMapper.toResponse(saved);
+        log.info("AT {} clôturée suite à réception {}", at.getNumero(), id);
+        return receptionMapper.toResponse(reception);
+    }
+
+    // =================================================================
+    // PHOTOS
+    // =================================================================
+
+    @Override
+    @Transactional
+    public PhotoReceptionResponse ajouterPhoto(String receptionId, PhotoReceptionRequest request) {
+        ReceptionTravaux reception = getEntityById(receptionId);
+
+        if (isATCloturee(reception)) {
+            throw new BusinessException("Impossible d'ajouter une photo à une réception d'une AT clôturée.");
+        }
+
+        PhotoReception photo = photoMapper.toEntity(request);
+        photo.setReceptionTravaux(reception);
+        PhotoReception saved = photoRepository.save(photo);
+
+        enregistrerHistoriqueReception(reception, "AJOUT_PHOTO", "Photo ajoutée : " + request.getNom());
+        logAudit("AJOUT_PHOTO_RECEPTION", "SUCCES");
+
+        return photoMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void supprimerPhoto(String receptionId, String photoId) {
+        ReceptionTravaux reception = getEntityById(receptionId);
+
+        if (isATCloturee(reception)) {
+            throw new BusinessException("Impossible de supprimer une photo d'une réception d'une AT clôturée.");
+        }
+
+        PhotoReception photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new ResourceNotFoundException("PhotoReception", "id", photoId));
+
+        if (!photo.getReceptionTravaux().getId().equals(receptionId)) {
+            throw new BusinessException("Cette photo n'appartient pas à la réception spécifiée.");
+        }
+
+        photoRepository.delete(photo);
+        enregistrerHistoriqueReception(reception, "SUPPRESSION_PHOTO", "Photo supprimée : " + photo.getNom());
+        logAudit("SUPPRESSION_PHOTO_RECEPTION", "SUCCES");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PhotoReceptionResponse> getPhotos(String receptionId) {
+        getEntityById(receptionId); // Vérifie que la réception existe
+        return photoRepository.findByReceptionTravauxIdOrderByOrdreAsc(receptionId)
+                .stream()
+                .map(photoMapper::toResponse)
+                .toList();
     }
 
     // =================================================================
@@ -313,6 +322,10 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     private ReceptionTravaux getEntityById(String id) {
         return receptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux", "id", id));
+    }
+
+    private boolean isATCloturee(ReceptionTravaux reception) {
+        return reception.getAutorisationTravail().getStatut() == StatutAT.CLOTUREE;
     }
 
     private String getCurrentMatricule() {
@@ -328,8 +341,20 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
                 .orElse(null);
     }
 
-    private void enregistrerHistorique(ReceptionTravaux reception, TypeActionAT action,
-                                       StatutAT ancienStatut, StatutAT nouveauStatut, String commentaire) {
+    private void enregistrerHistoriqueReception(ReceptionTravaux reception, String action, String commentaire) {
+        Utilisateur currentUser = getCurrentUser();
+        HistoriqueReception h = HistoriqueReception.builder()
+                .receptionTravaux(reception)
+                .dateAction(LocalDateTime.now())
+                .action(action)
+                .commentaire(commentaire)
+                .utilisateur(currentUser)
+                .build();
+        historiqueReceptionRepository.save(h);
+    }
+
+    private void enregistrerHistoriqueAT(ReceptionTravaux reception, TypeActionAT action,
+                                          StatutAT ancienStatut, StatutAT nouveauStatut, String commentaire) {
         Utilisateur currentUser = getCurrentUser();
         HistoriqueAT h = HistoriqueAT.builder()
                 .autorisationTravail(reception.getAutorisationTravail())
@@ -344,12 +369,10 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     }
 
     private void notifierParticipants(AutorisationTravail at, String titre, String message, String type) {
-        // Notifier le propriétaire (demandeur)
         if (at.getProprietaireBrouillon() != null) {
             notificationService.createNotification(
                     at.getProprietaireBrouillon(), titre, message, type, "/at/" + at.getId());
         }
-        // Notifier les responsables OCP et entreprise par rôle
         notificationService.sendNotificationToRole("RESPONSABLE_OCP", titre, message, type, "/at/" + at.getId());
         notificationService.sendNotificationToRole("RESPONSABLE_ENTREPRISE", titre, message, type, "/at/" + at.getId());
     }
