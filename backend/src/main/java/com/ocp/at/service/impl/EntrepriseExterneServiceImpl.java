@@ -1,0 +1,86 @@
+package com.ocp.at.service.impl;
+
+import com.ocp.at.dto.request.EntrepriseExterneRequest;
+import com.ocp.at.dto.response.EntrepriseExterneResponse;
+import com.ocp.at.entity.EntrepriseExterne;
+import com.ocp.at.exception.BusinessException;
+import com.ocp.at.exception.ResourceNotFoundException;
+import com.ocp.at.mapper.EntrepriseExterneMapper;
+import com.ocp.at.repository.EntrepriseExterneRepository;
+import com.ocp.at.service.EntrepriseExterneService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class EntrepriseExterneServiceImpl implements EntrepriseExterneService {
+
+    private final EntrepriseExterneRepository repository;
+    private final EntrepriseExterneMapper mapper;
+
+    @Override
+    @Transactional
+    public EntrepriseExterneResponse create(EntrepriseExterneRequest request) {
+        log.info("Création d'un(e) EntrepriseExterne");
+        EntrepriseExterne entity = mapper.toEntity(request);
+        entity = repository.save(entity);
+        return mapper.toResponse(entity);
+    }
+
+    @Override
+    @Transactional
+    public EntrepriseExterneResponse update(String id, EntrepriseExterneRequest request) {
+        log.info("Modification d'un(e) EntrepriseExterne avec ID: {}", id);
+        EntrepriseExterne entity = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("EntrepriseExterne non trouvé(e)"));
+        mapper.updateEntityFromRequest(request, entity);
+        entity = repository.save(entity);
+        return mapper.toResponse(entity);
+    }
+
+    @Override
+    public EntrepriseExterneResponse getById(String id) {
+        log.info("Consultation d'un(e) EntrepriseExterne avec ID: {}", id);
+        return repository.findById(id)
+                .map(mapper::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("EntrepriseExterne non trouvé(e)"));
+    }
+
+    @Override
+    public List<EntrepriseExterneResponse> getAll() {
+        log.info("Consultation de tous/toutes les EntrepriseExterne");
+        return repository.findAll().stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<EntrepriseExterneResponse> search(String query, Pageable pageable) {
+        log.info("Recherche EntrepriseExterne avec query: {}", query);
+        Specification<EntrepriseExterne> spec = Specification.where(null);
+        // Implement search logic if needed
+        return repository.findAll(spec, pageable).map(mapper::toResponse);
+    }
+
+    @Override
+    @Transactional
+    public void delete(String id) {
+        log.info("Suppression d'un(e) EntrepriseExterne avec ID: {}", id);
+        EntrepriseExterne entity = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("EntrepriseExterne non trouvé(e)"));
+
+        // Check if used in AT before deleting (A implémenter)
+        repository.delete(entity);
+    }
+}
+

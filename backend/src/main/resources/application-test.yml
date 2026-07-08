@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:ocp_at_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+
+app:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
+  security:
+    max-login-attempts: 5
+    password:
+      min-length: 8
+  storage:
+    location: uploads
+
+logging:
+  level:
+    root: WARN
+    com.ocp.at: INFO

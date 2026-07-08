@@ -1,0 +1,17 @@
+package com.ocp.at.entity.enums;
+
+public enum TypeActionAT {
+    CREATION,
+    MODIFICATION,
+    AUTO_SAVE,
+    TRANSFERT,
+    SOUMISSION,
+    VALIDATION,
+    REFUS,
+    RENOUVELLEMENT,
+    CLOTURE,
+    EXPORT_PDF,
+    ANNULATION,
+    RECEPTION_TRAVAUX,
+    VALIDATION_RECEPTION
+}
