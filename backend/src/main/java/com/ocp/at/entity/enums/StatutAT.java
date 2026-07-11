@@ -7,5 +7,6 @@ public enum StatutAT {
     REJETEE,
     RENOUVELEE,
     CLOTUREE,
+    ARCHIVEE,
     ANNULEE
 }

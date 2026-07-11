@@ -3,6 +3,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\ai\MockAIProvider.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\ZoneRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\ai\LangChainProvider.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\request\ArchiveRequest.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\request\PermisRequest.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\ExportService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\PermissionController.java
@@ -30,6 +31,8 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\storage\StorageService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\AuthServiceImpl.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\MesurePreparationServiceImpl.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\ArchiveMapper.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\QrCodeService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\AuditLogDTO.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\AnalyseIAResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\NotificationService.java
@@ -37,6 +40,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\request\VisitePrealableRequest.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\OrdreTravailResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\BonTravailServiceImpl.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\ArchiveRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\EquipementResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\exception\BusinessException.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\PermissionRepository.java
@@ -89,6 +93,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\HistoriqueATRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\RisqueResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\EntrepriseExterneMapper.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\ArchiveService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\RoleServiceImpl.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\RisqueMapper.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\EPIController.java
@@ -99,6 +104,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\AutorisationTravail.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\EquipementService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\RefreshTokenRepository.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\StorageService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\security\SecurityUtils.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\VisitePrealableServiceImpl.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\DemandeInterventionController.java
@@ -111,6 +117,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\OcpAtBackendApplication.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\RemiseEtatRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\NotificationMapper.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\ArchiveServiceImpl.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\RoleMapper.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\OrdreTravailRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\BonTravailService.java
@@ -130,7 +137,9 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\ServiceService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\InstallationService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\RoleResponse.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\request\ArchiveSearchRequest.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\RisqueServiceImpl.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\ArchiveSearchResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\validation\PasswordPolicyValidator.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\request\ServiceRequest.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\DemandeInterventionRepository.java
@@ -162,12 +171,14 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\WorkflowController.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\Service.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\PhotoService.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\StorageServiceImpl.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\config\OpenAPIConfig.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\PermissionResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\config\SecurityConfig.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\ServiceResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\NotificationController.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\UtilisateurMapper.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\PdfExportResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\request\TokenRefreshRequest.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\enums\StatutVisa.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\AuthService.java
@@ -192,6 +203,8 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\AnalyseRisqueMapper.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\ReceptionTravaux.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\VisaMapper.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\PdfPageEventHelper.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\enums\ArchiveStatus.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\OrdreTravailService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\ReceptionTravauxMapper.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\exception\UnauthorizedException.java
@@ -236,6 +249,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\exception\GlobalExceptionHandler.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\RisqueRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\config\DataInitializer.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\ArchiveController.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\EntrepriseExterne.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\EPI.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\ZoneServiceImpl.java
@@ -248,6 +262,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\enums\StatutDocument.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\validation\PasswordPolicy.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\EntrepriseExterneResponse.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\HashService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\MoyenAccesResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\VisitePrealableService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\RemiseEtatMapper.java
@@ -260,10 +275,12 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\enums\TypeActionAT.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\RisqueController.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\VisitePrealableResponse.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\ArchiveAT.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\request\MesurePreparationRequest.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\BonTravailController.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\DemandeInterventionService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\LoginRequest.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\ArchiveResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\JwtResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\entity\enums\StatutAT.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\storage\LocalStorageService.java

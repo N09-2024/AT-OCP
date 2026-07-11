@@ -72,10 +72,12 @@ public class ReceptionTravaux {
     @Column(columnDefinition = "TEXT")
     private String commentaireResponsable;
 
-    // Signature manuscrite du responsable (réutilisé depuis Module 8)
-    private String signatureResponsable;
+    // Signature manuscrite du responsable (stockée via StorageService)
+    private String signaturePath;
 
-    private LocalDateTime dateSignature;
+    private LocalDateTime signatureDate;
+
+    private String signatureBy;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

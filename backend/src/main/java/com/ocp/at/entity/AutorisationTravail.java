@@ -77,4 +77,19 @@ public class AutorisationTravail {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bt_id", unique = true)
     private BonTravail bonTravail;
+
+    @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
+    @Builder.Default
+    private java.util.List<Visa> visas = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
+    @Builder.Default
+    private java.util.List<Permis> permis = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
+    @Builder.Default
+    private java.util.List<HistoriqueAT> historiques = new java.util.ArrayList<>();
+
+    @OneToOne(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
+    private ReceptionTravaux receptionTravaux;
 }
