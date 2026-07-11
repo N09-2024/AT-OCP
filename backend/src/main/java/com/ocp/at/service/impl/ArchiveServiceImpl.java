@@ -86,7 +86,7 @@ public class ArchiveServiceImpl implements ArchiveService {
         try {
             storageService.storeFile(pdfPath, pdfBytes, "application/pdf");
         } catch (IOException e) {
-            throw new BusinessException("Erreur lors du stockage du fichier PDF archivé", e);
+            throw new BusinessException("Erreur lors du stockage du fichier PDF archivé: " + e.getMessage());
         }
 
         // Génération du QR Code
@@ -245,7 +245,7 @@ public class ArchiveServiceImpl implements ArchiveService {
         try {
             return storageService.loadFile(archive.getPathPdf());
         } catch (IOException e) {
-            throw new BusinessException("Erreur lors du téléchargement du fichier PDF archivé", e);
+            throw new BusinessException("Erreur lors du téléchargement du fichier PDF archivé: " + e.getMessage());
         }
     }
 
@@ -265,7 +265,7 @@ public class ArchiveServiceImpl implements ArchiveService {
             log.info("Vérification archive {} : {}", id, valid ? "VALIDE" : "INVALIDE");
             return valid;
         } catch (IOException e) {
-            throw new BusinessException("Erreur lors de la vérification de l'archive", e);
+            throw new BusinessException("Erreur lors de la vérification de l'archive: " + e.getMessage());
         }
     }
 

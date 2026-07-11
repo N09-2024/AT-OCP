@@ -55,7 +55,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     public ReceptionTravauxResponse create(ReceptionTravauxRequest request) {
         // 1. Vérifier que l'AT existe et est VALIDEE
         AutorisationTravail at = atRepository.findById(request.getAutorisationTravailId())
-                .orElseThrow(() -> new ResourceNotFoundException("AutorisationTravail", "id", request.getAutorisationTravailId()));
+                .orElseThrow(() -> new ResourceNotFoundException("AutorisationTravail non trouvée avec l'ID : " + request.getAutorisationTravailId()));
 
         if (at.getStatut() != StatutAT.VALIDEE) {
             throw new BusinessException(
@@ -86,7 +86,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         // 6. Responsable
         if (request.getResponsableId() != null) {
             Utilisateur responsable = utilisateurRepository.findById(request.getResponsableId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur", "id", request.getResponsableId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec l'ID : " + request.getResponsableId()));
             reception.setResponsable(responsable);
         }
 
@@ -128,7 +128,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         // Mise à jour du responsable si fourni
         if (request.getResponsableId() != null) {
             Utilisateur responsable = utilisateurRepository.findById(request.getResponsableId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur", "id", request.getResponsableId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec l'ID : " + request.getResponsableId()));
             reception.setResponsable(responsable);
         }
 
@@ -152,7 +152,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     @Transactional(readOnly = true)
     public ReceptionTravauxResponse getByAutorisationTravailId(String atId) {
         ReceptionTravaux reception = receptionRepository.findByAutorisationTravailId(atId)
-                .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux", "autorisationTravailId", atId));
+                .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux non trouvée pour l'AT ID : " + atId));
         return receptionMapper.toResponse(reception);
     }
 
@@ -294,7 +294,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         }
 
         PhotoReception photo = photoRepository.findById(photoId)
-                .orElseThrow(() -> new ResourceNotFoundException("PhotoReception", "id", photoId));
+                .orElseThrow(() -> new ResourceNotFoundException("PhotoReception non trouvée avec l'ID : " + photoId));
 
         if (!photo.getReceptionTravaux().getId().equals(receptionId)) {
             throw new BusinessException("Cette photo n'appartient pas à la réception spécifiée.");
@@ -321,7 +321,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
 
     private ReceptionTravaux getEntityById(String id) {
         return receptionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux non trouvée avec l'ID : " + id));
     }
 
     private boolean isATCloturee(ReceptionTravaux reception) {

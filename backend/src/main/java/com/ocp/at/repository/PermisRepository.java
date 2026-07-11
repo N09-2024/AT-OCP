@@ -18,5 +18,7 @@ public interface PermisRepository extends JpaRepository<Permis, String> {
     boolean existsByNumero(String numero);
 
     List<Permis> findByType(TypePermis type);
+
+    boolean existsByAutorisationTravailId(String atId);
 }
 

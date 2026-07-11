@@ -79,6 +79,18 @@ public class ReceptionTravaux {
 
     private String signatureBy;
 
+    // Signature responsable pour clôture
+    private String signatureResponsable;
+
+    private LocalDateTime dateSignature;
+
+    // Champs additionnels pour conformité
+    private Boolean validee;
+
+    private Boolean essaisConformes;
+
+    private Boolean installationRemiseEnEtat;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
