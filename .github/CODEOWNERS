@@ -1,0 +1,18 @@
+# Code Owners
+# These users will be automatically requested for review on PRs
+
+# Default owners for everything
+*       @ocp-dev-team
+
+# Backend code
+/backend/  @backend-team @ocp-dev-team
+
+# Frontend code
+/frontend/ @frontend-team @ocp-dev-team
+
+# Infrastructure
+/.github/ @devops-team @ocp-dev-team
+/docker*  @devops-team @ocp-dev-team
+
+# Database migrations
+/backend/src/main/resources/db/migration/ @backend-team @devops-team @ocp-dev-team

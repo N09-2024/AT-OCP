@@ -99,4 +99,32 @@ class AutorisationTravailControllerTest {
                 
         verify(atService).soumettreAT("at-1");
     }
+
+    @Test
+    @WithMockUser(authorities = "VALIDATE_AT")
+    void validerAT_ShouldReturnOk() throws Exception {
+        mockResponse.setStatut(StatutAT.VALIDEE);
+        when(atService.validerAT("at-1")).thenReturn(mockResponse);
+
+        mockMvc.perform(post("/api/at/at-1/validate")
+                .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.statut").value("VALIDEE"));
+                
+        verify(atService).validerAT("at-1");
+    }
+
+    @Test
+    @WithMockUser(authorities = "CLOSE_AT")
+    void cloturerAT_ShouldReturnOk() throws Exception {
+        mockResponse.setStatut(StatutAT.CLOTUREE);
+        when(atService.cloturerAT("at-1")).thenReturn(mockResponse);
+
+        mockMvc.perform(post("/api/at/at-1/close")
+                .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.statut").value("CLOTUREE"));
+                
+        verify(atService).cloturerAT("at-1");
+    }
 }

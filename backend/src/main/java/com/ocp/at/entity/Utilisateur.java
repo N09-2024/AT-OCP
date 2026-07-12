@@ -11,14 +11,17 @@ import java.util.Set;
 
 @Entity
 @Table(name = "utilisateurs")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Utilisateur {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @Column(unique = true, nullable = false)
@@ -36,6 +39,7 @@ public class Utilisateur {
     private String telephone;
 
     @Column(nullable = false)
+    @ToString.Exclude
     private String motDePasse;
 
     private String photo;
@@ -62,12 +66,14 @@ public class Utilisateur {
     @Builder.Default
     private boolean motDePasseExpire = false;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "utilisateur_roles",
         joinColumns = @JoinColumn(name = "utilisateur_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<Role> roles = new HashSet<>();
 }

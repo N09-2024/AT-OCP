@@ -1,0 +1,228 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  JAVA_VERSION: '21'
+  DOCKER_IMAGE: at-ocp-backend
+
+jobs:
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'staging'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_HOST_KEY }}" > ~/.ssh/known_hosts
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.DOCKER_IMAGE }}:staging ./backend
+
+      - name: Save Docker image
+        run: docker save ${{ env.DOCKER_IMAGE }}:staging -o docker-image.tar
+
+      - name: Copy to staging server
+        uses: scp-to-scp@v2
+        with:
+          local: docker-image.tar
+          remote: /tmp/
+          host: ${{ secrets.STAGING_HOST }}
+          user: ${{ secrets.STAGING_USER }}
+
+      - name: Deploy to Staging
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/at-ocp
+            docker load -i /tmp/docker-image.tar
+            docker-compose -f docker-compose.staging.yml down
+            docker-compose -f docker-compose.staging.yml up -d
+            docker image prune -f
+            rm /tmp/docker-image.tar
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f https://staging.at-ocp.${{ secrets.DOMAIN }}/actuator/health || exit 1
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "Successfully deployed to staging!"
+
+  # Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_HOST_KEY }}" > ~/.ssh/known_hosts
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=1.0.0.${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push to registry
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ steps.version.outputs.VERSION }}
+
+      - name: Deploy to Production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/at-ocp
+            
+            # Pull latest images
+            docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
+            
+            # Backup database
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            docker-compose -f docker-compose.prod.yml exec -T postgres pg_dump -U at_ocp_user at_ocp_db > /backups/at_ocp_$TIMESTAMP.sql
+            
+            # Deploy
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --no-deps backend
+            
+            # Wait for health check
+            sleep 60
+            
+            # Restart dependent services
+            docker-compose -f docker-compose.prod.yml restart nginx
+
+      - name: Health check
+        run: |
+          for i in {1..10}; do
+            if curl -f https://at-ocp.${{ secrets.DOMAIN }}/actuator/health; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+          echo "Health check failed after 10 attempts"
+          exit 1
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          release_name: Release v${{ steps.version.outputs.VERSION }}
+          draft: true
+          prerelease: false
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "Successfully deployed to production!"
+
+  # Rollback on failure
+  rollback-production:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    environment: production
+    needs: deploy-production
+    if: failure() && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_HOST_KEY }}" > ~/.ssh/known_hosts
+
+      - name: Rollback to previous version
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/at-ocp
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --no-deps backend
+            docker-compose -f docker-compose.prod.yml restart nginx
+
+      - name: Notify Rollback
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": ":warning: Production rolled back to previous version"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        if: secrets.SLACK_WEBHOOK_URL != ''

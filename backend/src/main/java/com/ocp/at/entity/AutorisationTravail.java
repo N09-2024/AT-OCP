@@ -4,11 +4,14 @@ import com.ocp.at.entity.enums.EtatVerrou;
 import com.ocp.at.entity.enums.StatutAT;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "autorisations_travail")
@@ -79,16 +82,19 @@ public class AutorisationTravail {
     private BonTravail bonTravail;
 
     @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @Builder.Default
-    private java.util.List<Visa> visas = new java.util.ArrayList<>();
+    private List<Visa> visas = new ArrayList<>();
 
     @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @Builder.Default
-    private java.util.List<Permis> permis = new java.util.ArrayList<>();
+    private List<Permis> permis = new ArrayList<>();
 
     @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @Builder.Default
-    private java.util.List<HistoriqueAT> historiques = new java.util.ArrayList<>();
+    private List<HistoriqueAT> historiques = new ArrayList<>();
 
     @OneToOne(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
     private ReceptionTravaux receptionTravaux;
