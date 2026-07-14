@@ -11,6 +11,7 @@ public interface ServiceService {
     ServiceResponse update(String id, ServiceRequest request);
     ServiceResponse getById(String id);
     List<ServiceResponse> getAll();
+    List<ServiceResponse> getByZoneId(String zoneId);
     Page<ServiceResponse> search(String query, Pageable pageable);
     void delete(String id);
 }

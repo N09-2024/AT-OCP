@@ -67,6 +67,22 @@ export interface RoleFormData {
   permissionIds: string[];
 }
 
+export interface Zone {
+  id: string;
+  libelle: string;
+  description?: string;
+  active: boolean;
+}
+
+export interface Installation {
+  id: string;
+  libelle: string;
+  description?: string;
+  zoneId: string;
+  zoneLibelle?: string;
+  active: boolean;
+}
+
 // -------------------------------------------------------
 // User-related API calls
 // -------------------------------------------------------
@@ -292,5 +308,95 @@ export const AdminService = {
 
   updateSettings: async (settings: SystemSettings): Promise<void> => {
     await apiClient.put('/settings', settings);
+  },
+
+  // --- Zones (Referentiels) ---
+  listZones: async (search?: string): Promise<{ content: Zone[]; totalElements: number; totalPages: number; number: number }> => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    const res = await apiClient.get(`/zones?${params}`);
+    return {
+      ...res.data,
+      content: res.data.content.map((z: any) => ({
+        id: z.id,
+        libelle: z.libelle,
+        description: z.description,
+        active: z.active,
+      })),
+    };
+  },
+
+  getZone: async (id: string): Promise<Zone> => {
+    const res = await apiClient.get<Zone>(`/zones/${id}`);
+    return res.data;
+  },
+
+  createZone: async (data: { libelle: string; description?: string; active?: boolean }): Promise<Zone> => {
+    const res = await apiClient.post('/zones', {
+      libelle: data.libelle,
+      description: data.description,
+      active: data.active ?? true,
+    });
+    return res.data;
+  },
+
+  updateZone: async (id: string, data: { libelle?: string; description?: string; active?: boolean }): Promise<Zone> => {
+    const res = await apiClient.put(`/zones/${id}`, {
+      libelle: data.libelle,
+      description: data.description,
+      active: data.active,
+    });
+    return res.data;
+  },
+
+  deleteZone: async (id: string): Promise<void> => {
+    await apiClient.delete(`/zones/${id}`);
+  },
+
+  // --- Installations (Referentiels) ---
+  listInstallations: async (search?: string): Promise<{ content: Installation[]; totalElements: number; totalPages: number; number: number }> => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    const res = await apiClient.get(`/installations?${params}`);
+    return {
+      ...res.data,
+      content: res.data.content.map((i: any) => ({
+        id: i.id,
+        libelle: i.libelle,
+        description: i.description,
+        zoneId: i.zoneId,
+        zoneLibelle: i.zone?.libelle,
+        active: i.active,
+      })),
+    };
+  },
+
+  getInstallation: async (id: string): Promise<Installation> => {
+    const res = await apiClient.get<Installation>(`/installations/${id}`);
+    return res.data;
+  },
+
+  createInstallation: async (data: { libelle: string; description: string; zoneId: string; active?: boolean }): Promise<Installation> => {
+    const res = await apiClient.post('/installations', {
+      libelle: data.libelle,
+      description: data.description,
+      zoneId: data.zoneId,
+      active: data.active ?? true,
+    });
+    return res.data;
+  },
+
+  updateInstallation: async (id: string, data: { libelle?: string; description?: string; zoneId?: string; active?: boolean }): Promise<Installation> => {
+    const res = await apiClient.put(`/installations/${id}`, {
+      libelle: data.libelle,
+      description: data.description,
+      zoneId: data.zoneId,
+      active: data.active,
+    });
+    return res.data;
+  },
+
+  deleteInstallation: async (id: string): Promise<void> => {
+    await apiClient.delete(`/installations/${id}`);
   },
 };

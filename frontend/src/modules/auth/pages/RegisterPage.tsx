@@ -2,7 +2,7 @@ import { Typography, Paper, Box, Button, TextField, Alert, Link as MuiLink } fro
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { apiClient } from '../../../services/apiClient';
 
@@ -22,7 +22,6 @@ const registerSchema = z.object({
 type RegisterFormInputs = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const { register } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 

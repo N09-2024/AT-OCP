@@ -66,6 +66,14 @@ public class ServiceServiceImpl implements ServiceService {
     }
 
     @Override
+    public List<ServiceResponse> getByZoneId(String zoneId) {
+        log.info("Consultation des services pour la zone ID: {}", zoneId);
+        return repository.findByZoneId(zoneId).stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Page<ServiceResponse> search(String query, Pageable pageable) {
         log.info("Recherche Service avec query: {}", query);
         Specification<Service> spec = Specification.where(null);

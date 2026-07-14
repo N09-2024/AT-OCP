@@ -10,7 +10,6 @@ import {
   CheckBadgeIcon,
   ArchiveBoxIcon,
   Cog6ToothIcon,
-  WrenchScrewdriverIcon,
   ChartBarIcon,
   DocumentMagnifyingGlassIcon,
   PlusCircleIcon,
@@ -20,7 +19,6 @@ import {
   CloudArrowUpIcon,
   MagnifyingGlassCircleIcon,
   ClockIcon,
-  BellAlertIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
 
@@ -41,15 +39,31 @@ const ADMIN_MENU = {
       items: [
         { text: 'Utilisateurs', path: '/administration/utilisateurs', icon: <UserGroupIcon width={20} /> },
         { text: 'Inscriptions en attente', path: '/administration/inscriptions', icon: <UserPlusIcon width={20} />, badge: true },
-        { text: 'Rôles & Permissions', path: '/administration/roles', icon: <ShieldCheckIcon width={20} /> },
       ],
     },
     {
       title: 'Système',
       items: [
-        { text: 'Référentiels', path: '/referentiels', icon: <BookOpenIcon width={20} /> },
         { text: 'Journal d\'audit', path: '/administration/audit', icon: <DocumentMagnifyingGlassIcon width={20} /> },
         { text: 'Paramètres', path: '/administration/parametres', icon: <Cog6ToothIcon width={20} /> },
+      ],
+    },
+    {
+      title: 'Référentiels',
+      collapsible: true,
+      defaultOpen: true,
+      items: [
+        { text: 'Installations', path: '/administration/installations', icon: <BookOpenIcon width={20} /> },
+        { text: 'Zones', path: '/administration/zones', icon: <BookOpenIcon width={20} /> },
+        { text: 'Équipements', path: '/administration/equipements', icon: <BookOpenIcon width={20} /> },
+        { text: "Types d'intervention", path: '/administration/types-intervention', icon: <BookOpenIcon width={20} /> },
+        { text: 'Risques', path: '/administration/risques', icon: <BookOpenIcon width={20} /> },
+        { text: 'Mesures de prévention', path: '/administration/mesures-prevention', icon: <BookOpenIcon width={20} /> },
+        { text: 'EPI', path: '/administration/epis', icon: <BookOpenIcon width={20} /> },
+        { text: "Moyens d'accès", path: '/administration/moyens-acces', icon: <BookOpenIcon width={20} /> },
+        { text: 'Types de permis', path: '/administration/types-permis', icon: <BookOpenIcon width={20} /> },
+        { text: 'Entreprises externes', path: '/administration/entreprises', icon: <BookOpenIcon width={20} /> },
+        { text: 'Services OCP', path: '/administration/services', icon: <BookOpenIcon width={20} /> },
       ],
     },
   ],
@@ -146,9 +160,10 @@ function MenuItemRow({ text, path, icon, badge, pendingCount }: MenuItemRowProps
           borderRadius: 2,
           py: 1,
           '&.active': {
-            bgcolor: 'primary.main',
-            color: 'white',
-            '& .MuiListItemIcon-root': { color: 'white' },
+            bgcolor: '#e6f4ea',
+            color: 'primary.dark',
+            fontWeight: 600,
+            '& .MuiListItemIcon-root': { color: 'primary.dark' },
           },
         }}
       >
@@ -172,17 +187,41 @@ function MenuItemRow({ text, path, icon, badge, pendingCount }: MenuItemRowProps
   );
 }
 
-function SectionMenu({ sections, color }: { sections: typeof ADMIN_MENU['sections']; color: string }) {
+import { useState } from 'react';
+import { Collapse } from '@mui/material';
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+
+function SectionMenu({ sections }: { sections: any[] }) {
   return (
     <>
       {sections.map((section) => (
-        <Box key={section.title} sx={{ mb: 1 }}>
+        <SectionMenuRow key={section.title} section={section} />
+      ))}
+    </>
+  );
+}
+
+function SectionMenuRow({ section }: { section: any }) {
+  const [open, setOpen] = useState(section.defaultOpen ?? false);
+
+  if (section.collapsible) {
+    return (
+      <Box sx={{ mb: 1 }}>
+        <Box
+          onClick={() => setOpen(!open)}
+          sx={{
+            px: 2,
+            py: 0.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            '&:hover': { bgcolor: 'action.hover' },
+          }}
+        >
           <Typography
             variant="caption"
             sx={{
-              px: 2,
-              py: 0.5,
-              display: 'block',
               color: 'text.disabled',
               fontWeight: 700,
               letterSpacing: '0.08em',
@@ -192,14 +231,46 @@ function SectionMenu({ sections, color }: { sections: typeof ADMIN_MENU['section
           >
             {section.title}
           </Typography>
+          {open ? (
+            <ChevronDownIcon width={12} style={{ color: '#999' }} />
+          ) : (
+            <ChevronRightIcon width={12} style={{ color: '#999' }} />
+          )}
+        </Box>
+        <Collapse in={open} timeout="auto" unmountOnExit>
           <List sx={{ px: 1.5, py: 0 }}>
-            {section.items.map((item) => (
+            {section.items.map((item: any) => (
               <MenuItemRow key={item.text} {...item} />
             ))}
           </List>
-        </Box>
-      ))}
-    </>
+        </Collapse>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ mb: 1 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          px: 2,
+          py: 0.5,
+          display: 'block',
+          color: 'text.disabled',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          fontSize: 10,
+        }}
+      >
+        {section.title}
+      </Typography>
+      <List sx={{ px: 1.5, py: 0 }}>
+        {section.items.map((item: any) => (
+          <MenuItemRow key={item.text} {...item} />
+        ))}
+      </List>
+    </Box>
   );
 }
 
@@ -229,6 +300,19 @@ export default function Sidebar() {
         display: 'flex',
         flexDirection: 'column',
         overflowY: 'auto',
+        '&::-webkit-scrollbar': {
+          width: '5px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          backgroundColor: '#e5e7eb',
+          borderRadius: '4px',
+        },
+        '&::-webkit-scrollbar-thumb:hover': {
+          backgroundColor: '#d1d5db',
+        },
+        '&::-webkit-scrollbar-track': {
+          backgroundColor: 'transparent',
+        },
       }}
     >
       {/* Logo */}
@@ -265,7 +349,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <Box sx={{ flexGrow: 1, overflowY: 'auto', py: 1.5 }}>
-        <SectionMenu sections={menuConfig.sections} color={menuConfig.color} />
+        <SectionMenu sections={menuConfig.sections} />
       </Box>
 
       <Divider />
@@ -291,7 +375,7 @@ export default function Sidebar() {
             {user?.prenom?.[0]?.toUpperCase()}{user?.nom?.[0]?.toUpperCase()}
           </Box>
           <Box sx={{ overflow: 'hidden' }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2, noWrap: true }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
               {user?.prenom} {user?.nom}
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>

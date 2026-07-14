@@ -1,7 +1,9 @@
 package com.ocp.at.controller;
 
 import com.ocp.at.dto.request.ZoneRequest;
+import com.ocp.at.dto.response.ServiceResponse;
 import com.ocp.at.dto.response.ZoneResponse;
+import com.ocp.at.service.ServiceService;
 import com.ocp.at.service.ZoneService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +24,7 @@ import java.util.List;
 public class ZoneController {
 
     private final ZoneService service;
+    private final ServiceService serviceService;
 
     @GetMapping
     @Operation(summary = "Lister tous les Zone")
@@ -62,6 +65,12 @@ public class ZoneController {
     @Operation(summary = "Supprimer un(e) Zone")
     public void delete(@PathVariable String id) {
         service.delete(id);
+    }
+
+    @GetMapping("/{id}/services")
+    @Operation(summary = "Lister les services d'une zone")
+    public List<ServiceResponse> getServicesByZone(@PathVariable String id) {
+        return serviceService.getByZoneId(id);
     }
 }
 

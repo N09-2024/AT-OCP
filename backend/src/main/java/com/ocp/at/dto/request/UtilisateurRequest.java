@@ -9,8 +9,8 @@ import lombok.Data;
 @Data
 public class UtilisateurRequest {
 
-    @NotBlank(message = "Le matricule est obligatoire")
-    @Size(min = 3, max = 20, message = "Le matricule doit comporter entre 3 et 20 caractères")
+    // Matricule optionnel — auto-généré si non fourni
+    @Size(max = 20, message = "Le matricule ne doit pas dépasser 20 caractères")
     private String matricule;
 
     @NotBlank(message = "Le nom est obligatoire")

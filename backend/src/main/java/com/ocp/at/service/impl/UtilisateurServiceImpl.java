@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,15 +45,19 @@ public class UtilisateurServiceImpl implements UtilisateurService {
         if (utilisateurRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Un utilisateur avec l'email " + request.getEmail() + " existe déjà");
         }
-        if (utilisateurRepository.existsByMatricule(request.getMatricule())) {
+        // Auto-générer le matricule si non fourni
+        if (request.getMatricule() == null || request.getMatricule().isBlank()) {
+            request.setMatricule("USR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        } else if (utilisateurRepository.existsByMatricule(request.getMatricule())) {
             throw new BusinessException("Un utilisateur avec le matricule " + request.getMatricule() + " existe déjà");
         }
 
         Utilisateur utilisateur = utilisateurMapper.toEntity(request);
         utilisateur.setMotDePasse(passwordEncoder.encode(request.getMotDePasse()));
+        utilisateur.setActif(true);
 
         Utilisateur saved = utilisateurRepository.save(utilisateur);
-        logger.info("Utilisateur créé: {} ({})", saved.getEmail(), saved.getId());
+        logger.info("Utilisateur créé par admin: {} ({})", saved.getEmail(), saved.getId());
         return utilisateurMapper.toResponse(saved);
     }
 

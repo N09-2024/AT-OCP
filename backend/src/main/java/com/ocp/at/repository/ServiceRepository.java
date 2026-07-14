@@ -8,5 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ServiceRepository extends JpaRepository<Service, String>, JpaSpecificationExecutor<Service> {
     boolean existsByZoneId(String zoneId);
+    java.util.List<Service> findByZoneId(String zoneId);
 }
 

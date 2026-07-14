@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -137,8 +138,8 @@ export default function AdminDashboardPage() {
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <Chip
               label="Gérer les utilisateurs"
-              component="a"
-              href="/administration/utilisateurs"
+              component={Link}
+              to="/administration/utilisateurs"
               clickable
               variant="outlined"
               color="primary"
@@ -146,8 +147,8 @@ export default function AdminDashboardPage() {
             />
             <Chip
               label="Gérer les rôles"
-              component="a"
-              href="/administration/roles"
+              component={Link}
+              to="/administration/roles"
               clickable
               variant="outlined"
               color="primary"
@@ -155,8 +156,8 @@ export default function AdminDashboardPage() {
             />
             <Chip
               label="Paramètres système"
-              component="a"
-              href="/administration/parametres"
+              component={Link}
+              to="/administration/parametres"
               clickable
               variant="outlined"
               color="primary"
@@ -164,8 +165,8 @@ export default function AdminDashboardPage() {
             />
             <Chip
               label="Journal d'activité"
-              component="a"
-              href="/administration/audit"
+              component={Link}
+              to="/administration/audit"
               clickable
               variant="outlined"
               color="primary"
