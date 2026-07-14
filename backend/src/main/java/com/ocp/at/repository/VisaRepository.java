@@ -58,4 +58,6 @@ public interface VisaRepository extends JpaRepository<Visa, String> {
            "FROM Visa v WHERE v.autorisationTravail.id = :atId " +
            "AND (v.statut <> 'VALIDE' OR v.statut IS NULL)")
     boolean areAllVisasValidated(@Param("atId") String atId);
+
+    long countByStatut(StatutVisa statut);
 }

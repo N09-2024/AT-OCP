@@ -1,6 +1,7 @@
 package com.ocp.at.controller;
 
 import com.ocp.at.dto.request.LoginRequest;
+import com.ocp.at.dto.request.RegisterRequest;
 import com.ocp.at.dto.request.TokenRefreshRequest;
 import com.ocp.at.dto.response.JwtResponse;
 import com.ocp.at.dto.response.TokenRefreshResponse;
@@ -60,6 +61,16 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> logout(@RequestBody TokenRefreshRequest request) {
         authService.logout(request.getRefreshToken());
         return ResponseEntity.ok(Map.of("message", "Déconnexion réussie"));
+    }
+
+    @PostMapping("/register")
+    @Operation(summary = "Inscription", description = "Permet à un nouvel utilisateur de créer un compte. Le rôle DEMANDEUR est attribué par défaut. Un admin doit approuver le compte.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Inscription réussie, en attente de validation"),
+        @ApiResponse(responseCode = "400", description = "Données invalides ou email déjà existant")
+    })
+    public ResponseEntity<UtilisateurResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(authService.register(request));
     }
 
     @GetMapping("/me")

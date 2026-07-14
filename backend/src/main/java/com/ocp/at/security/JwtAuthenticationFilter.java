@@ -15,7 +15,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    
+
     @Autowired
     private JwtUtils jwtUtils;
 
@@ -45,6 +45,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        // Skip JWT processing for public auth endpoints (login, register, refresh-token, logout)
+        return path.startsWith("/api/auth/");
     }
 
     private String parseJwt(HttpServletRequest request) {

@@ -13,4 +13,5 @@ public interface PermissionRepository extends JpaRepository<Permission, String> 
     Optional<Permission> findByNom(String nom);
     boolean existsByNom(String nom);
     Page<Permission> findByNomContainingIgnoreCase(String nom, Pageable pageable);
+    java.util.List<Permission> findByNomIn(java.util.Collection<String> noms);
 }

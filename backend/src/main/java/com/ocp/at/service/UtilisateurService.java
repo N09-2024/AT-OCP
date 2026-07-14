@@ -7,6 +7,7 @@ import com.ocp.at.dto.response.UtilisateurResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Set;
 
 public interface UtilisateurService {
@@ -21,4 +22,7 @@ public interface UtilisateurService {
     Set<RoleResponse> getRoles(String id);
     UtilisateurResponse affecterRole(String id, String roleId);
     UtilisateurResponse retirerRole(String id, String roleId);
+    List<UtilisateurResponse> listerEnAttente();
+    UtilisateurResponse approuverInscription(String id);
+    void rejeterInscription(String id);
 }

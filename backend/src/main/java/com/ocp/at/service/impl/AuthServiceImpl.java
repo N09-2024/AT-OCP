@@ -1,17 +1,20 @@
 package com.ocp.at.service.impl;
 
 import com.ocp.at.dto.request.LoginRequest;
+import com.ocp.at.dto.request.RegisterRequest;
 import com.ocp.at.dto.request.TokenRefreshRequest;
 import com.ocp.at.dto.response.JwtResponse;
 import com.ocp.at.dto.response.TokenRefreshResponse;
 import com.ocp.at.dto.response.UtilisateurResponse;
 import com.ocp.at.entity.RefreshToken;
+import com.ocp.at.entity.Role;
 import com.ocp.at.entity.Utilisateur;
 import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.exception.UnauthorizedException;
 import com.ocp.at.mapper.UtilisateurMapper;
 import com.ocp.at.repository.RefreshTokenRepository;
+import com.ocp.at.repository.RoleRepository;
 import com.ocp.at.repository.UtilisateurRepository;
 import com.ocp.at.security.JwtUtils;
 import com.ocp.at.security.UserDetailsImpl;
@@ -49,6 +52,8 @@ public class AuthServiceImpl implements AuthService {
     private final UtilisateurRepository utilisateurRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UtilisateurMapper utilisateurMapper;
+    private final RoleRepository roleRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Value("${app.jwt.refresh-expiration-ms:604800000}")
     private long refreshExpirationMs;
@@ -184,6 +189,41 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
+    public UtilisateurResponse register(RegisterRequest request) {
+        // Vérifier si l'email existe déjà
+        if (utilisateurRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException("Un compte avec cet email existe déjà");
+        }
+
+        // Récupérer le rôle DEMANDEUR par défaut
+        Role roleDemandeur = roleRepository.findByNom("DEMANDEUR")
+                .orElseThrow(() -> new RuntimeException("Rôle DEMANDEUR introuvable"));
+
+        // Générer un matricule automatique
+        String matricule = "USER-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        // Créer l'utilisateur
+        Utilisateur utilisateur = Utilisateur.builder()
+                .matricule(matricule)
+                .prenom(request.getPrenom())
+                .nom(request.getNom())
+                .email(request.getEmail())
+                .motDePasse(passwordEncoder.encode(request.getMotDePasse()))
+                .actif(false) // Compte inactif en attendant validation
+                .enAttenteValidation(true) // En attente de validation par l'admin
+                .roles(java.util.Set.of(roleDemandeur))
+                .build();
+
+        utilisateurRepository.save(utilisateur);
+        logger.info("Nouvelle inscription en attente de validation: {} <{}>", 
+                request.getPrenom() + " " + request.getNom(), request.getEmail());
+
+        return utilisateurMapper.toResponse(utilisateur);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public UtilisateurResponse getCurrentUser(String email) {
         Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable: " + email));

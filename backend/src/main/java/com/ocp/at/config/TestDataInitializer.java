@@ -55,7 +55,13 @@ public class TestDataInitializer {
             new String[]{"MANAGE_REFERENTIALS", "Gérer les référentiels"},
             new String[]{"VIEW_AUDIT", "Consulter les logs d'audit"},
             new String[]{"EXPORT_PDF", "Exporter une AT en PDF"},
-            new String[]{"UPLOAD_FILES", "Uploader des fichiers"}
+            new String[]{"UPLOAD_FILES", "Uploader des fichiers"},
+            new String[]{"VIEW_PERMIS", "Consulter les permis"},
+            new String[]{"CREATE_PERMIS", "Créer un permis"},
+            new String[]{"EDIT_PERMIS", "Modifier un permis"},
+            new String[]{"DELETE_PERMIS", "Supprimer un permis"},
+            new String[]{"UPLOAD_PERMIS", "Uploader un fichier de permis"},
+            new String[]{"ANALYSE_PERMIS", "Analyser un permis avec l'IA"}
         );
 
         for (String[] perm : permissions) {
@@ -71,16 +77,30 @@ public class TestDataInitializer {
             new String[]{"ADMIN", "Administrateur système"},
             new String[]{"DEMANDEUR", "Demandeur d'autorisation de travail"},
             new String[]{"RESPONSABLE_OCP", "Responsable OCP validateur"},
-            new String[]{"RESPONSABLE_ENTREPRISE", "Responsable d'entreprise externe"},
-            new String[]{"VERIFICATEUR", "Vérificateur de conformité"}
+            new String[]{"RESPONSABLE_ENTREPRISE", "Responsable d'entreprise externe"}
         );
 
         for (String[] roleData : roles) {
             if (!roleRepository.existsByNom(roleData[0])) {
                 Set<Permission> perms = new HashSet<>();
-                if ("ADMIN".equals(roleData[0])) {
-                    perms.addAll(permissionRepository.findAll());
+
+                switch (roleData[0]) {
+                    case "ADMIN" ->
+                        perms.addAll(permissionRepository.findAll());
+                    case "DEMANDEUR" ->
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "READ_AT", "CREATE_AT", "EDIT_AT", "SUBMIT_AT", "CLOSE_AT", "UPLOAD_FILES"
+                        )).forEach(perms::add);
+                    case "RESPONSABLE_OCP" ->
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "READ_AT", "VALIDATE_AT", "REJECT_AT", "SIGN_AT", "RECEIVE_AT", "VIEW_PERMIS"
+                        )).forEach(perms::add);
+                    case "RESPONSABLE_ENTREPRISE" ->
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "VIEW_PERMIS", "UPLOAD_PERMIS", "ANALYSE_PERMIS", "CREATE_PERMIS"
+                        )).forEach(perms::add);
                 }
+
                 roleRepository.save(Role.builder()
                         .nom(roleData[0]).description(roleData[1]).permissions(perms).build());
             }

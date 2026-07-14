@@ -1,297 +1,333 @@
-# AT-OCP - Autorisation de Travail
+# OCP AT System — Système de Gestion des Autorisations de Travail
 
-![Java](https://img.shields.io/badge/Java-21-blue)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.x-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
+![Java](https://img.shields.io/badge/Java-17-blue?logo=openjdk)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen?logo=springboot)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
+![MUI](https://img.shields.io/badge/MUI-v9-007FFF?logo=mui)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Système de gestion des Autorisations de Travail pour OCP.
+> Application industrielle complète de gestion des Autorisations de Travail (AT) développée pour **OCP Group**.  
+> Backend Spring Boot **✅ terminé** — Frontend React **🚧 en développement actif**.
+
+---
 
 ## 📋 Table des Matières
 
 - [Description](#-description)
-- [Fonctionnalités](#-fonctionnalités)
-- [Architecture](#-architecture)
+- [Stack Technique](#-stack-technique)
+- [Architecture du Projet](#-architecture-du-projet)
 - [Prérequis](#-prérequis)
-- [Installation](#-installation)
-- [Démarrage Rapide](#-démarrage-rapide)
+- [Installation & Démarrage](#-installation--démarrage)
+  - [Backend (Spring Boot)](#backend-spring-boot)
+  - [Frontend (React)](#frontend-react)
+  - [Avec Docker](#avec-docker)
 - [API REST](#-api-rest)
-- [Déploiement](#-déploiement)
-- [CI/CD](#-cicd)
+- [Modules Implémentés](#-modules-implémentés)
 - [Contribution](#-contribution)
 - [Licence](#-licence)
 
+---
+
 ## 📝 Description
 
-AT-OCP est une application Spring Boot permettant de gérer le cycle de vie complet des autorisations de travail :
-- Création et gestion des demandes d'autorisation
-- Workflow de validation multi-niveaux
-- Gestion des visas et approbations
-- Suivi des travaux et réceptions
-- Génération de rapports PDF
+**OCP AT System** est un système full-stack de gestion du cycle de vie complet des Autorisations de Travail :
 
-## ✨ Fonctionnalités
+- 📄 Création et gestion des **Demandes d'Intervention (DI / OT / BT)**
+- 🔄 **Workflow de validation multi-niveaux** (Brouillon → Soumise → Analyse → Autorisation → En cours → Réception → Archivage)
+- ✍️ **Signatures manuscrites numériques** (via React Signature Canvas)
+- 🛡️ Gestion des **permis** (feu, fouille, espace confiné, travail en hauteur…)
+- 👁️ **Visites préalables** de site avec géolocalisation et photos
+- ⚠️ **Analyse des risques** (risques, mesures, EPI, moyens d'accès)
+- ✅ **Validation & Visas** multi-rôles avec audit trail
+- 📦 **Archivage PDF** avec QR Code et recherche avancée
+- 📊 **Tableaux de bord** adaptés par rôle (Admin, Responsable OCP, HSE, Demandeur…)
+- 🔔 **Notifications** temps réel
 
-### Gestion des Autorisations de Travail
-- ✅ Création, modification, suppression d'AT
-- ✅ Workflow d'approbation configurable
-- ✅ Numérotation automatique
-- ✅ Verrouillage optimiste pour édition concurrente
-- ✅ Sauvegarde automatique (auto-save)
+---
 
-### Workflow
-- ✅ États : Brouillon → Soumise → Validée → En Cours → Clôturée
-- ✅ Validation multi-niveaux avec visas
-- ✅ Rejet avec motif obligatoire
-- ✅ Règles métier configurables
+## 🛠 Stack Technique
 
-### Sécurité
-- ✅ Authentification JWT
-- ✅ Gestion des rôles et permissions
-- ✅ Audit trail complet
-- ✅ Protection contre les attaques courantes
+### Backend
 
-### Intégrations
-- ✅ Génération de PDF
-- ✅ Export Excel
-- ✅ API REST complète
-- ✅ Swagger UI (documentation)
+| Composant | Technologie |
+|-----------|-------------|
+| Langage | Java 17 |
+| Framework | Spring Boot 3 |
+| Sécurité | Spring Security + JWT |
+| ORM | Spring Data JPA / Hibernate |
+| Base de données | PostgreSQL 16 |
+| Migration DB | Flyway |
+| Mapping | MapStruct |
+| Documentation API | Swagger / OpenAPI 3 |
+| Architecture | REST, RBAC |
+| Tests | JUnit 5, Mockito |
 
-## 🏗 Architecture
+### Frontend
+
+| Composant | Technologie |
+|-----------|-------------|
+| Framework | React 19 + TypeScript |
+| Bundler | Vite |
+| UI Library | Material UI (MUI v9) |
+| Routage | React Router v7 |
+| Requêtes HTTP | Axios |
+| Data Fetching | TanStack React Query |
+| Formulaires | React Hook Form + Zod |
+| État global | Zustand |
+| Graphiques | Recharts |
+| Signatures | React Signature Canvas |
+| Visualisation PDF | React PDF Viewer |
+| Animations | Framer Motion |
+| Icônes | Heroicons |
+
+---
+
+## 🏗 Architecture du Projet
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Frontend (à venir)                      │
-└──────────────────────────┬────────────────────────────────────┘
-                           │ REST API
-┌──────────────────────────▼────────────────────────────────────┐
-│                      Spring Boot 3.2                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │
-│  │ Controllers │  │  Services   │  │      Security        │   │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘   │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │
-│  │   Mappers   │  │  Repositor  │  │     Validators      │   │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘   │
-└──────────────────────────┬────────────────────────────────────┘
-                           │
-┌──────────────────────────▼────────────────────────────────────┐
-│                    PostgreSQL 16                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
-│  │    AT    │  │  Visa    │  │ Utilisat │  │ Workflow │     │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘     │
-└───────────────────────────────────────────────────────────────┘
+ocp-at-system/
+├── backend/                      # Spring Boot 3 (Java 17)
+│   └── src/main/java/com/ocp/at/
+│       ├── controller/           # REST Controllers
+│       ├── service/              # Logique métier
+│       ├── repository/           # Spring Data JPA
+│       ├── entity/               # Entités JPA
+│       ├── dto/                  # Data Transfer Objects
+│       ├── mapper/               # MapStruct
+│       └── security/             # JWT, RBAC
+│
+├── frontend/                     # React 19 + TypeScript
+│   └── src/
+│       ├── app/                  # Providers (ThemeProvider, QueryClient…)
+│       ├── assets/               # Images, logos
+│       ├── components/           # Composants génériques réutilisables
+│       │   ├── layout/           #   Sidebar, Topbar
+│       │   └── dashboard/        #   StatCard, AtTable, Charts…
+│       ├── constants/            # Constantes applicatives
+│       ├── hooks/                # Hooks personnalisés
+│       ├── layouts/              # MainLayout, AuthLayout
+│       ├── modules/              # Modules métier (1 dossier = 1 domaine)
+│       │   ├── auth/             #   Connexion, profil
+│       │   ├── dashboard/        #   Tableaux de bord par rôle
+│       │   ├── administration/   #   Utilisateurs, rôles, permissions
+│       │   ├── referentiels/     #   Zones, installations, équipements…
+│       │   ├── documents/        #   DI, OT, BT
+│       │   ├── visites/          #   Visites préalables
+│       │   ├── analyses/         #   Analyse des risques
+│       │   ├── autorisations/    #   AT (workflow complet)
+│       │   ├── permis/           #   Gestion des permis
+│       │   ├── visas/            #   Validations & signatures
+│       │   ├── receptions/       #   Réceptions des travaux
+│       │   ├── archives/         #   Archivage & rapports
+│       │   └── rapports/         #   Statistiques & exports
+│       ├── routes/               # Routage & routes protégées (RBAC)
+│       ├── services/             # Clients API (AuthService, ATService…)
+│       ├── store/                # Zustand (authStore, uiStore…)
+│       ├── theme/                # Thème MUI (couleurs OCP, typographie)
+│       ├── types/                # Interfaces TypeScript
+│       └── utils/                # Fonctions utilitaires
+│
+├── docs/                         # Documentation API
+├── docker-compose.yml
+└── README.md
 ```
 
-### Stack Technique
-
-| Composant | Technology |
-|-----------|------------|
-| Backend | Java 21, Spring Boot 3.2 |
-| Database | PostgreSQL 16 |
-| ORM | Spring Data JPA, Hibernate |
-| Migration | Flyway |
-| Security | Spring Security, JWT |
-| Testing | JUnit 5, Mockito, JaCoCo |
-| API Docs | SpringDoc OpenAPI (Swagger) |
-| PDF | iText, OpenPDF |
-| Docker | Multi-stage Dockerfile |
+---
 
 ## 📦 Prérequis
 
-- **Java**: 21 ou supérieur
-- **Maven**: 3.9+
-- **PostgreSQL**: 16+
-- **Docker**: 20.10+ (optionnel)
-- **Docker Compose**: 2.0+ (optionnel)
+| Outil | Version |
+|-------|---------|
+| Java | 17+ |
+| Maven | 3.9+ |
+| Node.js | 20+ |
+| npm | 10+ |
+| PostgreSQL | 16+ |
+| Docker (optionnel) | 20.10+ |
 
-## 🚀 Installation
+---
 
-### 1. Cloner le Repository
+## 🚀 Installation & Démarrage
 
-```bash
-git clone https://github.com/OCP-N09-2024/AT-OCP.git
-cd AT-OCP/AT-OCP
-```
-
-### 2. Configuration de la Base de Données
+### Backend (Spring Boot)
 
 ```bash
-# Connexion à PostgreSQL
+# 1. Créer la base de données PostgreSQL
 psql -U postgres -c "CREATE DATABASE at_ocp_db;"
 psql -U postgres -c "CREATE USER at_ocp_user WITH PASSWORD 'your_password';"
 psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE at_ocp_db TO at_ocp_user;"
-```
 
-### 3. Configuration de l'Application
-
-```bash
-# Copier le fichier de configuration
-cp backend/src/main/resources/application.yml.example backend/src/main/resources/application.yml
-
-# Éditer les configurations
-nano backend/src/main/resources/application.yml
-```
-
-### 4. Variables d'Environnement (optionnel)
-
-```bash
+# 2. Configurer les variables d'environnement (ou application.yml)
 export DB_HOST=localhost
 export DB_PORT=5432
 export DB_NAME=at_ocp_db
 export DB_USERNAME=at_ocp_user
 export DB_PASSWORD=your_password
-export JWT_SECRET=your-secret-key
+export JWT_SECRET=your-very-secret-key
+
+# 3. Lancer le backend
+cd backend
+mvn spring-boot:run
 ```
 
-## 🏃 Démarrage Rapide
+> API disponible sur `http://localhost:8080`  
+> Swagger UI : `http://localhost:8080/swagger-ui.html`
 
-### Mode Développement
+---
+
+### Frontend (React)
 
 ```bash
-cd backend
+# 1. Accéder au dossier frontend
+cd frontend
 
-# Compiler et exécuter
-mvn spring-boot:run
+# 2. Installer les dépendances
+npm install
 
-# Ou compiler le JAR et exécuter
-mvn clean package -DskipTests
-java -jar target/at-backend-*.jar
+# 3. Lancer le serveur de développement
+npm run dev
 ```
 
-L'application sera accessible sur : http://localhost:8080
+> Application disponible sur `http://localhost:5173`
+
+```bash
+# Build de production
+npm run build
+```
+
+---
 
 ### Avec Docker
 
 ```bash
-# Configuration
+# Copier et configurer les variables d'environnement
 cp .env.example .env
 # Éditer .env avec vos valeurs
 
-# Démarrer
-make up
+# Démarrer tous les services (Backend + DB)
+docker-compose up -d
 
 # Voir les logs
-make logs-backend
+docker-compose logs -f backend
 
 # Arrêter
-make down
+docker-compose down
 ```
 
-### Avec Docker Compose Direct
-
-```bash
-docker-compose up -d
-```
+---
 
 ## 📡 API REST
 
-### Points d'Accès Principaux
+### Endpoints principaux
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| POST | `/api/auth/login` | Authentification |
-| GET | `/api/autorisations-travail` | Liste des AT |
-| POST | `/api/autorisations-travail` | Créer une AT |
-| GET | `/api/autorisations-travail/{id}` | Détails AT |
-| PUT | `/api/autorisations-travail/{id}` | Modifier AT |
-| POST | `/api/at/{id}/submit` | Soumettre AT |
-| POST | `/api/at/{id}/validate` | Valider AT |
-| POST | `/api/at/{id}/reject` | Rejeter AT |
-| POST | `/api/at/{id}/close` | Clôturer AT |
-
-### Documentation Swagger
-
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **OpenAPI JSON**: http://localhost:8080/v3/api-docs
+| `POST` | `/api/auth/login` | Authentification (JWT) |
+| `GET` | `/api/auth/me` | Profil utilisateur connecté |
+| `GET` | `/api/autorisations-travail` | Liste paginée des AT |
+| `POST` | `/api/autorisations-travail` | Créer une AT |
+| `GET` | `/api/autorisations-travail/{id}` | Détails d'une AT |
+| `PUT` | `/api/autorisations-travail/{id}` | Modifier une AT |
+| `POST` | `/api/at/{id}/submit` | Soumettre une AT |
+| `POST` | `/api/at/{id}/validate` | Valider une AT |
+| `POST` | `/api/at/{id}/reject` | Rejeter une AT |
+| `GET` | `/api/statistiques/dashboard` | KPI du tableau de bord |
 
 ### Authentification
 
 ```bash
-# Login
+# Connexion
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@ocp.ma","password":"password"}'
+  -d '{"email":"user@ocp.ma","password":"password123"}'
 
-# Utiliser le token
-curl -X GET http://localhost:8080/api/autorisations-travail \
+# Utiliser le token retourné
+curl http://localhost:8080/api/autorisations-travail \
   -H "Authorization: Bearer <token>"
 ```
 
-## 🚢 Déploiement
+---
 
-### Docker
+## 📦 Modules Implémentés
 
-Voir [DOCKER.md](DOCKER.md) pour les instructions détaillées.
+| # | Module | Backend | Frontend |
+|---|--------|---------|----------|
+| 1 | Authentification & Sécurité (JWT, RBAC) | ✅ | ✅ |
+| 2 | Référentiels (Zones, Installations, EPI…) | ✅ | 🚧 |
+| 3 | Documents d'Intervention (DI / OT / BT) | ✅ | 🚧 |
+| 4 | Visites Préalables | ✅ | 🚧 |
+| 5 | Analyse des Risques | ✅ | 🚧 |
+| 6 | Autorisations de Travail (Workflow) | ✅ | 🚧 |
+| 7 | Gestion des Permis (PDF, IA) | ✅ | 🚧 |
+| 8 | Validations & Visas (Signature manuscrite) | ✅ | 🚧 |
+| 9 | Réceptions des Travaux | ✅ | 🚧 |
+| 10 | Archives & Rapports (QR Code, PDF) | ✅ | 🚧 |
 
-```bash
-# Build image
-docker build -t at-ocp-backend ./backend
+> ✅ Terminé &nbsp;|&nbsp; 🚧 En développement &nbsp;|&nbsp; ⬜ À venir
 
-# Run avec docker-compose
-docker-compose up -d
-```
+---
 
-### Production
+## 🎨 Design System
 
-1. Configurer les secrets GitHub (voir [CI/CD](#cicd))
-2. Modifier `docker-compose.prod.yml` si nécessaire
-3. Configurer le reverse proxy (Nginx)
-4. Configurer SSL/TLS
+Le frontend respecte la **charte graphique OCP** :
 
-## 🔄 CI/CD
+| Token | Valeur |
+|-------|--------|
+| Primary | `#009A44` (OCP Green) |
+| Dark Green | `#006B3C` |
+| Light Green | `#EAF7EF` |
+| Background | `#F7F9FB` |
+| Warning | `#F59E0B` |
+| Danger | `#DC2626` |
+| Typographie | Inter (Google Fonts) |
+| Border Radius | 16px |
 
-### Workflows GitHub Actions
-
-| Workflow | Déclencheur | Description |
-|----------|-------------|-------------|
-| `ci.yml` | push, PR | Build, Test, Security |
-| `cd.yml` | push main/develop | Déploiement |
-| `pr.yml` | PR | Validation complète |
-
-### Configuration Requise
-
-1. **Secrets GitHub**:
-   - `DOCKER_USERNAME` / `DOCKER_PASSWORD`
-   - `SONAR_TOKEN`
-   - `SLACK_WEBHOOK_URL`
-   - Clés SSH pour déploiement
-
-2. **Environnements GitHub**:
-   - `staging`
-   - `production`
+---
 
 ## 🤝 Contribution
 
 1. Fork le projet
-2. Créer une branche (`git checkout -b feature/amazing-feature`)
-3. Commit (`git commit -m 'feat: add amazing feature'`)
-4. Push (`git push origin feature/amazing-feature`)
-5. Ouvrir une Pull Request
+2. Créer une branche (`git checkout -b feature/ma-fonctionnalite`)
+3. Commit (`git commit -m 'feat: ajout de ma fonctionnalité'`)
+4. Push (`git push origin feature/ma-fonctionnalite`)
+5. Ouvrir une **Pull Request**
 
-### Standards de Code
+### Conventions
 
-- Respecter les conventions Java (Google Style)
-- Ajouter des tests pour les nouvelles fonctionnalités
-- Mettre à jour la documentation
-- Utiliser des commits sémantiques
+- **Backend** : Google Java Style Guide, commits sémantiques
+- **Frontend** : ESLint + Prettier, TypeScript strict mode
+- Ajouter des tests pour toute nouvelle fonctionnalité
+- Documenter les nouveaux endpoints dans `docs/API.md`
 
-## 📚 Documentation Additionnelle
+---
 
-- [AUDIT_REPORT.md](AUDIT_REPORT.md) - Rapport d'audit technique
-- [DOCKER.md](DOCKER.md) - Guide Docker
-- [API Documentation](http://localhost:8080/swagger-ui.html) - Swagger UI
+## 📚 Documentation
+
+- [docs/API.md](docs/API.md) — Documentation des endpoints REST
+- [DOCKER.md](DOCKER.md) — Guide de déploiement Docker
+- [AUDIT_REPORT.md](AUDIT_REPORT.md) — Rapport d'audit technique
+- [CHANGELOG.md](CHANGELOG.md) — Historique des versions
+- Swagger UI : `http://localhost:8080/swagger-ui.html`
+
+---
 
 ## 📄 Licence
 
 Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
+---
+
 ## 👥 Équipe
 
-- **Maintainers**: OCP Dev Team
-- **Contact**: dev@ocp.ma
+- **Maintainers** : OCP Dev Team
+- **Contact** : dev@ocp.ma
 
 ---
 
 <p align="center">
-  Développé avec ❤️ par OCP
+  Développé avec ❤️ pour <strong>OCP Group</strong>
+  <br/>
+  <img src="https://img.shields.io/badge/OCP-Successful%20Together-009A44?style=for-the-badge" alt="OCP Successful Together"/>
 </p>

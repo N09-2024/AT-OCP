@@ -1,40 +1,35 @@
--- Ajout des colonnes pour les Permis
-ALTER TABLE permis
-ADD COLUMN est_obligatoire BOOLEAN DEFAULT false,
-ADD COLUMN commentaire TEXT;
+-- ============================================================
+-- V8__module_7_gestion_permis.sql
+-- Insertion des rôles de base et permissions de gestion de permis
+-- Note: Colonnes déjà dans V1 (est_obligatoire, commentaire, uploaded_by, json_extraction)
+-- ============================================================
 
--- Ajout de la colonne pour FichierJoint
-ALTER TABLE fichiers_joints
-ADD COLUMN uploaded_by VARCHAR(255);
+-- 1. Insérer les rôles de base
+INSERT INTO roles (id, nom, description) VALUES
+    ('role_1', 'ADMIN', 'Administrateur système'),
+    ('role_2', 'SUPERVISEUR', 'Superviseur des travaux'),
+    ('role_3', 'RESPONSABLE_OCP', 'Responsable OCP'),
+    ('role_4', 'CHEF_DE_CHANTIER', 'Chef de chantier externe')
+ON CONFLICT (nom) DO NOTHING;
 
--- Ajout de la contrainte unique sur permis_id pour garantir la relation 1:1
-ALTER TABLE fichiers_joints
-ADD CONSTRAINT uk_fichiers_joints_permis UNIQUE (permis_id);
+-- 2. Insérer les permissions
+INSERT INTO permissions (id, nom, description) VALUES
+    ('perm_upload_permis',   'UPLOAD_PERMIS',   'Uploader un fichier de permis'),
+    ('perm_view_permis',     'VIEW_PERMIS',     'Consulter les permis'),
+    ('perm_edit_permis',     'EDIT_PERMIS',     'Modifier les permis'),
+    ('perm_delete_permis',   'DELETE_PERMIS',   'Supprimer les permis'),
+    ('perm_analyse_permis',  'ANALYSE_PERMIS',  'Lancer l''analyse IA des permis')
+ON CONFLICT (nom) DO NOTHING;
 
--- Ajout de la colonne pour AnalyseIA
-ALTER TABLE analyses_ia
-ADD COLUMN json_extraction TEXT;
-
--- Ajout de la contrainte unique sur permis_id pour garantir la relation 1:1
-ALTER TABLE analyses_ia
-ADD CONSTRAINT uk_analyses_ia_permis UNIQUE (permis_id);
-
--- Insertion des nouvelles permissions
-INSERT INTO permissions (id, nom, description) VALUES 
-('perm_upload_permis', 'UPLOAD_PERMIS', 'Uploader un fichier de permis'),
-('perm_view_permis', 'VIEW_PERMIS', 'Consulter les permis'),
-('perm_edit_permis', 'EDIT_PERMIS', 'Modifier les permis'),
-('perm_delete_permis', 'DELETE_PERMIS', 'Supprimer les permis'),
-('perm_analyse_permis', 'ANALYSE_PERMIS', 'Lancer l''analyse IA des permis');
-
--- Affectation des permissions aux roles ADMIN (role_1) et SUPERVISEUR (role_2)
-INSERT INTO role_permissions (role_id, permission_id) VALUES 
-('role_1', 'perm_upload_permis'),
-('role_1', 'perm_view_permis'),
-('role_1', 'perm_edit_permis'),
-('role_1', 'perm_delete_permis'),
-('role_1', 'perm_analyse_permis'),
-('role_2', 'perm_upload_permis'),
-('role_2', 'perm_view_permis'),
-('role_2', 'perm_edit_permis'),
-('role_2', 'perm_analyse_permis');
+-- 3. Attribuer aux rôles
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+    ('role_1', 'perm_upload_permis'),
+    ('role_1', 'perm_view_permis'),
+    ('role_1', 'perm_edit_permis'),
+    ('role_1', 'perm_delete_permis'),
+    ('role_1', 'perm_analyse_permis'),
+    ('role_2', 'perm_upload_permis'),
+    ('role_2', 'perm_view_permis'),
+    ('role_2', 'perm_edit_permis'),
+    ('role_2', 'perm_analyse_permis')
+ON CONFLICT DO NOTHING;

@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -108,5 +109,24 @@ public class UtilisateurController {
     @Operation(summary = "Retirer un rôle d'un utilisateur")
     public ResponseEntity<UtilisateurResponse> retirerRole(@PathVariable String id, @PathVariable String roleId) {
         return ResponseEntity.ok(utilisateurService.retirerRole(id, roleId));
+    }
+
+    @GetMapping("/pending")
+    @Operation(summary = "Lister les inscriptions en attente", description = "Retourne la liste des utilisateurs en attente de validation par l'admin")
+    public ResponseEntity<List<UtilisateurResponse>> listerEnAttente() {
+        return ResponseEntity.ok(utilisateurService.listerEnAttente());
+    }
+
+    @PatchMapping("/{id}/approve")
+    @Operation(summary = "Approuver une inscription", description = "Valide l'inscription d'un utilisateur et active son compte")
+    public ResponseEntity<UtilisateurResponse> approuverInscription(@PathVariable String id) {
+        return ResponseEntity.ok(utilisateurService.approuverInscription(id));
+    }
+
+    @DeleteMapping("/{id}/reject")
+    @Operation(summary = "Rejeter une inscription", description = "Rejette et supprime une inscription en attente")
+    public ResponseEntity<Void> rejeterInscription(@PathVariable String id) {
+        utilisateurService.rejeterInscription(id);
+        return ResponseEntity.noContent().build();
     }
 }

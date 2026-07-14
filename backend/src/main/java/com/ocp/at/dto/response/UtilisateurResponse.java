@@ -23,6 +23,7 @@ public class UtilisateurResponse {
     private boolean actif;
     private boolean compteVerrouille;
     private boolean motDePasseExpire;
+    private boolean enAttenteValidation;
     private LocalDateTime dateCreation;
     private LocalDateTime dateModification;
     private LocalDateTime derniereConnexion;

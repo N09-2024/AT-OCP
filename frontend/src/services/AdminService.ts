@@ -1,0 +1,296 @@
+import { apiClient } from './apiClient';
+import type { UtilisateurResponse } from './AuthService';
+
+// -------------------------------------------------------
+// Types for Admin module
+// -------------------------------------------------------
+export interface AuditLogEntry {
+  id: string;
+  date: string;
+  action: string;
+  resultat: string;
+  adresseIP: string;
+  navigateur: string;
+  utilisateur?: {
+    id: string;
+    nom: string;
+    prenom: string;
+    email: string;
+  };
+}
+
+export type AuditLogEntryFlat = {
+  id: string;
+  dateCreation: string;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  utilisateur: string;
+  details: string;
+};
+
+export interface SystemSettings {
+  maintenanceMode: boolean;
+  sessionTimeoutMinutes: number;
+  maxLoginAttempts: number;
+  inscriptionOuverte: boolean;
+  emailNotifications: boolean;
+  retentionDays: number;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalRoles: number;
+  pendingActions: number;
+  recentLogins: number;
+}
+
+export interface RoleResponse {
+  id: string;
+  nom: string;
+  description?: string;
+  permissionsCount?: number;
+  usersCount?: number;
+}
+
+export interface PermissionResponse {
+  id: string;
+  code: string;
+  description: string;
+  categorie: string;
+}
+
+export interface RoleFormData {
+  nom: string;
+  description: string;
+  permissionIds: string[];
+}
+
+// -------------------------------------------------------
+// User-related API calls
+// -------------------------------------------------------
+const mapUserFromApi = (u: any): any => ({
+  id: u.id,
+  email: u.email,
+  prenom: u.prenom,
+  nom: u.nom,
+  roles: u.roles || [],
+  actived: u.actif,
+  derniereConnexion: u.derniereConnexion,
+});
+
+export const AdminService = {
+  // --- Users ---
+  listUsers: async (search?: string, page = 0, size = 20) => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    params.set('page', String(page));
+    params.set('size', String(size));
+    const res = await apiClient.get(`/users?${params}`);
+    return {
+      ...res.data,
+      content: res.data.content.map(mapUserFromApi),
+    };
+  },
+
+  getUser: async (id: string) => {
+    const res = await apiClient.get<UtilisateurResponse>(`/users/${id}`);
+    return mapUserFromApi(res.data);
+  },
+
+  createUser: async (data: any) => {
+    const res = await apiClient.post('/users', {
+      email: data.email,
+      motDePasse: data.motDePasse,
+      prenom: data.prenom,
+      nom: data.nom,
+    });
+    return res.data;
+  },
+
+  updateUser: async (id: string, data: any) => {
+    const payload: any = {
+      email: data.email,
+      prenom: data.prenom,
+      nom: data.nom,
+    };
+    if (data.motDePasse) {
+      payload.motDePasse = data.motDePasse;
+    }
+    const res = await apiClient.put(`/users/${id}`, payload);
+    return res.data;
+  },
+
+  deleteUser: async (id: string) => {
+    await apiClient.delete(`/users/${id}`);
+  },
+
+  activateUser: async (id: string) => {
+    const res = await apiClient.patch(`/users/${id}/activate`);
+    return res.data;
+  },
+
+  deactivateUser: async (id: string) => {
+    const res = await apiClient.patch(`/users/${id}/deactivate`);
+    return res.data;
+  },
+
+  unlockUser: async (id: string) => {
+    const res = await apiClient.patch(`/users/${id}/unlock`);
+    return res.data;
+  },
+
+  assignRole: async (userId: string, roleId: string) => {
+    const res = await apiClient.post(`/users/${userId}/roles`, { roleId });
+    return res.data;
+  },
+
+  removeRole: async (userId: string, roleId: string) => {
+    const res = await apiClient.delete(`/users/${userId}/roles/${roleId}`);
+    return res.data;
+  },
+
+  // --- Roles ---
+  listRoles: async (search?: string) => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    const res = await apiClient.get(`/roles?${params}`);
+    return {
+      ...res.data,
+      content: res.data.content.map((r: any) => ({
+        id: r.id,
+        nom: r.nom,
+        description: r.description,
+        permissionsCount: r.permissions?.length || 0,
+        usersCount: r.usersCount || 0,
+      })),
+    };
+  },
+
+  getRole: async (id: string) => {
+    const res = await apiClient.get<RoleResponse>(`/roles/${id}`);
+    const role = res.data;
+    // Get permissions for this role
+    const permRes = await apiClient.get<PermissionResponse[]>(`/roles/${id}/permissions`);
+    return {
+      nom: role.nom,
+      description: role.description || '',
+      permissionIds: permRes.data.map((p) => p.id),
+    };
+  },
+
+  createRole: async (data: RoleFormData) => {
+    const res = await apiClient.post('/roles', {
+      nom: data.nom,
+      description: data.description,
+    });
+    // Assign permissions
+    for (const permId of data.permissionIds) {
+      await apiClient.post(`/roles/${res.data.id}/permissions`, { permissionId: permId });
+    }
+    return res.data;
+  },
+
+  updateRole: async (id: string, data: RoleFormData) => {
+    const res = await apiClient.put(`/roles/${id}`, {
+      nom: data.nom,
+      description: data.description,
+    });
+    // Get current permissions
+    const currentPerms = await apiClient.get<PermissionResponse[]>(`/roles/${id}/permissions`);
+    const currentIds = currentPerms.data.map((p) => p.id);
+    // Remove removed permissions
+    for (const pid of currentIds) {
+      if (!data.permissionIds.includes(pid)) {
+        await apiClient.delete(`/roles/${id}/permissions/${pid}`);
+      }
+    }
+    // Add new permissions
+    for (const pid of data.permissionIds) {
+      if (!currentIds.includes(pid)) {
+        await apiClient.post(`/roles/${id}/permissions`, { permissionId: pid });
+      }
+    }
+    return res.data;
+  },
+
+  deleteRole: async (id: string) => {
+    await apiClient.delete(`/roles/${id}`);
+  },
+
+  // --- Pending Users / Registration Approval ---
+  listPendingUsers: async () => {
+    const res = await apiClient.get('/users/pending');
+    return res.data;
+  },
+
+  approveUser: async (id: string) => {
+    const res = await apiClient.patch(`/users/${id}/approve`);
+    return res.data;
+  },
+
+  rejectUser: async (id: string) => {
+    await apiClient.delete(`/users/${id}/reject`);
+  },
+
+  // --- Permissions ---
+  listPermissions: async () => {
+    const res = await apiClient.get('/permissions?size=200');
+    return res.data.content;
+  },
+
+  // --- Dashboard ---
+  getAdminStats: async () => {
+    const res = await apiClient.get('/dashboard/stats');
+    const data = res.data;
+    return {
+      totalUsers: data.kpis?.autorisationsEnCours || 0,
+      activeUsers: data.kpis?.visasEnAttente || 0,
+      totalRoles: data.kpis?.permisActifs || 0,
+      pendingActions: data.kpis?.receptionsEnAttente || 0,
+      recentLogins: data.kpis?.totalArchives || 0,
+    } as AdminStats;
+  },
+
+  // --- Audit Logs ---
+  listAuditLogs: async () => {
+    try {
+      const res = await apiClient.get('/audit-logs?size=1000&sort=date,desc');
+      return res.data.content.map((entry: any): AuditLogEntryFlat => ({
+        id: entry.id,
+        dateCreation: entry.date,
+        action: entry.action,
+        entity: entry.resultat || 'SYSTEM',
+        entityId: entry.id,
+        utilisateur: entry.utilisateur
+          ? `${entry.utilisateur.prenom} ${entry.utilisateur.nom}`
+          : 'Système',
+        details: `${entry.action} depuis ${entry.adresseIP || 'IP inconnue'}`,
+      }));
+    } catch {
+      return [];
+    }
+  },
+
+  // --- Settings ---
+  getSettings: async (): Promise<SystemSettings> => {
+    try {
+      const res = await apiClient.get('/settings');
+      return res.data;
+    } catch {
+      return {
+        maintenanceMode: false,
+        sessionTimeoutMinutes: 60,
+        maxLoginAttempts: 5,
+        inscriptionOuverte: false,
+        emailNotifications: true,
+        retentionDays: 365,
+      };
+    }
+  },
+
+  updateSettings: async (settings: SystemSettings): Promise<void> => {
+    await apiClient.put('/settings', settings);
+  },
+};

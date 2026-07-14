@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL uniquement (pour le développement local)
+  postgres:
+    image: postgres:16-alpine
+    container_name: at-ocp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: at_ocp_db
+      POSTGRES_USER: at_ocp_user
+      POSTGRES_PASSWORD: at_ocp_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U at_ocp_user -d at_ocp_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_dev_data:
+    driver: local

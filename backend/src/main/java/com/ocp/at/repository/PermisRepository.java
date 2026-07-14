@@ -74,5 +74,7 @@ public interface PermisRepository extends JpaRepository<Permis, String> {
     @Query("SELECT p.statutVerification, COUNT(p) FROM Permis p " +
            "WHERE p.autorisationTravail.id = :atId GROUP BY p.statutVerification")
     List<Object[]> countByStatutForAt(@Param("atId") String atId);
+
+    long countByStatutVerification(StatutPermis statutVerification);
 }
 

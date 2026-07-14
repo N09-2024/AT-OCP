@@ -48,6 +48,13 @@ public class PermisController {
         return ResponseEntity.ok(permisService.getPermisById(id));
     }
 
+    @GetMapping
+    @PreAuthorize("hasAuthority('VIEW_PERMIS')")
+    @Operation(summary = "Lister tous les permis")
+    public ResponseEntity<List<PermisResponse>> getAllPermis() {
+        return ResponseEntity.ok(permisService.getAllPermis());
+    }
+
     @GetMapping("/at/{atId}")
     @PreAuthorize("hasAuthority('VIEW_PERMIS')")
     @Operation(summary = "Lister tous les permis d'une Autorisation de Travail")

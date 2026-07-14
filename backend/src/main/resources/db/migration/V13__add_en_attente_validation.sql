@@ -1,0 +1,1 @@
+ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS en_attente_validation BOOLEAN NOT NULL DEFAULT FALSE;

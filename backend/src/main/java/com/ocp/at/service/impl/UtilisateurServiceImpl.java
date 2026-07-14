@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -147,6 +148,40 @@ public class UtilisateurServiceImpl implements UtilisateurService {
         Utilisateur saved = utilisateurRepository.save(utilisateur);
         logger.info("Rôle '{}' retiré de l'utilisateur: {}", role.getNom(), utilisateur.getEmail());
         return utilisateurMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UtilisateurResponse> listerEnAttente() {
+        return utilisateurRepository.findByEnAttenteValidationTrue()
+                .stream()
+                .map(utilisateurMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public UtilisateurResponse approuverInscription(String id) {
+        Utilisateur utilisateur = findUtilisateurById(id);
+        if (!utilisateur.isEnAttenteValidation()) {
+            throw new BusinessException("Cette inscription n'est pas en attente de validation");
+        }
+        utilisateur.setActif(true);
+        utilisateur.setEnAttenteValidation(false);
+        Utilisateur saved = utilisateurRepository.save(utilisateur);
+        logger.info("Inscription approuvée: {} <{}>", saved.getEmail(), saved.getId());
+        return utilisateurMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void rejeterInscription(String id) {
+        Utilisateur utilisateur = findUtilisateurById(id);
+        if (!utilisateur.isEnAttenteValidation()) {
+            throw new BusinessException("Cette inscription n'est pas en attente de validation");
+        }
+        utilisateurRepository.delete(utilisateur);
+        logger.info("Inscription rejetée et supprimée: {} <{}>", utilisateur.getEmail(), utilisateur.getId());
     }
 
     private Utilisateur findUtilisateurById(String id) {

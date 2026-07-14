@@ -66,6 +66,10 @@ public class Utilisateur {
     @Builder.Default
     private boolean motDePasseExpire = false;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean enAttenteValidation = false;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "utilisateur_roles",

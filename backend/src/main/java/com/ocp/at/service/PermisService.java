@@ -74,6 +74,13 @@ public class PermisService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<PermisResponse> getAllPermis() {
+        return permisRepository.findAll().stream()
+                .map(permisMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public PermisResponse updatePermis(String id, PermisRequest request) {
         Permis permis = findPermisEntity(id);
