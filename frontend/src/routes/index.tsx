@@ -39,7 +39,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 // -------------------------------------------------------
-// Referentiel route configs — one entry per referential
+// Referentiel route configs — fields must match backend DTOs exactly
 // -------------------------------------------------------
 const REFERENTIEL_ROUTES = [
   {
@@ -50,37 +50,13 @@ const REFERENTIEL_ROUTES = [
     subtitle: 'Gestion des équipements utilisés dans les travaux',
     createLabel: 'Nouvel équipement',
     searchPlaceholder: 'Rechercher un équipement...',
-    labelField: 'nom' as const,
-  },
-  {
-    key: 'types-intervention',
-    apiPath: '/types-intervention',
-    routeBase: '/administration/types-intervention',
-    title: "Types d'intervention",
-    subtitle: "Gestion des types d'intervention",
-    createLabel: "Nouveau type d'intervention",
-    searchPlaceholder: "Rechercher un type d'intervention...",
-    labelField: 'nom' as const,
-  },
-  {
-    key: 'risques',
-    apiPath: '/risques',
-    routeBase: '/administration/risques',
-    title: 'Risques',
-    subtitle: 'Gestion des risques associés aux travaux',
-    createLabel: 'Nouveau risque',
-    searchPlaceholder: 'Rechercher un risque...',
-    labelField: 'nom' as const,
-  },
-  {
-    key: 'mesures-prevention',
-    apiPath: '/mesures-preparation',
-    routeBase: '/administration/mesures-prevention',
-    title: 'Mesures de prévention',
-    subtitle: 'Gestion des mesures de prévention et de préparation',
-    createLabel: 'Nouvelle mesure',
-    searchPlaceholder: 'Rechercher une mesure...',
-    labelField: 'nom' as const,
+    // EquipementRequest: nomEquipement (required), codeEquipement (required), descriptionEquipement, installationId
+    labelField: 'nomEquipement' as 'nom',  // kept for SimpleReferentielPage display
+    fields: [
+      { key: 'nomEquipement', label: "Nom de l'équipement", required: true },
+      { key: 'codeEquipement', label: "Code de l'équipement", required: true },
+      { key: 'descriptionEquipement', label: 'Description', multiline: true, rows: 3 },
+    ],
   },
   {
     key: 'epis',
@@ -90,7 +66,43 @@ const REFERENTIEL_ROUTES = [
     subtitle: 'Équipements de protection individuelle',
     createLabel: 'Nouvel EPI',
     searchPlaceholder: 'Rechercher un EPI...',
-    labelField: 'nom' as const,
+    // EPIRequest: nomEPI (required), descriptionEPI
+    labelField: 'nomEPI' as 'nom',
+    fields: [
+      { key: 'nomEPI', label: "Nom de l'EPI", required: true },
+      { key: 'descriptionEPI', label: 'Description', multiline: true, rows: 3 },
+    ],
+  },
+  {
+    key: 'risques',
+    apiPath: '/risques',
+    routeBase: '/administration/risques',
+    title: 'Risques',
+    subtitle: 'Gestion des risques associés aux travaux',
+    createLabel: 'Nouveau risque',
+    searchPlaceholder: 'Rechercher un risque...',
+    // RisqueRequest: nomRisque (required), descriptionRisque, niveau
+    labelField: 'nomRisque' as 'nom',
+    fields: [
+      { key: 'nomRisque', label: 'Nom du risque', required: true },
+      { key: 'niveau', label: 'Niveau (ex: FAIBLE, MOYEN, ELEVE)' },
+      { key: 'descriptionRisque', label: 'Description', multiline: true, rows: 3 },
+    ],
+  },
+  {
+    key: 'mesures-prevention',
+    apiPath: '/mesures-preparation',
+    routeBase: '/administration/mesures-prevention',
+    title: 'Mesures de prévention',
+    subtitle: 'Gestion des mesures de prévention et de préparation',
+    createLabel: 'Nouvelle mesure',
+    searchPlaceholder: 'Rechercher une mesure...',
+    // MesurePreparationRequest: nomMesure (required), descriptionMesure
+    labelField: 'nomMesure' as 'nom',
+    fields: [
+      { key: 'nomMesure', label: 'Nom de la mesure', required: true },
+      { key: 'descriptionMesure', label: 'Description', multiline: true, rows: 3 },
+    ],
   },
   {
     key: 'moyens-acces',
@@ -100,17 +112,12 @@ const REFERENTIEL_ROUTES = [
     subtitle: "Gestion des moyens d'accès aux zones de travail",
     createLabel: "Nouveau moyen d'accès",
     searchPlaceholder: "Rechercher un moyen d'accès...",
-    labelField: 'nom' as const,
-  },
-  {
-    key: 'types-permis',
-    apiPath: '/permis/types',
-    routeBase: '/administration/types-permis',
-    title: 'Types de permis',
-    subtitle: 'Gestion des types de permis de travail',
-    createLabel: 'Nouveau type de permis',
-    searchPlaceholder: 'Rechercher un type de permis...',
-    labelField: 'nom' as const,
+    // MoyenAccesRequest: nomMoyen (required), descriptionMoyen
+    labelField: 'nomMoyen' as 'nom',
+    fields: [
+      { key: 'nomMoyen', label: "Nom du moyen d'accès", required: true },
+      { key: 'descriptionMoyen', label: 'Description', multiline: true, rows: 3 },
+    ],
   },
   {
     key: 'entreprises',
@@ -120,7 +127,28 @@ const REFERENTIEL_ROUTES = [
     subtitle: 'Gestion des entreprises sous-traitantes',
     createLabel: 'Nouvelle entreprise',
     searchPlaceholder: 'Rechercher une entreprise...',
-    labelField: 'nom' as const,
+    // EntrepriseExterneRequest: nomEntreprise (required), adresse, telephone, responsable
+    labelField: 'nomEntreprise' as 'nom',
+    fields: [
+      { key: 'nomEntreprise', label: "Nom de l'entreprise", required: true },
+      { key: 'responsable', label: 'Responsable' },
+      { key: 'telephone', label: 'Téléphone' },
+      { key: 'adresse', label: 'Adresse', multiline: true, rows: 2 },
+    ],
+  },
+  {
+    key: 'types-permis',
+    apiPath: '/types-permis',
+    routeBase: '/administration/types-permis',
+    title: 'Types de permis',
+    subtitle: 'Gestion des types de permis de travail',
+    createLabel: 'Nouveau type',
+    searchPlaceholder: 'Rechercher un type...',
+    labelField: 'nom' as 'nom',
+    fields: [
+      { key: 'nom', label: 'Nom du type', required: true },
+      { key: 'description', label: 'Description', multiline: true, rows: 3 },
+    ],
   },
 ];
 
@@ -196,8 +224,7 @@ export default function AppRoutes() {
                   title={ref.title}
                   apiPath={ref.apiPath}
                   routeBase={ref.routeBase}
-                  labelField={ref.labelField}
-                  labelPlaceholder={ref.title}
+                  fields={ref.fields}
                 />
               }
             />,
@@ -209,8 +236,7 @@ export default function AppRoutes() {
                   title={ref.title}
                   apiPath={ref.apiPath}
                   routeBase={ref.routeBase}
-                  labelField={ref.labelField}
-                  labelPlaceholder={ref.title}
+                  fields={ref.fields}
                 />
               }
             />,

@@ -38,7 +38,7 @@ interface SimpleReferentielPageProps {
   subtitle: string;
   apiPath: string;          // e.g. '/epis'
   routeBase: string;        // e.g. '/administration/epis'
-  labelField?: 'nom' | 'libelle';  // which field to use as label
+  labelField?: string;      // which field to use as label (any backend field name)
   createLabel: string;      // e.g. 'Nouvel EPI'
   searchPlaceholder: string;
 }

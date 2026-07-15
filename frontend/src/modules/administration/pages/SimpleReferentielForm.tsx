@@ -12,29 +12,37 @@ import {
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { apiClient } from '../../../services/apiClient';
 
+// FieldDef describes a single input field in the form
+export interface FieldDef {
+  key: string;          // the JSON key sent to the backend
+  label: string;        // displayed label
+  required?: boolean;
+  multiline?: boolean;
+  rows?: number;
+  readKey?: string;     // optional: use a different key when reading (GET) — defaults to `key`
+}
+
 interface SimpleReferentielFormProps {
   title: string;
   apiPath: string;       // e.g. '/epis'
   routeBase: string;     // e.g. '/administration/epis'
-  labelField?: 'nom' | 'libelle';
-  labelPlaceholder?: string;
-  hasDescription?: boolean;
+  fields: FieldDef[];    // the list of fields to render and submit
 }
 
 export default function SimpleReferentielForm({
   title,
   apiPath,
   routeBase,
-  labelField = 'nom',
-  labelPlaceholder = 'Libellé',
-  hasDescription = true,
+  fields,
 }: SimpleReferentielFormProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEdit = Boolean(id) && id !== 'nouveau';
 
-  const [label, setLabel] = useState('');
-  const [description, setDescription] = useState('');
+  // Generic state: one value per field key
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(fields.map((f) => [f.key, '']))
+  );
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(isEdit);
   const [error, setError] = useState('');
@@ -46,8 +54,15 @@ export default function SimpleReferentielForm({
       try {
         const res = await apiClient.get(`${apiPath}/${id}`);
         const data = res.data;
-        setLabel(data[labelField] ?? data.nom ?? data.libelle ?? '');
-        setDescription(data.description ?? '');
+        // Populate each field from the response
+        setValues(
+          Object.fromEntries(
+            fields.map((f) => {
+              const readKey = f.readKey ?? f.key;
+              return [f.key, data[readKey] ?? ''];
+            })
+          )
+        );
       } catch {
         setError('Impossible de charger les données');
       } finally {
@@ -55,22 +70,34 @@ export default function SimpleReferentielForm({
       }
     };
     loadItem();
-  }, [id, isEdit, apiPath, labelField]);
+  }, [id, isEdit, apiPath]);
+
+  const handleChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setValues((prev) => ({ ...prev, [key]: e.target.value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!label.trim()) {
-      setError('Le libellé est obligatoire');
-      return;
+
+    // Validate required fields
+    for (const f of fields) {
+      if (f.required && !values[f.key]?.trim()) {
+        setError(`Le champ "${f.label}" est obligatoire`);
+        return;
+      }
     }
+
     setError('');
     setSuccess('');
     setLoading(true);
 
-    const payload: Record<string, any> = {
-      [labelField]: label.trim(),
-    };
-    if (hasDescription) payload.description = description.trim();
+    // Build payload: only include non-empty strings
+    const payload: Record<string, any> = {};
+    for (const f of fields) {
+      if (values[f.key] !== undefined) {
+        payload[f.key] = values[f.key].trim();
+      }
+    }
 
     try {
       if (isEdit) {
@@ -124,24 +151,19 @@ export default function SimpleReferentielForm({
 
       <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', p: { xs: 3, md: 5 } }}>
         <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <TextField
-            label={labelPlaceholder}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            required
-            fullWidth
-            autoFocus
-          />
-          {hasDescription && (
+          {fields.map((f, idx) => (
             <TextField
-              label="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              key={f.key}
+              label={f.label}
+              value={values[f.key] ?? ''}
+              onChange={handleChange(f.key)}
+              required={f.required}
               fullWidth
-              multiline
-              rows={3}
+              autoFocus={idx === 0}
+              multiline={f.multiline}
+              rows={f.multiline ? (f.rows ?? 3) : undefined}
             />
-          )}
+          ))}
           <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
             <Button
               type="submit"

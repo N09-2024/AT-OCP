@@ -69,18 +69,26 @@ export interface RoleFormData {
 
 export interface Zone {
   id: string;
-  libelle: string;
-  description?: string;
-  active: boolean;
+  nomZone: string;
+  descriptionZone?: string;
+  codeZone: string;
+}
+
+export interface Service {
+  id: string;
+  nomService: string;
+  descriptionService?: string;
+  codeService: string;
+  zone?: Zone;
 }
 
 export interface Installation {
   id: string;
-  libelle: string;
-  description?: string;
-  zoneId: string;
-  zoneLibelle?: string;
-  active: boolean;
+  nomInstallation: string;
+  codeInstallation: string;
+  atelier?: string;
+  localisation?: string;
+  service?: Service;
 }
 
 // -------------------------------------------------------
@@ -311,19 +319,16 @@ export const AdminService = {
   },
 
   // --- Zones (Referentiels) ---
-  listZones: async (search?: string): Promise<{ content: Zone[]; totalElements: number; totalPages: number; number: number }> => {
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    const res = await apiClient.get(`/zones?${params}`);
-    return {
-      ...res.data,
-      content: res.data.content.map((z: any) => ({
-        id: z.id,
-        libelle: z.libelle,
-        description: z.description,
-        active: z.active,
-      })),
-    };
+  listZones: async (search?: string): Promise<Zone[]> => {
+    const res = await apiClient.get('/zones');
+    // Backend GET /zones returns a List<ZoneResponse> directly (no pagination)
+    const raw: any[] = Array.isArray(res.data) ? res.data : (res.data.content ?? []);
+    return raw.map((z: any) => ({
+      id: z.id,
+      nomZone: z.nomZone,
+      descriptionZone: z.descriptionZone,
+      codeZone: z.codeZone,
+    }));
   },
 
   getZone: async (id: string): Promise<Zone> => {
@@ -331,20 +336,20 @@ export const AdminService = {
     return res.data;
   },
 
-  createZone: async (data: { libelle: string; description?: string; active?: boolean }): Promise<Zone> => {
+  createZone: async (data: { nomZone: string; codeZone: string; descriptionZone?: string }): Promise<Zone> => {
     const res = await apiClient.post('/zones', {
-      libelle: data.libelle,
-      description: data.description,
-      active: data.active ?? true,
+      nomZone: data.nomZone,
+      codeZone: data.codeZone,
+      descriptionZone: data.descriptionZone,
     });
     return res.data;
   },
 
-  updateZone: async (id: string, data: { libelle?: string; description?: string; active?: boolean }): Promise<Zone> => {
+  updateZone: async (id: string, data: { nomZone?: string; codeZone?: string; descriptionZone?: string }): Promise<Zone> => {
     const res = await apiClient.put(`/zones/${id}`, {
-      libelle: data.libelle,
-      description: data.description,
-      active: data.active,
+      nomZone: data.nomZone,
+      codeZone: data.codeZone,
+      descriptionZone: data.descriptionZone,
     });
     return res.data;
   },
@@ -353,21 +358,37 @@ export const AdminService = {
     await apiClient.delete(`/zones/${id}`);
   },
 
+  // --- Services (Referentiels) ---
+  listServices: async (): Promise<Service[]> => {
+    const res = await apiClient.get('/services?size=500');
+    const raw: any[] = Array.isArray(res.data) ? res.data : (res.data.content ?? []);
+    return raw.map((s: any) => ({
+      id: s.id,
+      nomService: s.nomService,
+      descriptionService: s.descriptionService,
+      codeService: s.codeService,
+      zone: s.zone,
+    }));
+  },
+
   // --- Installations (Referentiels) ---
   listInstallations: async (search?: string): Promise<{ content: Installation[]; totalElements: number; totalPages: number; number: number }> => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     const res = await apiClient.get(`/installations?${params}`);
+    const raw: any[] = Array.isArray(res.data) ? res.data : (res.data.content ?? []);
     return {
-      ...res.data,
-      content: res.data.content.map((i: any) => ({
+      content: raw.map((i: any) => ({
         id: i.id,
-        libelle: i.libelle,
-        description: i.description,
-        zoneId: i.zoneId,
-        zoneLibelle: i.zone?.libelle,
-        active: i.active,
+        nomInstallation: i.nomInstallation,
+        codeInstallation: i.codeInstallation,
+        atelier: i.atelier,
+        localisation: i.localisation,
+        service: i.service,
       })),
+      totalElements: res.data.totalElements ?? raw.length,
+      totalPages: res.data.totalPages ?? 1,
+      number: res.data.number ?? 0,
     };
   },
 
@@ -376,22 +397,24 @@ export const AdminService = {
     return res.data;
   },
 
-  createInstallation: async (data: { libelle: string; description: string; zoneId: string; active?: boolean }): Promise<Installation> => {
+  createInstallation: async (data: { nomInstallation: string; codeInstallation: string; atelier?: string; localisation?: string; serviceId?: string }): Promise<Installation> => {
     const res = await apiClient.post('/installations', {
-      libelle: data.libelle,
-      description: data.description,
-      zoneId: data.zoneId,
-      active: data.active ?? true,
+      nomInstallation: data.nomInstallation,
+      codeInstallation: data.codeInstallation,
+      atelier: data.atelier,
+      localisation: data.localisation,
+      serviceId: data.serviceId,
     });
     return res.data;
   },
 
-  updateInstallation: async (id: string, data: { libelle?: string; description?: string; zoneId?: string; active?: boolean }): Promise<Installation> => {
+  updateInstallation: async (id: string, data: { nomInstallation?: string; codeInstallation?: string; atelier?: string; localisation?: string; serviceId?: string }): Promise<Installation> => {
     const res = await apiClient.put(`/installations/${id}`, {
-      libelle: data.libelle,
-      description: data.description,
-      zoneId: data.zoneId,
-      active: data.active,
+      nomInstallation: data.nomInstallation,
+      codeInstallation: data.codeInstallation,
+      atelier: data.atelier,
+      localisation: data.localisation,
+      serviceId: data.serviceId,
     });
     return res.data;
   },

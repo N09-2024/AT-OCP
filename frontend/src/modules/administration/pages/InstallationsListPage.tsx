@@ -11,7 +11,6 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Chip,
   CircularProgress,
   TextField,
   InputAdornment,
@@ -27,11 +26,11 @@ import { AdminService } from '../../../services/AdminService';
 
 interface Installation {
   id: string;
-  libelle: string;
-  description?: string;
-  zoneId?: string;
-  zoneLibelle?: string;
-  active: boolean;
+  nomInstallation: string;
+  codeInstallation: string;
+  atelier?: string;
+  localisation?: string;
+  service?: { id: string; nomService: string; codeService: string };
 }
 
 export default function InstallationsListPage() {
@@ -43,7 +42,7 @@ export default function InstallationsListPage() {
     const loadInstallations = async () => {
       try {
         const res = await AdminService.listInstallations();
-        setInstallations(res.content || res);
+        setInstallations(res.content);
       } catch (err) {
         console.error('Erreur chargement installations', err);
       } finally {
@@ -64,8 +63,9 @@ export default function InstallationsListPage() {
   };
 
   const filtered = installations.filter(i =>
-    i.libelle.toLowerCase().includes(search.toLowerCase()) ||
-    (i.description && i.description.toLowerCase().includes(search.toLowerCase()))
+    i.nomInstallation.toLowerCase().includes(search.toLowerCase()) ||
+    i.codeInstallation.toLowerCase().includes(search.toLowerCase()) ||
+    (i.atelier && i.atelier.toLowerCase().includes(search.toLowerCase()))
   );
 
   if (loading) {
@@ -122,10 +122,10 @@ export default function InstallationsListPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Libellé</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Zone</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Statut</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Code</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Nom</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Atelier</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Service rattaché</TableCell>
                 <TableCell sx={{ fontWeight: 600 }} align="right">
                   Actions
                 </TableCell>
@@ -142,27 +142,24 @@ export default function InstallationsListPage() {
               {filtered.map((inst) => (
                 <TableRow key={inst.id} hover>
                   <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', fontFamily: 'monospace' }}>
+                      {inst.codeInstallation}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {inst.libelle}
+                      {inst.nomInstallation}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
-                      {inst.description || '-'}
+                      {inst.atelier || '-'}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
-                      {inst.zoneLibelle || '-'}
+                      {inst.service ? `${inst.service.nomService} (${inst.service.codeService})` : '-'}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={inst.active ? 'Actif' : 'Inactif'}
-                      size="small"
-                      color={inst.active ? 'success' : 'default'}
-                      sx={{ borderRadius: 1.5, fontWeight: 500 }}
-                    />
                   </TableCell>
                   <TableCell align="right">
                     <IconButton

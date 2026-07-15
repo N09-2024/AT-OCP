@@ -56,7 +56,6 @@ const ADMIN_MENU = {
         { text: 'Installations', path: '/administration/installations', icon: <BookOpenIcon width={20} /> },
         { text: 'Zones', path: '/administration/zones', icon: <BookOpenIcon width={20} /> },
         { text: 'Équipements', path: '/administration/equipements', icon: <BookOpenIcon width={20} /> },
-        { text: "Types d'intervention", path: '/administration/types-intervention', icon: <BookOpenIcon width={20} /> },
         { text: 'Risques', path: '/administration/risques', icon: <BookOpenIcon width={20} /> },
         { text: 'Mesures de prévention', path: '/administration/mesures-prevention', icon: <BookOpenIcon width={20} /> },
         { text: 'EPI', path: '/administration/epis', icon: <BookOpenIcon width={20} /> },

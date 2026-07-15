@@ -7,23 +7,21 @@ import {
   Button,
   Paper,
   CircularProgress,
-  FormControlLabel,
-  Switch,
   Alert,
 } from '@mui/material';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { AdminService } from '../../../services/AdminService';
 
 interface ZoneFormData {
-  libelle: string;
-  description: string;
-  active: boolean;
+  nomZone: string;
+  codeZone: string;
+  descriptionZone: string;
 }
 
 const DEFAULT_FORM: ZoneFormData = {
-  libelle: '',
-  description: '',
-  active: true,
+  nomZone: '',
+  codeZone: '',
+  descriptionZone: '',
 };
 
 export default function ZoneFormPage() {
@@ -43,9 +41,9 @@ export default function ZoneFormPage() {
         if (isEdit) {
           const data = await AdminService.getZone(id!);
           setForm({
-            libelle: data.libelle,
-            description: data.description || '',
-            active: data.active,
+            nomZone: data.nomZone,
+            codeZone: data.codeZone,
+            descriptionZone: data.descriptionZone || '',
           });
         }
       } catch (err) {
@@ -59,8 +57,7 @@ export default function ZoneFormPage() {
   }, [id, isEdit]);
 
   const handleChange = (field: keyof ZoneFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,24 +119,32 @@ export default function ZoneFormPage() {
 
       <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', p: { xs: 3, md: 5 } }}>
         <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <TextField
-            label="Libellé"
-            value={form.libelle}
-            onChange={handleChange('libelle')}
-            required
-            fullWidth
-          />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              label="Code de la zone"
+              value={form.codeZone}
+              onChange={handleChange('codeZone')}
+              required
+              fullWidth
+              autoFocus
+              helperText="Identifiant unique (ex: Z001)"
+            />
+            <TextField
+              label="Nom de la zone"
+              value={form.nomZone}
+              onChange={handleChange('nomZone')}
+              required
+              fullWidth
+              helperText="Libellé complet de la zone"
+            />
+          </Box>
           <TextField
             label="Description"
-            value={form.description}
-            onChange={handleChange('description')}
+            value={form.descriptionZone}
+            onChange={handleChange('descriptionZone')}
             fullWidth
             multiline
             rows={4}
-          />
-          <FormControlLabel
-            control={<Switch checked={form.active} onChange={handleChange('active')} />}
-            label="Zone active"
           />
           <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
             <Button

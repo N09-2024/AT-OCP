@@ -11,7 +11,6 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Chip,
   CircularProgress,
   TextField,
   InputAdornment,
@@ -27,9 +26,9 @@ import { AdminService } from '../../../services/AdminService';
 
 interface Zone {
   id: string;
-  libelle: string;
-  description?: string;
-  active: boolean;
+  nomZone: string;
+  codeZone: string;
+  descriptionZone?: string;
 }
 
 export default function ZonesListPage() {
@@ -41,7 +40,7 @@ export default function ZonesListPage() {
     const loadZones = async () => {
       try {
         const res = await AdminService.listZones();
-        setZones(res.content || res);
+        setZones(Array.isArray(res) ? res : (res as any).content ?? []);
       } catch (err) {
         console.error('Erreur chargement zones', err);
       } finally {
@@ -63,8 +62,9 @@ export default function ZonesListPage() {
 
   const filtered = zones.filter(
     (z) =>
-      z.libelle.toLowerCase().includes(search.toLowerCase()) ||
-      (z.description && z.description.toLowerCase().includes(search.toLowerCase()))
+      z.nomZone.toLowerCase().includes(search.toLowerCase()) ||
+      z.codeZone.toLowerCase().includes(search.toLowerCase()) ||
+      (z.descriptionZone && z.descriptionZone.toLowerCase().includes(search.toLowerCase()))
   );
 
   if (loading) {
@@ -121,9 +121,9 @@ export default function ZonesListPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Libellé</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Code</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Nom</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Statut</TableCell>
                 <TableCell sx={{ fontWeight: 600 }} align="right">
                   Actions
                 </TableCell>
@@ -140,22 +140,19 @@ export default function ZonesListPage() {
               {filtered.map((zone) => (
                 <TableRow key={zone.id} hover>
                   <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', fontFamily: 'monospace' }}>
+                      {zone.codeZone}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {zone.libelle}
+                      {zone.nomZone}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
-                      {zone.description || '-'}
+                      {zone.descriptionZone || '-'}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={zone.active ? 'Actif' : 'Inactif'}
-                      size="small"
-                      color={zone.active ? 'success' : 'default'}
-                      sx={{ borderRadius: 1.5, fontWeight: 500 }}
-                    />
                   </TableCell>
                   <TableCell align="right">
                     <IconButton

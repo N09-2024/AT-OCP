@@ -7,29 +7,30 @@ import {
   Button,
   Paper,
   CircularProgress,
-  FormControlLabel,
-  Switch,
   Alert,
   MenuItem,
   FormControl,
   Select,
   InputLabel,
+  FormHelperText,
 } from '@mui/material';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { AdminService } from '../../../services/AdminService';
 
 interface InstallationFormData {
-  libelle: string;
-  description: string;
-  zoneId: string;
-  active: boolean;
+  nomInstallation: string;
+  codeInstallation: string;
+  atelier: string;
+  localisation: string;
+  serviceId: string;
 }
 
 const DEFAULT_FORM: InstallationFormData = {
-  libelle: '',
-  description: '',
-  zoneId: '',
-  active: true,
+  nomInstallation: '',
+  codeInstallation: '',
+  atelier: '',
+  localisation: '',
+  serviceId: '',
 };
 
 export default function InstallationFormPage() {
@@ -38,7 +39,7 @@ export default function InstallationFormPage() {
   const isEdit = Boolean(id) && id !== 'nouveau';
 
   const [form, setForm] = useState<InstallationFormData>(DEFAULT_FORM);
-  const [zones, setZones] = useState<Array<{ id: string; libelle: string }>>([]);
+  const [services, setServices] = useState<Array<{ id: string; nomService: string; codeService: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [error, setError] = useState('');
@@ -47,18 +48,18 @@ export default function InstallationFormPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load zones for dropdown
-        const zonesRes = await AdminService.listZones();
-        const zonesList = Array.isArray(zonesRes) ? zonesRes : zonesRes.content;
-        setZones(zonesList.map((z: any) => ({ id: z.id, libelle: z.libelle })));
+        // Load services for dropdown
+        const servicesList = await AdminService.listServices();
+        setServices(servicesList.map((s: any) => ({ id: s.id, nomService: s.nomService, codeService: s.codeService })));
 
         if (isEdit) {
           const data = await AdminService.getInstallation(id!);
           setForm({
-            libelle: data.libelle,
-            description: data.description || '',
-            zoneId: data.zoneId || '',
-            active: data.active,
+            nomInstallation: data.nomInstallation,
+            codeInstallation: data.codeInstallation,
+            atelier: data.atelier || '',
+            localisation: data.localisation || '',
+            serviceId: data.service?.id || '',
           });
         }
       } catch (err) {
@@ -72,8 +73,7 @@ export default function InstallationFormPage() {
   }, [id, isEdit]);
 
   const handleChange = (field: keyof InstallationFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,42 +135,68 @@ export default function InstallationFormPage() {
 
       <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', p: { xs: 3, md: 5 } }}>
         <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <TextField
-            label="Libellé"
-            value={form.libelle}
-            onChange={handleChange('libelle')}
-            required
-            fullWidth
-          />
-          <TextField
-            label="Description"
-            value={form.description}
-            onChange={handleChange('description')}
-            fullWidth
-            multiline
-            rows={4}
-          />
+          {/* Code + Nom */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              label="Code de l'installation"
+              value={form.codeInstallation}
+              onChange={handleChange('codeInstallation')}
+              required
+              fullWidth
+              autoFocus
+              helperText="Identifiant unique (ex: INST-001)"
+            />
+            <TextField
+              label="Nom de l'installation"
+              value={form.nomInstallation}
+              onChange={handleChange('nomInstallation')}
+              required
+              fullWidth
+              helperText="Libellé complet de l'installation"
+            />
+          </Box>
+
+          {/* Atelier + Localisation */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              label="Atelier"
+              value={form.atelier}
+              onChange={handleChange('atelier')}
+              fullWidth
+              helperText="Nom de l'atelier (optionnel)"
+            />
+            <TextField
+              label="Localisation"
+              value={form.localisation}
+              onChange={handleChange('localisation')}
+              fullWidth
+              helperText="Emplacement géographique (optionnel)"
+            />
+          </Box>
+
+          {/* Service parent */}
           <FormControl fullWidth>
-            <InputLabel id="zone-label">Zone</InputLabel>
+            <InputLabel id="service-label">Service rattaché</InputLabel>
             <Select
-              labelId="zone-label"
-              value={form.zoneId}
+              labelId="service-label"
+              value={form.serviceId}
               onChange={(e) => {
-                setForm((prev) => ({ ...prev, zoneId: e.target.value }));
+                setForm((prev) => ({ ...prev, serviceId: e.target.value }));
               }}
-              label="Zone"
+              label="Service rattaché"
             >
-              {zones.map(zone => (
-                <MenuItem key={zone.id} value={zone.id}>
-                  {zone.libelle}
+              <MenuItem value="">
+                <em>Aucun service</em>
+              </MenuItem>
+              {services.map(service => (
+                <MenuItem key={service.id} value={service.id}>
+                  {service.nomService} ({service.codeService})
                 </MenuItem>
               ))}
             </Select>
+            <FormHelperText>Une installation appartient à un service OCP</FormHelperText>
           </FormControl>
-          <FormControlLabel
-            control={<Switch checked={form.active} onChange={handleChange('active')} />}
-            label="Installation active"
-          />
+
           <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
             <Button
               type="submit"
