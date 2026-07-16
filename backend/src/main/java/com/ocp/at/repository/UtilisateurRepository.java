@@ -18,7 +18,7 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, String
     Boolean existsByEmail(String email);
     Boolean existsByMatricule(String matricule);
 
-    @Query("SELECT u FROM Utilisateur u WHERE " +
+    @Query("SELECT DISTINCT u FROM Utilisateur u LEFT JOIN FETCH u.roles WHERE " +
            "(:search IS NULL OR LOWER(u.nom) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(u.prenom) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +

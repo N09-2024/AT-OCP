@@ -41,8 +41,9 @@ public class ConformitePermisService {
 
             // 2. Vérification du type
             String extractedType = extractedData.path("type").asText(null);
-            if (extractedType == null || !extractedType.equalsIgnoreCase(permis.getType().name())) {
-                log.warn("Non-conformité: Le type extrait ({}) ne correspond pas au type du permis ({}).", extractedType, permis.getType().name());
+            String expectedType = permis.getTypePermis() != null ? permis.getTypePermis().getNom() : "";
+            if (extractedType == null || !extractedType.equalsIgnoreCase(expectedType)) {
+                log.warn("Non-conformité: Le type extrait ({}) ne correspond pas au type du permis ({}).", extractedType, expectedType);
                 return StatutPermis.NON_CONFORME;
             }
 

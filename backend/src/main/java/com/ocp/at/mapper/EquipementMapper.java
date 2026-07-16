@@ -9,9 +9,12 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface EquipementMapper {
-    @Mapping(target = "installation.id", source = "installationId")
+    @Mapping(target = "installation", expression = "java(request.getInstallationId() != null && !request.getInstallationId().isEmpty() ? com.ocp.at.entity.Installation.builder().id(request.getInstallationId()).build() : null)")
     Equipement toEntity(EquipementRequest request);
+    
     EquipementResponse toResponse(Equipement entity);
+    
+    @Mapping(target = "installation", expression = "java(request.getInstallationId() != null && !request.getInstallationId().isEmpty() ? com.ocp.at.entity.Installation.builder().id(request.getInstallationId()).build() : null)")
     void updateEntityFromRequest(EquipementRequest request, @MappingTarget Equipement entity);
 }
 

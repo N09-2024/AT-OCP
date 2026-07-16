@@ -7,7 +7,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {TypePermisMapper.class})
 public interface PermisMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -18,6 +18,7 @@ public interface PermisMapper {
     @Mapping(target = "analyseIA", ignore = true)
     @Mapping(target = "fichierJoint", ignore = true)
     @Mapping(target = "autorisationTravail", ignore = true)
+    @Mapping(target = "typePermis", expression = "java(request.getTypePermisId() != null && !request.getTypePermisId().isEmpty() ? com.ocp.at.entity.TypePermis.builder().id(request.getTypePermisId()).build() : null)")
     Permis toEntity(PermisRequest request);
 
     @Mapping(target = "fichierJointId", source = "fichierJoint.id")
@@ -33,5 +34,6 @@ public interface PermisMapper {
     @Mapping(target = "analyseIA", ignore = true)
     @Mapping(target = "fichierJoint", ignore = true)
     @Mapping(target = "autorisationTravail", ignore = true)
+    @Mapping(target = "typePermis", expression = "java(request.getTypePermisId() != null && !request.getTypePermisId().isEmpty() ? com.ocp.at.entity.TypePermis.builder().id(request.getTypePermisId()).build() : null)")
     void updateEntityFromRequest(PermisRequest request, @MappingTarget Permis permis);
 }

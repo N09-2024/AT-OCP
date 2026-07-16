@@ -1,6 +1,6 @@
 package com.ocp.at.dto.request;
 
-import com.ocp.at.entity.enums.TypePermis;
+
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -8,7 +8,7 @@ import lombok.Data;
 public class PermisRequest {
     
     @NotNull(message = "Le type de permis est obligatoire")
-    private TypePermis type;
+    private String typePermisId;
     
     private Boolean estObligatoire = false;
     

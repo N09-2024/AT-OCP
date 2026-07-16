@@ -6,6 +6,7 @@ import com.ocp.at.entity.Service;
 import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.ServiceMapper;
+import com.ocp.at.repository.InstallationRepository;
 import com.ocp.at.repository.ServiceRepository;
 import com.ocp.at.service.ServiceService;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.ocp.at.repository.InstallationRepository;
 
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor

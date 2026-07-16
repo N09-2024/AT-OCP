@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageImpl;
 
 import java.util.List;
 import java.util.Set;
@@ -63,15 +64,42 @@ public class UtilisateurServiceImpl implements UtilisateurService {
 
     @Override
     public UtilisateurResponse trouverParId(String id) {
-        return utilisateurMapper.toResponse(findUtilisateurById(id));
+        Utilisateur utilisateur = findUtilisateurById(id);
+        if (utilisateur.getRoles() != null) {
+            // Initialize the roles collection to avoid LazyInitializationException
+            utilisateur.getRoles().size();
+            // Now, for each role, initialize the permissions
+            utilisateur.getRoles().forEach(role -> {
+                if (role.getPermissions() != null) {
+                    role.getPermissions().size();
+                }
+            });
+        }
+        return utilisateurMapper.toResponse(utilisateur);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<UtilisateurResponse> listerTous(String search, Pageable pageable) {
         Page<Utilisateur> page = (search != null && !search.isBlank())
                 ? utilisateurRepository.findBySearchTerm(search, pageable)
                 : utilisateurRepository.findAll(pageable);
-        return page.map(utilisateurMapper::toResponse);
+        List<UtilisateurResponse> response = page.getContent().stream()
+                .peek(user -> {
+                    if (user.getRoles() != null) {
+                        // Initialize the roles collection to avoid LazyInitializationException
+                        user.getRoles().size();
+                        // Now, for each role, initialize the permissions
+                        user.getRoles().forEach(role -> {
+                            if (role.getPermissions() != null) {
+                                role.getPermissions().size();
+                            }
+                        });
+                    }
+                })
+                .map(utilisateurMapper::toResponse)
+                .collect(Collectors.toList());
+        return new PageImpl<>(response, pageable, page.getTotalElements());
     }
 
     @Override

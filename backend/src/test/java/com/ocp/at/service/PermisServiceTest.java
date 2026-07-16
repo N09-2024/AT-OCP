@@ -8,8 +8,8 @@ import com.ocp.at.entity.AnalyseIA;
 import com.ocp.at.entity.AutorisationTravail;
 import com.ocp.at.entity.FichierJoint;
 import com.ocp.at.entity.Permis;
+import com.ocp.at.entity.TypePermis;
 import com.ocp.at.entity.enums.StatutPermis;
-import com.ocp.at.entity.enums.TypePermis;
 import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.PermisMapper;
@@ -51,15 +51,20 @@ class PermisServiceTest {
 
     private AutorisationTravail at;
     private Permis permis;
+    private TypePermis typeFeu;
 
     @BeforeEach
     void setUp() {
         at = new AutorisationTravail();
         at.setId("at-1");
 
+        typeFeu = new TypePermis();
+        typeFeu.setId("tp_feu");
+        typeFeu.setNom("FEU");
+
         permis = new Permis();
         permis.setId("permis-1");
-        permis.setType(TypePermis.FEU);
+        permis.setTypePermis(typeFeu);
         permis.setStatutVerification(StatutPermis.A_VERIFIER);
         permis.setAutorisationTravail(at);
     }
@@ -67,7 +72,7 @@ class PermisServiceTest {
     @Test
     void createPermis_ShouldSucceed() {
         PermisRequest request = new PermisRequest();
-        request.setType(TypePermis.FEU);
+        request.setTypePermisId("tp_feu");
         request.setAutorisationTravailId("at-1");
 
         when(autorisationTravailRepository.findById("at-1")).thenReturn(Optional.of(at));
@@ -84,7 +89,7 @@ class PermisServiceTest {
     @Test
     void createPermis_ShouldThrow_WhenATNotFound() {
         PermisRequest request = new PermisRequest();
-        request.setType(TypePermis.FEU);
+        request.setTypePermisId("tp_feu");
         request.setAutorisationTravailId("unknown-at");
 
         when(autorisationTravailRepository.findById("unknown-at")).thenReturn(Optional.empty());

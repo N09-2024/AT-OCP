@@ -1,7 +1,7 @@
 package com.ocp.at.service.impl;
 
 import com.ocp.at.entity.*;
-import com.ocp.at.entity.enums.TypePermis;
+
 import com.ocp.at.service.PdfGeneratorService;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -558,7 +558,7 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
 
         for (Permis p : permis) {
             Paragraph tpermis = new Paragraph(
-                    (p.getType() != null ? p.getType().name() : "INCONNU") +
+                    (p.getTypePermis() != null ? p.getTypePermis().getNom() : "INCONNU") +
                             (p.getNumero() != null ? " - N° " + p.getNumero() : ""), ftitle);
             tpermis.setSpacingBefore(10);
             tpermis.setSpacingAfter(5);

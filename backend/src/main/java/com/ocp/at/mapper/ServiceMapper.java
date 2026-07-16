@@ -9,9 +9,12 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface ServiceMapper {
-    @Mapping(target = "zone.id", source = "zoneId")
+    @Mapping(target = "zone", expression = "java(request.getZoneId() != null && !request.getZoneId().isEmpty() ? com.ocp.at.entity.Zone.builder().id(request.getZoneId()).build() : null)")
     Service toEntity(ServiceRequest request);
+    
     ServiceResponse toResponse(Service entity);
+    
+    @Mapping(target = "zone", expression = "java(request.getZoneId() != null && !request.getZoneId().isEmpty() ? com.ocp.at.entity.Zone.builder().id(request.getZoneId()).build() : null)")
     void updateEntityFromRequest(ServiceRequest request, @MappingTarget Service entity);
 }
 

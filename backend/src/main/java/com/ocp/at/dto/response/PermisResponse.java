@@ -1,7 +1,7 @@
 package com.ocp.at.dto.response;
 
 import com.ocp.at.entity.enums.StatutPermis;
-import com.ocp.at.entity.enums.TypePermis;
+
 import lombok.Data;
 import java.time.LocalDate;
 
@@ -9,7 +9,7 @@ import java.time.LocalDate;
 public class PermisResponse {
     private String id;
     private String numero;
-    private TypePermis type;
+    private TypePermisResponse typePermis;
     private LocalDate dateEmission;
     private LocalDate dateExpiration;
     private StatutPermis statutVerification;

@@ -1,7 +1,7 @@
 package com.ocp.at.entity;
 
 import com.ocp.at.entity.enums.StatutPermis;
-import com.ocp.at.entity.enums.TypePermis;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,9 +23,9 @@ public class Permis {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private TypePermis type;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "type_permis_id")
+    private TypePermis typePermis;
 
     private String numero;
 

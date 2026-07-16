@@ -16,9 +16,17 @@ export const apiClient = axios.create({
 // Intercepteur requête : ajoute le token JWT
 apiClient.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().token;
+    // Try to get token from localStorage first (works before store hydration)
+    let token = localStorage.getItem('accessToken');
+    // Fallback to store (for consistency after login)
+    if (!token) {
+      token = useAuthStore.getState().token;
+    }
     if (token) {
+      console.log('[apiClient] Adding token to request:', token);
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.log('[apiClient] No token found');
     }
     return config;
   },

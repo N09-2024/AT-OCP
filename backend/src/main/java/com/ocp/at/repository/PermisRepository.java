@@ -2,7 +2,7 @@ package com.ocp.at.repository;
 
 import com.ocp.at.entity.Permis;
 import com.ocp.at.entity.enums.StatutPermis;
-import com.ocp.at.entity.enums.TypePermis;
+
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,7 +22,7 @@ public interface PermisRepository extends JpaRepository<Permis, String> {
 
     boolean existsByNumero(String numero);
 
-    List<Permis> findByType(TypePermis type);
+    List<Permis> findByTypePermisId(String typePermisId);
 
     boolean existsByAutorisationTravailId(String atId);
 

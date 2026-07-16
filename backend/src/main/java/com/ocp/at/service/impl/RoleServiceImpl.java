@@ -16,10 +16,12 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -52,11 +54,15 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<RoleResponse> listerTous(String search, Pageable pageable) {
         Page<Role> page = (search != null && !search.isBlank())
-                ? roleRepository.findByNomContainingIgnoreCase(search, pageable)
-                : roleRepository.findAll(pageable);
-        return page.map(roleMapper::toResponse);
+                ? roleRepository.findByNomContainingIgnoreCaseWithPermissions(search, pageable)
+                : roleRepository.findAllWithPermissions(pageable);
+        List<RoleResponse> content = page.getContent().stream()
+                .map(roleMapper::toResponse)
+                .collect(Collectors.toList());
+        return new PageImpl<>(content, pageable, page.getTotalElements());
     }
 
     @Override

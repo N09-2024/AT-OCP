@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { useAuthStore } from '../store/authStore';
 
 // -------------------------------------------------------
 // Types correspondant exactement aux DTOs du backend
@@ -55,12 +56,22 @@ export const AuthService = {
     };
 
     const response = await apiClient.post<JwtResponse>('/auth/login', payload);
-    const { accessToken, utilisateur, permissions } = response.data;
+    const { accessToken, utilisateur, permissions, refreshToken } = response.data;
 
-    // Stocker le refreshToken pour le renouvellement silencieux
-    if (response.data.refreshToken) {
-      localStorage.setItem('refreshToken', response.data.refreshToken);
+    // Stocker le accessToken dans localStorage pour un accès immédiat
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+      console.log('[AuthService] Access token stored in localStorage');
     }
+    
+    // Stocker le refreshToken pour le renouvellement silencieux
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+
+    // Mettre à jour le store d'authentification (qui sera persistant via zustand-middleware)
+    useAuthStore.getState().login(utilisateur, accessToken, permissions);
+    console.log('[AuthService] Auth store updated with token:', accessToken ? 'present' : 'null');
 
     return {
       token: accessToken,

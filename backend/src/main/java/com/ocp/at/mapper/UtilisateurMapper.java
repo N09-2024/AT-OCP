@@ -15,7 +15,6 @@ public interface UtilisateurMapper {
     @Mapping(target = "compteurEchecsConnexion", ignore = true)
     @Mapping(target = "compteVerrouille", ignore = true)
     @Mapping(target = "motDePasseExpire", ignore = true)
-    @Mapping(target = "roles", ignore = true)
     @Mapping(target = "actif", ignore = true)
     Utilisateur toEntity(UtilisateurRequest request);
 

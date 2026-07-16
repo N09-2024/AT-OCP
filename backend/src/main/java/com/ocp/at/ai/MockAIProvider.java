@@ -34,7 +34,7 @@ public class MockAIProvider implements IAProvider {
         // Simulation d'un JSON de sortie
         String jsonResult = "{\n" +
                 "  \"numero\": \"" + (permis.getNumero() != null ? permis.getNumero() : "PRM-MOCK-001") + "\",\n" +
-                "  \"type\": \"" + permis.getType().name() + "\",\n" +
+                "  \"type\": \"" + (permis.getTypePermis() != null ? permis.getTypePermis().getNom() : "") + "\",\n" +
                 "  \"entreprise\": \"OCP SA\",\n" +
                 "  \"dateEmission\": \"2026-07-01\",\n" +
                 "  \"dateExpiration\": \"2026-12-31\",\n" +

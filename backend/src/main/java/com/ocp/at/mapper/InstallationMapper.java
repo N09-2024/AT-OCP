@@ -9,9 +9,12 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface InstallationMapper {
-    @Mapping(target = "service.id", source = "serviceId")
+    @Mapping(target = "service", expression = "java(request.getServiceId() != null && !request.getServiceId().isEmpty() ? com.ocp.at.entity.Service.builder().id(request.getServiceId()).build() : null)")
     Installation toEntity(InstallationRequest request);
+    
     InstallationResponse toResponse(Installation entity);
+    
+    @Mapping(target = "service", expression = "java(request.getServiceId() != null && !request.getServiceId().isEmpty() ? com.ocp.at.entity.Service.builder().id(request.getServiceId()).build() : null)")
     void updateEntityFromRequest(InstallationRequest request, @MappingTarget Installation entity);
 }
 
