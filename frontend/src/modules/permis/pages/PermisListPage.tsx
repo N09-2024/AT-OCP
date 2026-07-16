@@ -71,7 +71,7 @@ export default function PermisListPage() {
               permisList.map((permis) => (
                 <TableRow key={permis.id} hover>
                   <TableCell>{permis.numero}</TableCell>
-                  <TableCell>{permis.type}</TableCell>
+                  <TableCell>{permis.typePermis?.nom}</TableCell>
                   <TableCell>{new Date(permis.dateEmission).toLocaleDateString()}</TableCell>
                   <TableCell>{new Date(permis.dateExpiration).toLocaleDateString()}</TableCell>
                   <TableCell>

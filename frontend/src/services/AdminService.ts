@@ -43,7 +43,7 @@ export interface AdminStats {
   activeUsers: number;
   totalRoles: number;
   pendingActions: number;
-  recentLogins: number;
+  totalPermissions: number;
 }
 
 export interface RoleResponse {
@@ -265,16 +265,25 @@ export const AdminService = {
   },
 
   // --- Dashboard ---
-  getAdminStats: async () => {
-    const res = await apiClient.get('/dashboard/stats');
-    const data = res.data;
+  getAdminStats: async (): Promise<AdminStats> => {
+    // Pulls real counts from the endpoints that actually back this data,
+    // instead of relabeling the unrelated AT-workflow KPIs from /dashboard/stats.
+    const [usersRes, rolesRes, pendingRes, permissionsRes] = await Promise.all([
+      apiClient.get('/users?size=1000'),
+      apiClient.get('/roles?size=200'),
+      apiClient.get('/users/pending'),
+      apiClient.get('/permissions?size=200'),
+    ]);
+
+    const users: any[] = usersRes.data.content ?? [];
+
     return {
-      totalUsers: data.kpis?.autorisationsEnCours || 0,
-      activeUsers: data.kpis?.visasEnAttente || 0,
-      totalRoles: data.kpis?.permisActifs || 0,
-      pendingActions: data.kpis?.receptionsEnAttente || 0,
-      recentLogins: data.kpis?.totalArchives || 0,
-    } as AdminStats;
+      totalUsers: usersRes.data.totalElements ?? users.length,
+      activeUsers: users.filter((u) => u.actif).length,
+      totalRoles: rolesRes.data.totalElements ?? rolesRes.data.content?.length ?? 0,
+      pendingActions: Array.isArray(pendingRes.data) ? pendingRes.data.length : 0,
+      totalPermissions: permissionsRes.data.totalElements ?? permissionsRes.data.content?.length ?? 0,
+    };
   },
 
   // --- Audit Logs ---

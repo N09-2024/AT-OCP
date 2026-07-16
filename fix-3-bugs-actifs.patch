@@ -1,0 +1,150 @@
+diff --git a/frontend/src/modules/administration/pages/AdminDashboardPage.tsx b/frontend/src/modules/administration/pages/AdminDashboardPage.tsx
+index c37eb65..452d0af 100644
+--- a/frontend/src/modules/administration/pages/AdminDashboardPage.tsx
++++ b/frontend/src/modules/administration/pages/AdminDashboardPage.tsx
+@@ -59,9 +59,9 @@ export default function AdminDashboardPage() {
+       color: '#F59E0B',
+     },
+     {
+-      title: 'Connexions récentes',
+-      value: stats?.recentLogins ?? 0,
+-      subtitle: '24 dernières heures',
++      title: 'Permissions',
++      value: stats?.totalPermissions ?? 0,
++      subtitle: 'Configurées',
+       icon: <ClockIcon width={28} />,
+       color: '#8B5CF6',
+     },
+diff --git a/frontend/src/modules/administration/pages/UserFormPage.tsx b/frontend/src/modules/administration/pages/UserFormPage.tsx
+index 2b23370..8597d3f 100644
+--- a/frontend/src/modules/administration/pages/UserFormPage.tsx
++++ b/frontend/src/modules/administration/pages/UserFormPage.tsx
+@@ -75,6 +75,7 @@ export default function UserFormPage() {
+   const [form, setForm] = useState<UserFormData>(DEFAULT_FORM);
+   // roleId resolved from the backend roles list
+   const [resolvedRoleId, setResolvedRoleId] = useState<string>('');
++  const [originalActived, setOriginalActived] = useState<boolean>(true);
+   const [allRoles, setAllRoles] = useState<{ id: string; nom: string }[]>([]);
+ 
+   const [loading, setLoading] = useState(false);
+@@ -103,6 +104,7 @@ export default function UserFormPage() {
+             actived: data.actived,
+           });
+           setResolvedRoleId(firstRole?.id ?? '');
++          setOriginalActived(data.actived);
+         }
+       } catch (err) {
+         console.error('Erreur chargement données', err);
+@@ -154,6 +156,17 @@ export default function UserFormPage() {
+           await AdminService.assignRole(id!, resolvedRoleId);
+         }
+ 
++        // PUT /users/{id} ignores the actif field on the backend — the
++        // active/inactive state has to go through its own endpoints.
++        if (form.actived !== originalActived) {
++          if (form.actived) {
++            await AdminService.activateUser(id!);
++          } else {
++            await AdminService.deactivateUser(id!);
++          }
++          setOriginalActived(form.actived);
++        }
++
+         setSuccess('Utilisateur mis à jour avec succès');
+       } else {
+         const newUser = await AdminService.createUser(form);
+diff --git a/frontend/src/modules/permis/pages/PermisDetailsPage.tsx b/frontend/src/modules/permis/pages/PermisDetailsPage.tsx
+index 99d997b..4797675 100644
+--- a/frontend/src/modules/permis/pages/PermisDetailsPage.tsx
++++ b/frontend/src/modules/permis/pages/PermisDetailsPage.tsx
+@@ -140,7 +140,7 @@ export default function PermisDetailsPage() {
+             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+               <Box>
+                 <Typography color="text.secondary" variant="body2">Type</Typography>
+-                <Typography sx={{ fontWeight: 'medium' }}>{permis.type}</Typography>
++                <Typography sx={{ fontWeight: 'medium' }}>{permis.typePermis?.nom}</Typography>
+               </Box>
+               <Box>
+                 <Typography color="text.secondary" variant="body2">Statut IA</Typography>
+diff --git a/frontend/src/modules/permis/pages/PermisListPage.tsx b/frontend/src/modules/permis/pages/PermisListPage.tsx
+index e6d76a9..55375ba 100644
+--- a/frontend/src/modules/permis/pages/PermisListPage.tsx
++++ b/frontend/src/modules/permis/pages/PermisListPage.tsx
+@@ -71,7 +71,7 @@ export default function PermisListPage() {
+               permisList.map((permis) => (
+                 <TableRow key={permis.id} hover>
+                   <TableCell>{permis.numero}</TableCell>
+-                  <TableCell>{permis.type}</TableCell>
++                  <TableCell>{permis.typePermis?.nom}</TableCell>
+                   <TableCell>{new Date(permis.dateEmission).toLocaleDateString()}</TableCell>
+                   <TableCell>{new Date(permis.dateExpiration).toLocaleDateString()}</TableCell>
+                   <TableCell>
+diff --git a/frontend/src/services/AdminService.ts b/frontend/src/services/AdminService.ts
+index 55b6bbe..1deb174 100644
+--- a/frontend/src/services/AdminService.ts
++++ b/frontend/src/services/AdminService.ts
+@@ -43,7 +43,7 @@ export interface AdminStats {
+   activeUsers: number;
+   totalRoles: number;
+   pendingActions: number;
+-  recentLogins: number;
++  totalPermissions: number;
+ }
+ 
+ export interface RoleResponse {
+@@ -265,16 +265,25 @@ export const AdminService = {
+   },
+ 
+   // --- Dashboard ---
+-  getAdminStats: async () => {
+-    const res = await apiClient.get('/dashboard/stats');
+-    const data = res.data;
++  getAdminStats: async (): Promise<AdminStats> => {
++    // Pulls real counts from the endpoints that actually back this data,
++    // instead of relabeling the unrelated AT-workflow KPIs from /dashboard/stats.
++    const [usersRes, rolesRes, pendingRes, permissionsRes] = await Promise.all([
++      apiClient.get('/users?size=1000'),
++      apiClient.get('/roles?size=200'),
++      apiClient.get('/users/pending'),
++      apiClient.get('/permissions?size=200'),
++    ]);
++
++    const users: any[] = usersRes.data.content ?? [];
++
+     return {
+-      totalUsers: data.kpis?.autorisationsEnCours || 0,
+-      activeUsers: data.kpis?.visasEnAttente || 0,
+-      totalRoles: data.kpis?.permisActifs || 0,
+-      pendingActions: data.kpis?.receptionsEnAttente || 0,
+-      recentLogins: data.kpis?.totalArchives || 0,
+-    } as AdminStats;
++      totalUsers: usersRes.data.totalElements ?? users.length,
++      activeUsers: users.filter((u) => u.actif).length,
++      totalRoles: rolesRes.data.totalElements ?? rolesRes.data.content?.length ?? 0,
++      pendingActions: Array.isArray(pendingRes.data) ? pendingRes.data.length : 0,
++      totalPermissions: permissionsRes.data.totalElements ?? permissionsRes.data.content?.length ?? 0,
++    };
+   },
+ 
+   // --- Audit Logs ---
+diff --git a/frontend/src/services/PermisService.ts b/frontend/src/services/PermisService.ts
+index efa189e..ec34886 100644
+--- a/frontend/src/services/PermisService.ts
++++ b/frontend/src/services/PermisService.ts
+@@ -1,9 +1,15 @@
+ import { apiClient } from './apiClient';
+ 
++export interface TypePermisResponse {
++  id: string;
++  nom: string;
++  description?: string;
++}
++
+ export interface PermisResponse {
+   id: string;
+   numero: string;
+-  type: string;
++  typePermis: TypePermisResponse;
+   dateEmission: string;
+   dateExpiration: string;
+   statutVerification: string;

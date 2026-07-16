@@ -59,9 +59,9 @@ export default function AdminDashboardPage() {
       color: '#F59E0B',
     },
     {
-      title: 'Connexions récentes',
-      value: stats?.recentLogins ?? 0,
-      subtitle: '24 dernières heures',
+      title: 'Permissions',
+      value: stats?.totalPermissions ?? 0,
+      subtitle: 'Configurées',
       icon: <ClockIcon width={28} />,
       color: '#8B5CF6',
     },

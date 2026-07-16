@@ -140,7 +140,7 @@ export default function PermisDetailsPage() {
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
               <Box>
                 <Typography color="text.secondary" variant="body2">Type</Typography>
-                <Typography sx={{ fontWeight: 'medium' }}>{permis.type}</Typography>
+                <Typography sx={{ fontWeight: 'medium' }}>{permis.typePermis?.nom}</Typography>
               </Box>
               <Box>
                 <Typography color="text.secondary" variant="body2">Statut IA</Typography>

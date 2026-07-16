@@ -1,9 +1,15 @@
 import { apiClient } from './apiClient';
 
+export interface TypePermisResponse {
+  id: string;
+  nom: string;
+  description?: string;
+}
+
 export interface PermisResponse {
   id: string;
   numero: string;
-  type: string;
+  typePermis: TypePermisResponse;
   dateEmission: string;
   dateExpiration: string;
   statutVerification: string;

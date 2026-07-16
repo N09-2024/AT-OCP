@@ -75,6 +75,7 @@ export default function UserFormPage() {
   const [form, setForm] = useState<UserFormData>(DEFAULT_FORM);
   // roleId resolved from the backend roles list
   const [resolvedRoleId, setResolvedRoleId] = useState<string>('');
+  const [originalActived, setOriginalActived] = useState<boolean>(true);
   const [allRoles, setAllRoles] = useState<{ id: string; nom: string }[]>([]);
 
   const [loading, setLoading] = useState(false);
@@ -103,6 +104,7 @@ export default function UserFormPage() {
             actived: data.actived,
           });
           setResolvedRoleId(firstRole?.id ?? '');
+          setOriginalActived(data.actived);
         }
       } catch (err) {
         console.error('Erreur chargement données', err);
@@ -152,6 +154,17 @@ export default function UserFormPage() {
         }
         if (resolvedRoleId) {
           await AdminService.assignRole(id!, resolvedRoleId);
+        }
+
+        // PUT /users/{id} ignores the actif field on the backend — the
+        // active/inactive state has to go through its own endpoints.
+        if (form.actived !== originalActived) {
+          if (form.actived) {
+            await AdminService.activateUser(id!);
+          } else {
+            await AdminService.deactivateUser(id!);
+          }
+          setOriginalActived(form.actived);
         }
 
         setSuccess('Utilisateur mis à jour avec succès');
