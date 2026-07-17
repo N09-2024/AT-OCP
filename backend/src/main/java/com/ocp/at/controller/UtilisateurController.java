@@ -124,7 +124,7 @@ public class UtilisateurController {
     }
 
     @DeleteMapping("/{id}/reject")
-    @Operation(summary = "Rejeter une inscription", description = "Rejette et supprime une inscription en attente")
+    @Operation(summary = "Rejeter une inscription", description = "Marque l'inscription comme rejetée et désactive le compte, sans supprimer les données")
     public ResponseEntity<Void> rejeterInscription(@PathVariable String id) {
         utilisateurService.rejeterInscription(id);
         return ResponseEntity.noContent().build();

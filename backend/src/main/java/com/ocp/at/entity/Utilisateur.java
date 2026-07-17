@@ -70,6 +70,10 @@ public class Utilisateur {
     @Column(nullable = false)
     private boolean enAttenteValidation = false;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean inscriptionRejetee = false;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "utilisateur_roles",
@@ -80,8 +84,4 @@ public class Utilisateur {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<Role> roles = new HashSet<>();
-
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean inscriptionRejetee = false;
 }
