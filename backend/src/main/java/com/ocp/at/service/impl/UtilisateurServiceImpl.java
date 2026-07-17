@@ -61,14 +61,13 @@ public class UtilisateurServiceImpl implements UtilisateurService {
         logger.info("Utilisateur créé par admin: {} ({})", saved.getEmail(), saved.getId());
         return utilisateurMapper.toResponse(saved);
     }
-
+    
     @Override
+    @Transactional(readOnly = true)
     public UtilisateurResponse trouverParId(String id) {
         Utilisateur utilisateur = findUtilisateurById(id);
         if (utilisateur.getRoles() != null) {
-            // Initialize the roles collection to avoid LazyInitializationException
             utilisateur.getRoles().size();
-            // Now, for each role, initialize the permissions
             utilisateur.getRoles().forEach(role -> {
                 if (role.getPermissions() != null) {
                     role.getPermissions().size();
@@ -106,6 +105,12 @@ public class UtilisateurServiceImpl implements UtilisateurService {
     @Transactional
     public UtilisateurResponse modifier(String id, UtilisateurUpdateRequest request) {
         Utilisateur utilisateur = findUtilisateurById(id);
+
+        if (request.getEmail() != null
+                && utilisateurRepository.findByEmailAndIdNot(request.getEmail(), id).isPresent()) {
+            throw new BusinessException("Un autre utilisateur utilise déjà l'email " + request.getEmail());
+        }
+
         utilisateurMapper.updateEntityFromRequest(request, utilisateur);
         Utilisateur saved = utilisateurRepository.save(utilisateur);
         logger.info("Utilisateur modifié: {}", saved.getEmail());

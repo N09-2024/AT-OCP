@@ -25,4 +25,5 @@ public interface UtilisateurService {
     List<UtilisateurResponse> listerEnAttente();
     UtilisateurResponse approuverInscription(String id);
     void rejeterInscription(String id);
+    
 }

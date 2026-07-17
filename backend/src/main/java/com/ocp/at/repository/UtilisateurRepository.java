@@ -26,4 +26,5 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, String
     Page<Utilisateur> findBySearchTerm(@Param("search") String search, Pageable pageable);
 
     List<Utilisateur> findByEnAttenteValidationTrue();
+    Optional<Utilisateur> findByEmailAndIdNot(String email, String id);
 }
