@@ -20,7 +20,8 @@ import { Link } from 'react-router-dom';
 import {
   PlusIcon,
   PencilSquareIcon,
-  TrashIcon,
+  NoSymbolIcon,
+  CheckCircleIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import { AdminService } from '../../../services/AdminService';
@@ -54,13 +55,18 @@ export default function UsersListPage() {
     loadUsers();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Confirmer la suppression de cet utilisateur ?')) return;
+  const handleToggleActive = async (user: User) => {
+    const action = user.actived ? 'désactiver' : 'réactiver';
+    if (!window.confirm(`Confirmer : ${action} le compte de ${user.prenom} ${user.nom} ?`)) return;
     try {
-      await AdminService.deleteUser(id);
-      setUsers((prev) => prev.filter((u) => u.id !== id));
+      const updated = user.actived
+        ? await AdminService.deactivateUser(user.id)
+        : await AdminService.activateUser(user.id);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, actived: updated.actived } : u))
+      );
     } catch (err) {
-      console.error('Erreur suppression utilisateur', err);
+      console.error('Erreur changement de statut utilisateur', err);
     }
   };
 
@@ -201,10 +207,15 @@ export default function UsersListPage() {
                     </IconButton>
                     <IconButton
                       size="small"
-                      sx={{ color: 'error.main' }}
-                      onClick={() => handleDelete(user.id)}
+                      sx={{ color: user.actived ? 'error.main' : 'success.main' }}
+                      onClick={() => handleToggleActive(user)}
+                      title={user.actived ? 'Désactiver le compte' : 'Réactiver le compte'}
                     >
-                      <TrashIcon width={18} />
+                      {user.actived ? (
+                        <NoSymbolIcon width={18} />
+                      ) : (
+                        <CheckCircleIcon width={18} />
+                      )}
                     </IconButton>
                   </TableCell>
                 </TableRow>

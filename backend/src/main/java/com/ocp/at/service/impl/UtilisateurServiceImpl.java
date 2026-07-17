@@ -61,13 +61,15 @@ public class UtilisateurServiceImpl implements UtilisateurService {
         logger.info("Utilisateur créé par admin: {} ({})", saved.getEmail(), saved.getId());
         return utilisateurMapper.toResponse(saved);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public UtilisateurResponse trouverParId(String id) {
         Utilisateur utilisateur = findUtilisateurById(id);
         if (utilisateur.getRoles() != null) {
+            // Initialize the roles collection to avoid LazyInitializationException
             utilisateur.getRoles().size();
+            // Now, for each role, initialize the permissions
             utilisateur.getRoles().forEach(role -> {
                 if (role.getPermissions() != null) {
                     role.getPermissions().size();
@@ -105,12 +107,6 @@ public class UtilisateurServiceImpl implements UtilisateurService {
     @Transactional
     public UtilisateurResponse modifier(String id, UtilisateurUpdateRequest request) {
         Utilisateur utilisateur = findUtilisateurById(id);
-
-        if (request.getEmail() != null
-                && utilisateurRepository.findByEmailAndIdNot(request.getEmail(), id).isPresent()) {
-            throw new BusinessException("Un autre utilisateur utilise déjà l'email " + request.getEmail());
-        }
-
         utilisateurMapper.updateEntityFromRequest(request, utilisateur);
         Utilisateur saved = utilisateurRepository.save(utilisateur);
         logger.info("Utilisateur modifié: {}", saved.getEmail());
@@ -121,8 +117,11 @@ public class UtilisateurServiceImpl implements UtilisateurService {
     @Transactional
     public void supprimer(String id) {
         Utilisateur utilisateur = findUtilisateurById(id);
-        utilisateurRepository.delete(utilisateur);
-        logger.info("Utilisateur supprimé: {}", utilisateur.getEmail());
+        // Suppression physique interdite : on désactive le compte au lieu de le supprimer,
+        // afin de préserver l'historique et l'intégrité référentielle (logs d'audit, etc.).
+        utilisateur.setActif(false);
+        utilisateurRepository.save(utilisateur);
+        logger.info("Utilisateur désactivé (suppression demandée mais bloquée par politique): {}", utilisateur.getEmail());
     }
 
     @Override
@@ -157,6 +156,7 @@ public class UtilisateurServiceImpl implements UtilisateurService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Set<RoleResponse> getRoles(String id) {
         Utilisateur utilisateur = findUtilisateurById(id);
         return utilisateur.getRoles().stream()
@@ -218,8 +218,13 @@ public class UtilisateurServiceImpl implements UtilisateurService {
         if (!utilisateur.isEnAttenteValidation()) {
             throw new BusinessException("Cette inscription n'est pas en attente de validation");
         }
-        utilisateurRepository.delete(utilisateur);
-        logger.info("Inscription rejetée et supprimée: {} <{}>", utilisateur.getEmail(), utilisateur.getId());
+        // Suppression physique interdite : on marque l'inscription comme rejetée
+        // et on désactive le compte, la ligne reste en base.
+        utilisateur.setEnAttenteValidation(false);
+        utilisateur.setInscriptionRejetee(true);
+        utilisateur.setActif(false);
+        utilisateurRepository.save(utilisateur);
+        logger.info("Inscription rejetée (conservée, désactivée): {} <{}>", utilisateur.getEmail(), utilisateur.getId());
     }
 
     private Utilisateur findUtilisateurById(String id) {

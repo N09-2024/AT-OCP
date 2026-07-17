@@ -68,8 +68,8 @@ public class UtilisateurController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer un utilisateur")
-    @ApiResponse(responseCode = "204", description = "Utilisateur supprimé")
+    @Operation(summary = "Désactiver un utilisateur", description = "Ne supprime jamais les données : désactive le compte au lieu de le supprimer physiquement")
+    @ApiResponse(responseCode = "204", description = "Utilisateur désactivé")
     public ResponseEntity<Void> supprimer(@PathVariable String id) {
         utilisateurService.supprimer(id);
         return ResponseEntity.noContent().build();

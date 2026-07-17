@@ -152,12 +152,12 @@ export const AdminService = {
 
   activateUser: async (id: string) => {
     const res = await apiClient.patch(`/users/${id}/activate`);
-    return res.data;
+    return mapUserFromApi(res.data);
   },
 
   deactivateUser: async (id: string) => {
     const res = await apiClient.patch(`/users/${id}/deactivate`);
-    return res.data;
+    return mapUserFromApi(res.data);
   },
 
   unlockUser: async (id: string) => {

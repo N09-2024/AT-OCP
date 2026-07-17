@@ -80,4 +80,8 @@ public class Utilisateur {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<Role> roles = new HashSet<>();
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean inscriptionRejetee = false;
 }
