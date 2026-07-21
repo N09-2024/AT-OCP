@@ -11,6 +11,7 @@ import com.ocp.at.mapper.PermissionMapper;
 import com.ocp.at.mapper.RoleMapper;
 import com.ocp.at.repository.PermissionRepository;
 import com.ocp.at.repository.RoleRepository;
+import com.ocp.at.repository.UtilisateurRepository;
 import com.ocp.at.service.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final UtilisateurRepository utilisateurRepository;
     private final RoleMapper roleMapper;
     private final PermissionMapper permissionMapper;
 
@@ -45,12 +47,13 @@ public class RoleServiceImpl implements RoleService {
         Role role = roleMapper.toEntity(request);
         Role saved = roleRepository.save(role);
         logger.info("Rôle créé: {}", saved.getNom());
-        return roleMapper.toResponse(saved);
+        return enrichRoleResponse(roleMapper.toResponse(saved), saved);
     }
 
     @Override
     public RoleResponse trouverParId(String id) {
-        return roleMapper.toResponse(findRoleById(id));
+        Role role = findRoleById(id);
+        return enrichRoleResponse(roleMapper.toResponse(role), role);
     }
 
     @Override
@@ -60,9 +63,15 @@ public class RoleServiceImpl implements RoleService {
                 ? roleRepository.findByNomContainingIgnoreCaseWithPermissions(search, pageable)
                 : roleRepository.findAllWithPermissions(pageable);
         List<RoleResponse> content = page.getContent().stream()
-                .map(roleMapper::toResponse)
+                .map(role -> enrichRoleResponse(roleMapper.toResponse(role), role))
                 .collect(Collectors.toList());
         return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+    
+    private RoleResponse enrichRoleResponse(RoleResponse response, Role role) {
+        response.setPermissionsCount(role.getPermissions() != null ? role.getPermissions().size() : 0);
+        response.setUsersCount(utilisateurRepository.countByRolesId(role.getId()));
+        return response;
     }
 
     @Override

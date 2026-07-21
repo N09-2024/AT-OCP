@@ -1,27 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  CircularProgress,
-  TextField,
-  InputAdornment,
-  Alert,
+  Box, Typography, Button, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Paper, IconButton,
+  CircularProgress, TextField, InputAdornment, Alert,
+  Stack, Chip, TablePagination, FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import {
-  PlusIcon,
-  PencilSquareIcon,
-  TrashIcon,
-  MagnifyingGlassIcon,
+  PlusIcon, PencilSquareIcon, TrashIcon,
+  MagnifyingGlassIcon, ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { apiClient } from '../../../services/apiClient';
 
@@ -33,6 +20,14 @@ interface SimpleItem {
   [key: string]: any;
 }
 
+interface FieldConfig {
+  key: string;
+  label: string;
+  required?: boolean;
+  multiline?: boolean;
+  rows?: number;
+}
+
 interface SimpleReferentielPageProps {
   title: string;
   subtitle: string;
@@ -41,6 +36,7 @@ interface SimpleReferentielPageProps {
   labelField?: string;      // which field to use as label (any backend field name)
   createLabel: string;      // e.g. 'Nouvel EPI'
   searchPlaceholder: string;
+  fields?: FieldConfig[];   // dynamic fields to display in table
 }
 
 export default function SimpleReferentielPage({
@@ -51,18 +47,25 @@ export default function SimpleReferentielPage({
   labelField = 'nom',
   createLabel,
   searchPlaceholder,
+  fields = [],
 }: SimpleReferentielPageProps) {
   const [items, setItems] = useState<SimpleItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+
+  // Filters & Sorting
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'asc' | 'desc' | ''>('');
+
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(15);
 
   const load = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get(`${apiPath}?size=200`);
+      const res = await apiClient.get(`${apiPath}?size=500`);
       const data = res.data;
-      // Handle both array and paginated responses
       setItems(Array.isArray(data) ? data : (data.content ?? []));
     } catch (err) {
       console.error(`Erreur chargement ${title}`, err);
@@ -87,12 +90,42 @@ export default function SimpleReferentielPage({
   const getLabel = (item: SimpleItem) =>
     item[labelField] ?? item.nom ?? item.libelle ?? item.id;
 
-  const filtered = items.filter((item) => {
-    const label = getLabel(item)?.toLowerCase() ?? '';
-    const desc = (item.description ?? '').toLowerCase();
-    const q = search.toLowerCase();
-    return label.includes(q) || desc.includes(q);
-  });
+  const filteredAndSorted = useMemo(() => {
+    // 1. Filter
+    let result = items.filter((item) => {
+      const label = getLabel(item)?.toLowerCase() ?? '';
+      
+      // Search in all dynamic fields
+      const fieldValues = fields.map(f => (item[f.key] ?? '').toString().toLowerCase()).join(' ');
+      const q = search.toLowerCase();
+      
+      return !search || label.includes(q) || fieldValues.includes(q);
+    });
+
+    // 2. Sort
+    if (sortBy === 'asc') {
+      result = result.sort((a, b) => getLabel(a).localeCompare(getLabel(b)));
+    } else if (sortBy === 'desc') {
+      result = result.sort((a, b) => getLabel(b).localeCompare(getLabel(a)));
+    }
+
+    return result;
+  }, [items, search, sortBy, labelField, fields]);
+
+  const paginated = filteredAndSorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const hasFilters = search.length > 0 || sortBy !== '';
+
+  const resetFilters = () => {
+    setSearch('');
+    setSortBy('');
+    setPage(0);
+  };
+
+  // If fields are provided, use them as columns. Otherwise default to Libellé + Description
+  const tableColumns = fields.length > 0 ? fields : [
+    { key: labelField, label: 'Libellé' },
+    { key: 'description', label: 'Description' }
+  ];
 
   if (loading) {
     return (
@@ -104,14 +137,13 @@ export default function SimpleReferentielPage({
 
   return (
     <Box>
-      {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 'bold' }} color="text.primary">
             {title}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {subtitle}
+            {subtitle} • {filteredAndSorted.length} élément(s)
           </Typography>
         </Box>
         <Button
@@ -133,77 +165,148 @@ export default function SimpleReferentielPage({
       )}
 
       <Paper sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-        <Box sx={{ p: 2, pb: 0 }}>
-          <TextField
-            size="small"
-            placeholder={searchPlaceholder}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            sx={{ width: 320, mb: 2 }}
-            slotProps={{
-              input: {
+        <Box sx={{ p: 2.5, borderBottom: '1px solid #f1f5f9' }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+            <TextField
+              size="small"
+              placeholder={searchPlaceholder || "Rechercher..."}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              sx={{
+                flexGrow: 1,
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#f8fafc',
+                  borderRadius: 2,
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                  '&:hover fieldset': { borderColor: '#cbd5e1' },
+                  '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1px' },
+                }
+              }}
+              InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <MagnifyingGlassIcon width={18} />
+                    <MagnifyingGlassIcon style={{ width: 18, height: 18, color: '#94a3b8' }} />
                   </InputAdornment>
                 ),
-              },
-            }}
-          />
+              }}
+            />
+
+            <TextField
+              select
+              size="small"
+              label="Trier par"
+              value={sortBy}
+              onChange={(e) => { setSortBy(e.target.value as 'asc' | 'desc' | ''); setPage(0); }}
+              sx={{
+                minWidth: 220,
+                flexShrink: 0,
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#f8fafc',
+                  borderRadius: 2,
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                  '&:hover fieldset': { borderColor: '#cbd5e1' },
+                  '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1px' },
+                }
+              }}
+            >
+              <MenuItem value=""><em>Par défaut</em></MenuItem>
+              <MenuItem value="asc">Nom (A-Z)</MenuItem>
+              <MenuItem value="desc">Nom (Z-A)</MenuItem>
+            </TextField>
+
+            {hasFilters && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<ArrowPathIcon width={14} />}
+                onClick={resetFilters}
+                sx={{ borderRadius: 2, borderColor: '#e2e8f0', color: 'text.secondary', whiteSpace: 'nowrap', height: 40 }}
+              >
+                Réinitialiser
+              </Button>
+            )}
+          </Stack>
+
+          {hasFilters && (
+            <Box sx={{ display: 'flex', gap: 1, mt: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+              {search && <Chip label={`Recherche: "${search}"`} size="small" onDelete={() => setSearch('')} sx={{ borderRadius: 1.5 }} />}
+              {sortBy === 'asc' && <Chip label={`Tri: A-Z`} size="small" onDelete={() => setSortBy('')} sx={{ borderRadius: 1.5 }} />}
+              {sortBy === 'desc' && <Chip label={`Tri: Z-A`} size="small" onDelete={() => setSortBy('')} sx={{ borderRadius: 1.5 }} />}
+              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                {filteredAndSorted.length} résultat(s)
+              </Typography>
+            </Box>
+          )}
         </Box>
+
         <TableContainer>
-          <Table>
+          <Table size="small">
             <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Libellé</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                <TableCell sx={{ fontWeight: 600 }} align="right">
-                  Actions
-                </TableCell>
+              <TableRow sx={{ '& th': { fontWeight: 700, fontSize: 12, color: '#64748b', bgcolor: '#f8fafc', textTransform: 'uppercase', letterSpacing: 0.5 } }}>
+                {tableColumns.map((col, index) => (
+                   <TableCell key={index}>{col.label}</TableCell>
+                ))}
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filtered.length === 0 && (
+              {paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    Aucun élément trouvé
+                  <TableCell colSpan={tableColumns.length + 1} align="center" sx={{ py: 5, color: 'text.secondary' }}>
+                    {hasFilters ? 'Aucun élément ne correspond à ces critères.' : 'Aucun élément trouvé'}
                   </TableCell>
                 </TableRow>
+              ) : (
+                paginated.map((item) => (
+                  <TableRow key={item.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                    {tableColumns.map((col, index) => (
+                      <TableCell key={index}>
+                        {index === 0 ? (
+                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                             {item[col.key] || '-'}
+                           </Typography>
+                        ) : (
+                           <Typography variant="body2" color="text.secondary">
+                             {item[col.key] || '-'}
+                           </Typography>
+                        )}
+                      </TableCell>
+                    ))}
+                    <TableCell align="right">
+                      <IconButton
+                        component={Link}
+                        to={`${routeBase}/${item.id}`}
+                        size="small"
+                        sx={{ color: '#3b82f6', mr: 0.5, '&:hover': { bgcolor: '#eff6ff' } }}
+                      >
+                        <PencilSquareIcon width={18} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        sx={{ color: '#ef4444', '&:hover': { bgcolor: '#fee2e2' } }}
+                        onClick={() => handleDelete(item.id)}
+                      >
+                        <TrashIcon width={18} />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
-              {filtered.map((item) => (
-                <TableRow key={item.id} hover>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {getLabel(item)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.description || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      component={Link}
-                      to={`${routeBase}/${item.id}`}
-                      size="small"
-                      sx={{ color: 'primary.main', mr: 0.5 }}
-                    >
-                      <PencilSquareIcon width={18} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      sx={{ color: 'error.main' }}
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <TrashIcon width={18} />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
             </TableBody>
           </Table>
         </TableContainer>
+
+        <TablePagination
+          component="div"
+          count={filteredAndSorted.length}
+          page={page}
+          onPageChange={(_, p) => setPage(p)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+          rowsPerPageOptions={[10, 15, 25, 50]}
+          labelRowsPerPage="Lignes par page"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count}`}
+        />
       </Paper>
     </Box>
   );

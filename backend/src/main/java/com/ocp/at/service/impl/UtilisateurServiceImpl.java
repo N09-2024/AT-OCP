@@ -1,5 +1,6 @@
 package com.ocp.at.service.impl;
 
+import com.ocp.at.dto.request.ChangePasswordRequest;
 import com.ocp.at.dto.request.UtilisateurRequest;
 import com.ocp.at.dto.request.UtilisateurUpdateRequest;
 import com.ocp.at.dto.response.RoleResponse;
@@ -225,6 +226,18 @@ public class UtilisateurServiceImpl implements UtilisateurService {
         utilisateur.setActif(false);
         utilisateurRepository.save(utilisateur);
         logger.info("Inscription rejetée (conservée, désactivée): {} <{}>", utilisateur.getEmail(), utilisateur.getId());
+    }
+
+    @Override
+    @Transactional
+    public void changerMotDePasse(String userId, ChangePasswordRequest request) {
+        Utilisateur utilisateur = findUtilisateurById(userId);
+        if (!passwordEncoder.matches(request.getAncienMotDePasse(), utilisateur.getMotDePasse())) {
+            throw new BusinessException("L'ancien mot de passe est incorrect");
+        }
+        utilisateur.setMotDePasse(passwordEncoder.encode(request.getNouveauMotDePasse()));
+        utilisateurRepository.save(utilisateur);
+        logger.info("Mot de passe modifié pour l'utilisateur: {}", utilisateur.getEmail());
     }
 
     private Utilisateur findUtilisateurById(String id) {

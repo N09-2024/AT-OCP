@@ -82,8 +82,12 @@ public class DashboardServiceImpl implements DashboardService {
             monthlyStats.add(new MonthlyStat(mois, count));
         }
 
-        // 4. Recent ATs for this user
-        List<AutorisationTravail> recentAts = autorisationTravailRepository.findTop5ByProprietaireBrouillonIdOrderByDateCreationDesc(user.getId());
+        // 4. Recent ATs for this user or all if ADMIN
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getNom().equals("ADMIN"));
+        List<AutorisationTravail> recentAts = isAdmin ? 
+            autorisationTravailRepository.findTop5ByOrderByDateCreationDesc() : 
+            autorisationTravailRepository.findTop5ByProprietaireBrouillonIdOrderByDateCreationDesc(user.getId());
+        
         List<AtSummaryDto> recentAtDtos = recentAts.stream().map(at -> {
             String installation = "N/A";
             if (at.getDemandeIntervention() != null && at.getDemandeIntervention().getEquipement() != null) {

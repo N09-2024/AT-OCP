@@ -16,7 +16,6 @@ import StatCard from '../../../components/dashboard/StatCard';
 import StatusChart from '../../../components/dashboard/StatusChart';
 import AtTable from '../../../components/dashboard/AtTable';
 import RecentActivity from '../../../components/dashboard/RecentActivity';
-import WorkflowStepper from '../../../components/dashboard/WorkflowStepper';
 import { useAuthStore } from '../../../store/authStore';
 import { DashboardService, type DashboardData } from '../../../services/DashboardService';
 
@@ -137,32 +136,22 @@ export default function DashboardPage() {
         ))}
       </Box>
 
-      {/* 🚀 Main Content: Two Columns 🚀 */}
-      <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', lg: 'row' } }}>
+      {/* 🚀 Main Content: Full Width 🚀 */}
+      <Box sx={{ display: 'flex', gap: 3, flexDirection: 'column' }}>
+        {/* AT Table */}
+        <Box>
+          <AtTable data={data?.recentAutorisations ?? []} />
+        </Box>
         
-        {/* 🚀 Left Column (Table + Charts/Activity) 🚀 */}
-        <Box sx={{ flex: '2 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* AT Table */}
-          <Box>
-            <AtTable data={data?.recentAutorisations ?? []} />
+        {/* Status Chart & Recent Activity Row */}
+        <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+          <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
+            <StatusChart data={data?.statusDistribution ?? {}} />
           </Box>
-          
-          {/* Status Chart & Recent Activity Row */}
-          <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
-            <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
-              <StatusChart data={data?.statusDistribution ?? {}} />
-            </Box>
-            <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
-              <RecentActivity />
-            </Box>
+          <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
+            <RecentActivity />
           </Box>
         </Box>
-
-        {/* 🚀 Right Column (Workflow Stepper) 🚀 */}
-        <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
-          <WorkflowStepper />
-        </Box>
-
       </Box>
     </Box>
   );

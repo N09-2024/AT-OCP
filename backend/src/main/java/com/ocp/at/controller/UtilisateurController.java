@@ -1,9 +1,12 @@
 package com.ocp.at.controller;
 
+import com.ocp.at.dto.request.ChangePasswordRequest;
 import com.ocp.at.dto.request.UtilisateurRequest;
 import com.ocp.at.dto.request.UtilisateurUpdateRequest;
 import com.ocp.at.dto.response.RoleResponse;
 import com.ocp.at.dto.response.UtilisateurResponse;
+import com.ocp.at.repository.UtilisateurRepository;
+import com.ocp.at.security.SecurityUtils;
 import com.ocp.at.service.UtilisateurService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,6 +35,7 @@ import java.util.Set;
 public class UtilisateurController {
 
     private final UtilisateurService utilisateurService;
+    private final UtilisateurRepository utilisateurRepository;
 
     @GetMapping
     @Operation(summary = "Lister les utilisateurs", description = "Retourne la liste paginée des utilisateurs avec filtres optionnels")
@@ -127,6 +131,17 @@ public class UtilisateurController {
     @Operation(summary = "Rejeter une inscription", description = "Marque l'inscription comme rejetée et désactive le compte, sans supprimer les données")
     public ResponseEntity<Void> rejeterInscription(@PathVariable String id) {
         utilisateurService.rejeterInscription(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/me/password")
+    @Operation(summary = "Changer son mot de passe", description = "Permet à l'utilisateur connecté de changer son propre mot de passe")
+    public ResponseEntity<Void> changerMonMotDePasse(@Valid @RequestBody ChangePasswordRequest request) {
+        String email = SecurityUtils.getCurrentUtilisateurId()
+                .orElseThrow(() -> new RuntimeException("Non authentifié"));
+        com.ocp.at.entity.Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+        utilisateurService.changerMotDePasse(utilisateur.getId(), request);
         return ResponseEntity.noContent().build();
     }
 }

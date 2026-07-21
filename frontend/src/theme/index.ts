@@ -3,75 +3,56 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#009A44',
-      dark: '#006B3C',
-      light: '#EAF7EF',
+      main: '#16a34a', // OCP Green from the image
+      dark: '#15803d',
+      light: '#dcfce7',
       contrastText: '#FFFFFF',
     },
     secondary: {
-      main: '#006B3C', // Dark Green
+      main: '#3b82f6',
     },
     background: {
-      default: '#F7F9FB',
+      default: '#f8fafc',
       paper: '#FFFFFF',
     },
     error: {
-      main: '#DC2626', // Danger
+      main: '#ef4444',
     },
     warning: {
-      main: '#F59E0B', // Warning
+      main: '#f59e0b',
     },
     success: {
-      main: '#16A34A', // Success
+      main: '#10b981',
     },
     text: {
-      primary: '#1F2937', // Gray 800
-      secondary: '#6B7280', // Gray 500
+      primary: '#1f2937',
+      secondary: '#64748b',
     },
-    divider: '#E5E7EB', // Borders
+    divider: '#f1f5f9',
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
-      fontWeight: 700,
-      fontSize: '2.5rem',
-    },
-    h2: {
-      fontWeight: 600,
-      fontSize: '2rem',
-    },
-    h3: {
-      fontWeight: 600,
-      fontSize: '1.75rem',
-    },
-    h4: {
-      fontWeight: 600,
-      fontSize: '1.5rem',
-    },
-    h5: {
-      fontWeight: 600,
-      fontSize: '1.25rem',
-    },
-    h6: {
-      fontWeight: 600,
-      fontSize: '1rem',
-    },
-    button: {
-      textTransform: 'none',
-      fontWeight: 500,
-    },
+    h1: { fontWeight: 700, fontSize: '2.5rem' },
+    h2: { fontWeight: 600, fontSize: '2rem' },
+    h3: { fontWeight: 600, fontSize: '1.75rem' },
+    h4: { fontWeight: 600, fontSize: '1.5rem' },
+    h5: { fontWeight: 600, fontSize: '1.25rem' },
+    h6: { fontWeight: 600, fontSize: '1rem' },
+    subtitle1: { fontWeight: 600 },
+    subtitle2: { fontWeight: 600 },
+    button: { textTransform: 'none', fontWeight: 600 },
   },
   shape: {
-    borderRadius: 16, // Coins 16px as requested
+    borderRadius: 12,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8, // Boutons un peu moins arrondis que les cartes en général, ou 16px si on veut. Restons sur 8px pour les boutons, 16px pour les cartes
+          borderRadius: 8,
           boxShadow: 'none',
           '&:hover': {
-            boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
           },
         },
       },
@@ -80,8 +61,8 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 16,
-          boxShadow: '0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.06)', // Ombre très discrète
-          border: '1px solid #E5E7EB',
+          boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.04)',
+          border: '1px solid #e2e8f0',
         },
       },
     },
@@ -96,8 +77,13 @@ const theme = createTheme({
       styleOverrides: {
         head: {
           fontWeight: 600,
-          backgroundColor: '#F7F9FB',
-          color: '#6B7280',
+          backgroundColor: '#FFFFFF',
+          color: '#64748b',
+          borderBottom: '2px solid #f1f5f9',
+        },
+        root: {
+          borderBottom: '1px solid #f1f5f9',
+          padding: '12px 16px',
         },
       },
     },

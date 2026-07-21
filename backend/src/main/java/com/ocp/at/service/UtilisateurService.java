@@ -1,5 +1,6 @@
 package com.ocp.at.service;
 
+import com.ocp.at.dto.request.ChangePasswordRequest;
 import com.ocp.at.dto.request.UtilisateurRequest;
 import com.ocp.at.dto.request.UtilisateurUpdateRequest;
 import com.ocp.at.dto.response.RoleResponse;
@@ -25,5 +26,6 @@ public interface UtilisateurService {
     List<UtilisateurResponse> listerEnAttente();
     UtilisateurResponse approuverInscription(String id);
     void rejeterInscription(String id);
-    
+    void changerMotDePasse(String userId, ChangePasswordRequest request);
 }
+

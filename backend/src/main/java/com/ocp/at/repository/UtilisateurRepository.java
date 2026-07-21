@@ -27,4 +27,5 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, String
 
     List<Utilisateur> findByEnAttenteValidationTrue();
     Optional<Utilisateur> findByEmailAndIdNot(String email, String id);
+    int countByRolesId(String roleId);
 }

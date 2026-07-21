@@ -46,6 +46,25 @@ export interface AdminStats {
   totalPermissions: number;
 }
 
+export interface DashboardStats {
+  kpis: {
+    autorisationsEnCours: number;
+    visasEnAttente: number;
+    permisActifs: number;
+    receptionsEnAttente: number;
+    totalArchives: number;
+  };
+  monthlyStats: { mois: string; total: number }[];
+  statusDistribution: Record<string, number>;
+  recentAutorisations: {
+    id: string;
+    titre: string;
+    installation: string;
+    statut: string;
+    echeance: string;
+  }[];
+}
+
 export interface RoleResponse {
   id: string;
   nom: string;
@@ -284,6 +303,11 @@ export const AdminService = {
       pendingActions: Array.isArray(pendingRes.data) ? pendingRes.data.length : 0,
       totalPermissions: permissionsRes.data.totalElements ?? permissionsRes.data.content?.length ?? 0,
     };
+  },
+
+  getDashboardStats: async (): Promise<DashboardStats> => {
+    const res = await apiClient.get('/dashboard/stats');
+    return res.data;
   },
 
   // --- Audit Logs ---

@@ -1,4 +1,4 @@
-import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider, Chip } from '@mui/material';
+import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider, Chip, Collapse } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 import {
   HomeIcon,
@@ -10,7 +10,6 @@ import {
   CheckBadgeIcon,
   ArchiveBoxIcon,
   Cog6ToothIcon,
-  ChartBarIcon,
   DocumentMagnifyingGlassIcon,
   PlusCircleIcon,
   ClipboardDocumentListIcon,
@@ -19,25 +18,31 @@ import {
   CloudArrowUpIcon,
   MagnifyingGlassCircleIcon,
   ClockIcon,
+  ChevronDownIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
+import { useState } from 'react';
+
+// OCP Primary Green
+const PRIMARY_COLOR = '#16a34a';
 
 // ─── ADMIN ────────────────────────────────────────────────
 const ADMIN_MENU = {
   label: 'Administration',
-  color: '#7c3aed',
   sections: [
     {
       title: 'Tableau de bord',
       items: [
-        { text: 'Vue d\'ensemble', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Statistiques', path: '/administration/stats', icon: <ChartBarIcon width={20} /> },
+        { text: 'Vue d\'ensemble', path: '/administration', icon: <HomeIcon width={20} /> },
+        { text: 'Statistiques', path: '/administration/statistiques', icon: <DocumentMagnifyingGlassIcon width={20} /> },
       ],
     },
     {
       title: 'Gestion des comptes',
       items: [
         { text: 'Utilisateurs', path: '/administration/utilisateurs', icon: <UserGroupIcon width={20} /> },
+        { text: 'Rôles & Permissions', path: '/administration/roles', icon: <ShieldCheckIcon width={20} /> },
         { text: 'Inscriptions en attente', path: '/administration/inscriptions', icon: <UserPlusIcon width={20} />, badge: true },
       ],
     },
@@ -71,7 +76,6 @@ const ADMIN_MENU = {
 // ─── DEMANDEUR ────────────────────────────────────────────
 const DEMANDEUR_MENU = {
   label: 'Demandeur',
-  color: '#0891b2',
   sections: [
     {
       title: 'Mon espace',
@@ -93,7 +97,6 @@ const DEMANDEUR_MENU = {
 // ─── RESPONSABLE OCP ─────────────────────────────────────
 const RESPONSABLE_OCP_MENU = {
   label: 'Responsable OCP',
-  color: '#16a34a',
   sections: [
     {
       title: 'Mon espace',
@@ -122,7 +125,6 @@ const RESPONSABLE_OCP_MENU = {
 // ─── RESPONSABLE ENTREPRISE EXTERNE ──────────────────────
 const RESPONSABLE_ENTREPRISE_MENU = {
   label: 'Resp. Entreprise',
-  color: '#ea580c',
   sections: [
     {
       title: 'Mon espace',
@@ -151,52 +153,43 @@ interface MenuItemRowProps {
 
 function MenuItemRow({ text, path, icon, badge, pendingCount }: MenuItemRowProps) {
   return (
-    <ListItem disablePadding sx={{ mb: 0.25 }}>
+    <ListItem disablePadding sx={{ mb: 0.5, px: 2 }}>
       <ListItemButton
         component={NavLink as any}
         to={path}
         sx={{
           borderRadius: 2,
           py: 1,
+          px: 2,
+          color: 'text.secondary',
           '&.active': {
-            bgcolor: '#e6f4ea',
-            color: 'primary.dark',
+            bgcolor: `${PRIMARY_COLOR}15`,
+            color: PRIMARY_COLOR,
             fontWeight: 600,
-            '& .MuiListItemIcon-root': { color: 'primary.dark' },
+            '& .MuiListItemIcon-root': { color: PRIMARY_COLOR },
           },
+          '&:hover': {
+            bgcolor: 'action.hover',
+          }
         }}
       >
-        <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+        <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>
           {icon}
         </ListItemIcon>
         <ListItemText
           primary={text}
-          slotProps={{ primary: { style: { fontSize: 13, fontWeight: 500 } } }}
+          slotProps={{ primary: { style: { fontSize: 14, fontWeight: 'inherit' } } }}
         />
         {badge && pendingCount !== undefined && pendingCount > 0 && (
           <Chip
             label={pendingCount}
             size="small"
             color="error"
-            sx={{ height: 18, fontSize: 10, fontWeight: 700, minWidth: 22 }}
+            sx={{ height: 20, fontSize: 11, fontWeight: 700, minWidth: 24 }}
           />
         )}
       </ListItemButton>
     </ListItem>
-  );
-}
-
-import { useState } from 'react';
-import { Collapse } from '@mui/material';
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-
-function SectionMenu({ sections }: { sections: any[] }) {
-  return (
-    <>
-      {sections.map((section) => (
-        <SectionMenuRow key={section.title} section={section} />
-      ))}
-    </>
   );
 }
 
@@ -205,12 +198,12 @@ function SectionMenuRow({ section }: { section: any }) {
 
   if (section.collapsible) {
     return (
-      <Box sx={{ mb: 1 }}>
+      <Box sx={{ mb: 2 }}>
         <Box
           onClick={() => setOpen(!open)}
           sx={{
-            px: 2,
-            py: 0.5,
+            px: 4,
+            py: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -221,23 +214,21 @@ function SectionMenuRow({ section }: { section: any }) {
           <Typography
             variant="caption"
             sx={{
-              color: 'text.disabled',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              fontSize: 10,
+              color: 'text.secondary',
+              fontWeight: 600,
+              fontSize: 12,
             }}
           >
             {section.title}
           </Typography>
           {open ? (
-            <ChevronDownIcon width={12} style={{ color: '#999' }} />
+            <ChevronDownIcon width={14} style={{ color: '#64748b' }} />
           ) : (
-            <ChevronRightIcon width={12} style={{ color: '#999' }} />
+            <ChevronRightIcon width={14} style={{ color: '#64748b' }} />
           )}
         </Box>
         <Collapse in={open} timeout="auto" unmountOnExit>
-          <List sx={{ px: 1.5, py: 0 }}>
+          <List disablePadding>
             {section.items.map((item: any) => (
               <MenuItemRow key={item.text} {...item} />
             ))}
@@ -248,23 +239,21 @@ function SectionMenuRow({ section }: { section: any }) {
   }
 
   return (
-    <Box sx={{ mb: 1 }}>
+    <Box sx={{ mb: 2 }}>
       <Typography
         variant="caption"
         sx={{
-          px: 2,
-          py: 0.5,
+          px: 4,
+          py: 1,
           display: 'block',
-          color: 'text.disabled',
-          fontWeight: 700,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          fontSize: 10,
+          color: 'text.secondary',
+          fontWeight: 600,
+          fontSize: 12,
         }}
       >
         {section.title}
       </Typography>
-      <List sx={{ px: 1.5, py: 0 }}>
+      <List disablePadding>
         {section.items.map((item: any) => (
           <MenuItemRow key={item.text} {...item} />
         ))}
@@ -279,8 +268,7 @@ export default function Sidebar() {
   const hasRole = (roleName: string) =>
     user?.roles?.some((r) => r.nom === roleName) ?? false;
 
-  // Determine active menu config
-  let menuConfig = DEMANDEUR_MENU; // default
+  let menuConfig = DEMANDEUR_MENU;
   if (hasRole('ADMIN')) menuConfig = ADMIN_MENU;
   else if (hasRole('RESPONSABLE_OCP')) menuConfig = RESPONSABLE_OCP_MENU;
   else if (hasRole('RESPONSABLE_ENTREPRISE')) menuConfig = RESPONSABLE_ENTREPRISE_MENU;
@@ -288,7 +276,7 @@ export default function Sidebar() {
   return (
     <Box
       sx={{
-        width: 270,
+        width: 280,
         flexShrink: 0,
         height: '100vh',
         position: 'sticky',
@@ -299,107 +287,44 @@ export default function Sidebar() {
         display: 'flex',
         flexDirection: 'column',
         overflowY: 'auto',
-        '&::-webkit-scrollbar': {
-          width: '5px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#e5e7eb',
-          borderRadius: '4px',
-        },
-        '&::-webkit-scrollbar-thumb:hover': {
-          backgroundColor: '#d1d5db',
-        },
-        '&::-webkit-scrollbar-track': {
-          backgroundColor: 'transparent',
-        },
+        '&::-webkit-scrollbar': { width: '4px' },
+        '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' },
       }}
     >
-      {/* Logo */}
-      <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box
-          sx={{
-            width: 38,
-            height: 38,
-            bgcolor: menuConfig.color,
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: 1,
-            flexShrink: 0,
-          }}
-        >
-          OCP
-        </Box>
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, color: 'text.primary' }}>
-            AT System
-          </Typography>
-          <Typography variant="caption" sx={{ color: menuConfig.color, fontWeight: 600 }}>
-            {menuConfig.label}
+      {/* OCP Logo Header */}
+      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* Placeholder for the OCP star logo */}
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M50 10L61 40H93L67 59L77 89L50 70L23 89L33 59L7 40H39L50 10Z" fill={PRIMARY_COLOR} />
+              <circle cx="50" cy="50" r="15" fill="white" />
+              <circle cx="50" cy="50" r="10" fill={PRIMARY_COLOR} />
+            </svg>
+            <Typography variant="h5" sx={{ fontWeight: 900, color: PRIMARY_COLOR, letterSpacing: -0.5 }}>
+              OCP
+            </Typography>
+          </Box>
+          <Typography variant="caption" sx={{ color: PRIMARY_COLOR, fontWeight: 700, fontSize: '0.6rem', letterSpacing: 0.5, mt: -0.5, ml: 0.5 }}>
+            SUCCESSFUL TOGETHER
           </Typography>
         </Box>
       </Box>
-
-      <Divider />
 
       {/* Navigation */}
-      <Box sx={{ flexGrow: 1, overflowY: 'auto', py: 1.5 }}>
-        <SectionMenu sections={menuConfig.sections} />
+      <Box sx={{ flexGrow: 1, py: 1 }}>
+        <SectionMenuRow section={{ title: '', collapsible: false, items: menuConfig.sections[0]?.items ?? [] }} />
+        {menuConfig.sections.slice(1).map((section) => (
+          <SectionMenuRow key={section.title} section={section} />
+        ))}
       </Box>
 
-      <Divider />
-
-      {/* Bottom: user info */}
-      <Box sx={{ px: 2.5, py: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-          <Box
-            sx={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              bgcolor: menuConfig.color + '22',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: menuConfig.color,
-              fontWeight: 700,
-              fontSize: 12,
-              flexShrink: 0,
-            }}
-          >
-            {user?.prenom?.[0]?.toUpperCase()}{user?.nom?.[0]?.toUpperCase()}
-          </Box>
-          <Box sx={{ overflow: 'hidden' }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-              {user?.prenom} {user?.nom}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
-              {user?.email}
-            </Typography>
-          </Box>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          {user?.roles?.map((r) => (
-            <Chip
-              key={r.id}
-              label={r.nom.replace('_', ' ')}
-              size="small"
-              sx={{
-                bgcolor: menuConfig.color + '18',
-                color: menuConfig.color,
-                fontWeight: 700,
-                fontSize: 9,
-                height: 18,
-              }}
-            />
-          ))}
-        </Box>
-        <Typography variant="caption" color="text.disabled" sx={{ mt: 1.5, display: 'block' }}>
+      {/* Footer / Copyright */}
+      <Box sx={{ p: 3, mt: 'auto' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 11 }}>
           © 2026 OCP Group
+          <br />
+          Tous droits réservés
         </Typography>
       </Box>
     </Box>

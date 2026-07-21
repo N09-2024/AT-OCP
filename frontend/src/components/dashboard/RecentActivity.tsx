@@ -1,90 +1,85 @@
-import { Card, Box, Typography } from '@mui/material';
-import { DocumentCheckIcon, ClipboardDocumentIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
-import type { ReactNode } from 'react';
-
-interface Activity {
-  id: number;
-  text: string;
-  time: string;
-  bgColor: string;
-  iconColor: string;
-  icon: ReactNode;
-}
-
-const activities: Activity[] = [
-  {
-    id: 1,
-    text: 'AT-2026-1258 a été validée par Ahmed El Amrani',
-    time: 'Il y a 25 min',
-    bgColor: '#EAF7EF',
-    iconColor: '#16A34A',
-    icon: <DocumentCheckIcon width={20} />,
-  },
-  {
-    id: 2,
-    text: 'Visa requis pour AT-2026-1255',
-    time: 'Il y a 1 heure',
-    bgColor: '#FEF3C7',
-    iconColor: '#D97706',
-    icon: <ClipboardDocumentIcon width={20} />,
-  },
-  {
-    id: 3,
-    text: 'Permis de feu PFE-2026-045 expire demain',
-    time: 'Il y a 2 heures',
-    bgColor: '#FEE2E2',
-    iconColor: '#DC2626',
-    icon: <ExclamationCircleIcon width={20} />,
-  },
-];
+import { Card, Box, Typography, CircularProgress } from '@mui/material';
+import { DocumentCheckIcon, ClipboardDocumentIcon, ExclamationCircleIcon, BellIcon } from '@heroicons/react/24/outline';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { NotificationService, type NotificationItem } from '../../services/NotificationService';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export default function RecentActivity() {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    NotificationService.getMyNotifications(0, 5)
+      .then((page) => setNotifications(page.content))
+      .catch((err) => console.error("Error loading notifications", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <Card sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress size={30} color="success" />
+      </Card>
+    );
+  }
+
   return (
-    <Card sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+    <Card sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
         Activités récentes
       </Typography>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {activities.map((activity, idx) => (
-          <Box
-            key={activity.id}
-            sx={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 2,
-              pb: idx < activities.length - 1 ? 2 : 0,
-              borderBottom: idx < activities.length - 1 ? '1px solid' : 'none',
-              borderColor: 'divider',
-            }}
-          >
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
+        {notifications.length === 0 ? (
+          <Typography color="text.secondary">Aucune activité récente.</Typography>
+        ) : (
+          notifications.map((activity, idx) => (
             <Box
+              key={activity.id}
               sx={{
-                p: 1,
-                borderRadius: 2,
-                bgcolor: activity.bgColor,
-                color: activity.iconColor,
                 display: 'flex',
-                flexShrink: 0,
+                alignItems: 'flex-start',
+                gap: 2,
+                pb: idx < notifications.length - 1 ? 2 : 0,
+                borderBottom: idx < notifications.length - 1 ? '1px solid' : 'none',
+                borderColor: 'divider',
               }}
             >
-              {activity.icon}
+              <Box
+                sx={{
+                  p: 1,
+                  borderRadius: 2,
+                  bgcolor: '#EAF7EF',
+                  color: '#16A34A',
+                  display: 'flex',
+                  flexShrink: 0,
+                }}
+              >
+                <BellIcon width={20} />
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.primary">
+                  {activity.titre} - {activity.message}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {formatDistanceToNow(new Date(activity.dateCreation), { addSuffix: true, locale: fr })}
+                </Typography>
+              </Box>
             </Box>
-            <Box>
-              <Typography variant="body2" color="text.primary">
-                {activity.text}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {activity.time}
-              </Typography>
-            </Box>
-          </Box>
-        ))}
+          ))
+        )}
       </Box>
 
-      <Box sx={{ mt: 3, color: 'primary.main', cursor: 'pointer', fontWeight: 500, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Box 
+        component={Link}
+        to="/notifications"
+        sx={{ mt: 3, color: 'primary.main', textDecoration: 'none', fontWeight: 500, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}
+      >
         Voir toutes les activités →
       </Box>
     </Card>
   );
 }
+

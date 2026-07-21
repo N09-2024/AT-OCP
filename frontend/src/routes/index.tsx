@@ -11,8 +11,13 @@ import UserFormPage from '../modules/administration/pages/UserFormPage';
 import PendingUsersPage from '../modules/administration/pages/PendingUsersPage';
 import SettingsPage from '../modules/administration/pages/SettingsPage';
 import AuditLogPage from '../modules/administration/pages/AuditLogPage';
+import StatistiquesPage from '../modules/administration/pages/StatistiquesPage';
+import RolesListPage from '../modules/administration/pages/RolesListPage';
+import RoleFormPage from '../modules/administration/pages/RoleFormPage';
 import PermisListPage from '../modules/permis/pages/PermisListPage';
 import PermisDetailsPage from '../modules/permis/pages/PermisDetailsPage';
+import ProfilePage from '../modules/profile/pages/ProfilePage';
+import NotificationsPage from '../modules/profile/pages/NotificationsPage';
 
 // Référentiels existants
 import ZonesListPage from '../modules/administration/pages/ZonesListPage';
@@ -174,10 +179,16 @@ export default function AppRoutes() {
 
         <Route path="administration" element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
+          <Route path="statistiques" element={<StatistiquesPage />} />
 
           {/* Utilisateurs */}
           <Route path="utilisateurs" element={<UsersListPage />} />
           <Route path="utilisateurs/:id" element={<UserFormPage />} />
+
+          {/* Rôles & Permissions */}
+          <Route path="roles" element={<RolesListPage />} />
+          <Route path="roles/nouveau" element={<RoleFormPage />} />
+          <Route path="roles/:id" element={<RoleFormPage />} />
 
           {/* Inscriptions / Paramètres / Audit */}
           <Route path="inscriptions" element={<PendingUsersPage />} />
@@ -213,6 +224,7 @@ export default function AppRoutes() {
                   labelField={ref.labelField}
                   createLabel={ref.createLabel}
                   searchPlaceholder={ref.searchPlaceholder}
+                  fields={ref.fields}
                 />
               }
             />,
@@ -247,6 +259,9 @@ export default function AppRoutes() {
           <Route index element={<PermisListPage />} />
           <Route path=":id" element={<PermisDetailsPage />} />
         </Route>
+
+        <Route path="profil" element={<ProfilePage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
