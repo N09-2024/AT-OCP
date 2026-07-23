@@ -132,4 +132,21 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
      */
     @Query(value = "SELECT to_char(date_creation, 'Mon') as mois, COUNT(*) as total FROM autorisations_travail GROUP BY to_char(date_creation, 'Mon'), extract(month from date_creation) ORDER BY extract(month from date_creation)", nativeQuery = true)
     List<Object[]> countAtByMonth();
+
+    /**
+     * Statistiques mensuelles des AT pour un utilisateur (Demandeur)
+     */
+    @Query(value = "SELECT to_char(date_creation, 'Mon') as mois, COUNT(*) as total FROM autorisations_travail WHERE proprietaire_brouillon_id = :userId GROUP BY to_char(date_creation, 'Mon'), extract(month from date_creation) ORDER BY extract(month from date_creation)", nativeQuery = true)
+    List<Object[]> countAtByMonthForUser(@Param("userId") String userId);
+
+    /**
+     * Compte les AT par statut pour un utilisateur
+     */
+    long countByProprietaireBrouillonIdAndStatut(String userId, StatutAT statut);
+
+    /**
+     * Statistiques par statut (pour dashboard utilisateur)
+     */
+    @Query("SELECT at.statut, COUNT(at) FROM AutorisationTravail at WHERE at.proprietaireBrouillon.id = :userId GROUP BY at.statut")
+    List<Object[]> countByStatutGroupedForUser(@Param("userId") String userId);
 }

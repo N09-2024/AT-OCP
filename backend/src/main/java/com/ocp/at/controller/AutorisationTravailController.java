@@ -45,6 +45,13 @@ public class AutorisationTravailController {
         return ResponseEntity.status(HttpStatus.CREATED).body(atService.createFromDocument(id, type));
     }
 
+    @PostMapping("/autorisations-travail")
+    @Operation(summary = "Créer une Autorisation de Travail sans document source obligatoire")
+    @PreAuthorize("hasAuthority('CREATE_AT')")
+    public ResponseEntity<AutorisationTravailResponse> createDirect() {
+        return ResponseEntity.status(HttpStatus.CREATED).body(atService.createDirect());
+    }
+
     // --- CONSULTATION ---
 
     @GetMapping("/autorisations-travail")

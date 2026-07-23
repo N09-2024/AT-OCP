@@ -120,7 +120,7 @@ export default function PermisListPage() {
 
       <Paper sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <Box sx={{ p: 2.5, borderBottom: '1px solid #f1f5f9' }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: 'center' }}>
             <TextField
               size="small"
               placeholder="Rechercher par numéro ou type..."
@@ -136,12 +136,14 @@ export default function PermisListPage() {
                 '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1px' },
               }
             }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <MagnifyingGlassIcon style={{ width: 18, height: 18, color: '#94a3b8' }} />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <MagnifyingGlassIcon style={{ width: 18, height: 18, color: '#94a3b8' }} />
+                    </InputAdornment>
+                  ),
+                }
               }}
             />
 

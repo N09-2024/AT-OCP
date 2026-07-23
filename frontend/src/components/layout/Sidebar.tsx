@@ -34,7 +34,7 @@ const ADMIN_MENU = {
     {
       title: 'Tableau de bord',
       items: [
-        { text: 'Vue d\'ensemble', path: '/administration', icon: <HomeIcon width={20} /> },
+        { text: 'Vue d\'ensemble', path: '/dashboard', icon: <HomeIcon width={20} /> },
         { text: 'Statistiques', path: '/administration/statistiques', icon: <DocumentMagnifyingGlassIcon width={20} /> },
       ],
     },

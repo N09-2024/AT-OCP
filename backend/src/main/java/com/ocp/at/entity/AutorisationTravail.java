@@ -98,4 +98,45 @@ public class AutorisationTravail {
 
     @OneToOne(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
     private ReceptionTravaux receptionTravaux;
+
+    // --- Champs spécifiques du formulaire (PDF) ---
+    private String servicesIntervenants;
+    private String entreprisesIntervenantes;
+    private String mesuresSecuriteExecutant;
+
+    @ManyToMany
+    @JoinTable(
+        name = "at_risques",
+        joinColumns = @JoinColumn(name = "at_id"),
+        inverseJoinColumns = @JoinColumn(name = "risque_id")
+    )
+    @Builder.Default
+    private List<Risque> risques = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "at_mesures",
+        joinColumns = @JoinColumn(name = "at_id"),
+        inverseJoinColumns = @JoinColumn(name = "mesure_id")
+    )
+    @Builder.Default
+    private List<MesurePreparation> mesures = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "at_epis",
+        joinColumns = @JoinColumn(name = "at_id"),
+        inverseJoinColumns = @JoinColumn(name = "epi_id")
+    )
+    @Builder.Default
+    private List<EPI> epis = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "at_moyens_acces",
+        joinColumns = @JoinColumn(name = "at_id"),
+        inverseJoinColumns = @JoinColumn(name = "moyen_id")
+    )
+    @Builder.Default
+    private List<MoyenAcces> moyensAcces = new ArrayList<>();
 }

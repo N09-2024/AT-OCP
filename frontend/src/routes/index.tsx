@@ -5,7 +5,6 @@ import LoginPage from '../modules/auth/pages/LoginPage';
 import RegisterPage from '../modules/auth/pages/RegisterPage';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import AdminLayout from '../modules/administration/AdminLayout';
-import AdminDashboardPage from '../modules/administration/pages/AdminDashboardPage';
 import UsersListPage from '../modules/administration/pages/UsersListPage';
 import UserFormPage from '../modules/administration/pages/UserFormPage';
 import PendingUsersPage from '../modules/administration/pages/PendingUsersPage';
@@ -18,6 +17,7 @@ import PermisListPage from '../modules/permis/pages/PermisListPage';
 import PermisDetailsPage from '../modules/permis/pages/PermisDetailsPage';
 import ProfilePage from '../modules/profile/pages/ProfilePage';
 import NotificationsPage from '../modules/profile/pages/NotificationsPage';
+import AutorisationFormPage from '../modules/autorisations/pages/AutorisationFormPage';
 
 // Référentiels existants
 import ZonesListPage from '../modules/administration/pages/ZonesListPage';
@@ -178,7 +178,7 @@ export default function AppRoutes() {
         <Route path="dashboard" element={<DashboardPage />} />
 
         <Route path="administration" element={<AdminLayout />}>
-          <Route index element={<AdminDashboardPage />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="statistiques" element={<StatistiquesPage />} />
 
           {/* Utilisateurs */}
@@ -258,6 +258,11 @@ export default function AppRoutes() {
         <Route path="permis">
           <Route index element={<PermisListPage />} />
           <Route path=":id" element={<PermisDetailsPage />} />
+        </Route>
+
+        <Route path="autorisations">
+          <Route index element={<div>TODO Liste AT</div>} />
+          <Route path="nouvelle" element={<AutorisationFormPage />} />
         </Route>
 
         <Route path="profil" element={<ProfilePage />} />

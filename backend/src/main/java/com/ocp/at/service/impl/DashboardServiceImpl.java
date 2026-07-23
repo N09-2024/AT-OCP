@@ -44,15 +44,35 @@ public class DashboardServiceImpl implements DashboardService {
         Utilisateur user = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
 
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getNom().equals("ADMIN"));
+        
         // 1. KPIs
-        long atEnCours = autorisationTravailRepository.countByStatut(StatutAT.VALIDEE);
-        if(atEnCours == 0) {
-            atEnCours = autorisationTravailRepository.countByStatut(StatutAT.SOUMISE); // Fallback
+        long atEnCours;
+        long visasEnAttente;
+        long permisActifs;
+        long receptionsEnAttente;
+        long totalArchives;
+        
+        if (isAdmin) {
+            atEnCours = autorisationTravailRepository.countByStatut(StatutAT.VALIDEE);
+            if (atEnCours == 0) {
+                atEnCours = autorisationTravailRepository.countByStatut(StatutAT.SOUMISE); // Fallback
+            }
+            visasEnAttente = visaRepository.countByStatut(StatutVisa.EN_ATTENTE);
+            permisActifs = permisRepository.countByStatutVerification(StatutPermis.CONFORME);
+            receptionsEnAttente = receptionTravauxRepository.countPendingReceptions();
+            totalArchives = archiveRepository.count();
+        } else {
+            atEnCours = autorisationTravailRepository.countByProprietaireBrouillonIdAndStatut(user.getId(), StatutAT.VALIDEE);
+            if (atEnCours == 0) {
+                atEnCours = autorisationTravailRepository.countByProprietaireBrouillonIdAndStatut(user.getId(), StatutAT.SOUMISE);
+            }
+            // Approximation for Demandeur (could be refined with custom queries)
+            visasEnAttente = 0; // Or create a query
+            permisActifs = 0;
+            receptionsEnAttente = 0;
+            totalArchives = 0;
         }
-        long visasEnAttente = visaRepository.countByStatut(StatutVisa.EN_ATTENTE);
-        long permisActifs = permisRepository.countByStatutVerification(StatutPermis.CONFORME);
-        long receptionsEnAttente = receptionTravauxRepository.countPendingReceptions();
-        long totalArchives = archiveRepository.count();
 
         KpiStats kpis = KpiStats.builder()
                 .autorisationsEnCours(atEnCours)
@@ -63,7 +83,10 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
 
         // 2. Status Distribution
-        List<Object[]> statusCounts = autorisationTravailRepository.countByStatutGrouped();
+        List<Object[]> statusCounts = isAdmin ? 
+            autorisationTravailRepository.countByStatutGrouped() :
+            autorisationTravailRepository.countByStatutGroupedForUser(user.getId());
+            
         Map<String, Long> distribution = new HashMap<>();
         for (Object[] result : statusCounts) {
             StatutAT statut = (StatutAT) result[0];
@@ -74,7 +97,10 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // 3. Monthly Stats
-        List<Object[]> monthlyResults = autorisationTravailRepository.countAtByMonth();
+        List<Object[]> monthlyResults = isAdmin ? 
+            autorisationTravailRepository.countAtByMonth() :
+            autorisationTravailRepository.countAtByMonthForUser(user.getId());
+            
         List<MonthlyStat> monthlyStats = new ArrayList<>();
         for (Object[] result : monthlyResults) {
             String mois = (String) result[0];
@@ -83,7 +109,6 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // 4. Recent ATs for this user or all if ADMIN
-        boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getNom().equals("ADMIN"));
         List<AutorisationTravail> recentAts = isAdmin ? 
             autorisationTravailRepository.findTop5ByOrderByDateCreationDesc() : 
             autorisationTravailRepository.findTop5ByProprietaireBrouillonIdOrderByDateCreationDesc(user.getId());

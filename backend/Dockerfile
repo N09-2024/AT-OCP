@@ -6,7 +6,8 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
-# Copy source code and build
+# Copy source code and build (use --build-arg CACHE_BUST=$(date +%s) to force recompile)
+ARG CACHE_BUST=1
 COPY src ./src
 RUN mvn package -DskipTests -B
 

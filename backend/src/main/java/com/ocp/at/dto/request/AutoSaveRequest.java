@@ -33,4 +33,28 @@ public class AutoSaveRequest {
 
     @Schema(description = "Heure de fin prévue")
     private LocalTime heureFin;
+
+    @Schema(description = "Services intervenants")
+    private String servicesIntervenants;
+
+    @Schema(description = "Entreprises intervenantes")
+    private String entreprisesIntervenantes;
+
+    @Schema(description = "Mesures de sécurité de l'exécutant")
+    private String mesuresSecuriteExecutant;
+
+    @Schema(description = "Liste des IDs des risques")
+    private java.util.List<String> risquesIds;
+
+    @Schema(description = "Liste des IDs des mesures")
+    private java.util.List<String> mesuresIds;
+
+    @Schema(description = "Liste des IDs des EPIs")
+    private java.util.List<String> episIds;
+
+    @Schema(description = "Liste des IDs des moyens d'accès")
+    private java.util.List<String> moyensAccesIds;
+
+    @Schema(description = "Liste des IDs des types de permis nécessaires")
+    private java.util.List<String> permisIds;
 }

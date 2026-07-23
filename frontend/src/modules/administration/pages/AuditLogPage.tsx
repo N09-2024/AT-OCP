@@ -109,7 +109,7 @@ export default function AuditLogPage() {
       <Paper sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         {/* Filters */}
         <Box sx={{ p: 2.5, borderBottom: '1px solid #f1f5f9' }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" flexWrap="wrap">
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Text search */}
             <TextField
               size="small"
@@ -126,12 +126,14 @@ export default function AuditLogPage() {
                 '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1px' },
               }
             }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <MagnifyingGlassIcon style={{ width: 18, height: 18, color: '#94a3b8' }} />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <MagnifyingGlassIcon style={{ width: 18, height: 18, color: '#94a3b8' }} />
+                    </InputAdornment>
+                  ),
+                }
               }}
             />
 
@@ -200,7 +202,7 @@ export default function AuditLogPage() {
                 '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1px' },
               }
             }}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
               size="small"
@@ -218,7 +220,7 @@ export default function AuditLogPage() {
                 '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1px' },
               }
             }}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
 
             {hasFilters && (

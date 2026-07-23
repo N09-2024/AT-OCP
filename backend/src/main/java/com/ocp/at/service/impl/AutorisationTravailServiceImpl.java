@@ -45,6 +45,11 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     private final UtilisateurRepository utilisateurRepository;
     private final PermisRepository permisRepository;
     private final ReceptionTravauxRepository receptionRepository;
+    private final RisqueRepository risqueRepository;
+    private final MesurePreparationRepository mesureRepository;
+    private final EPIRepository epiRepository;
+    private final MoyenAccesRepository moyenAccesRepository;
+    private final TypePermisRepository typePermisRepository;
     
     private final WorkflowATService workflowService;
     private final NotificationService notificationService;
@@ -70,7 +75,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             throw new BusinessException("Une Autorisation de Travail existe déjà pour ce document.");
         }
 
-        // 2. Récupérer le document, vérifier le niveau et la finalisation des étapes
+        // 2. Récupérer le document source
         DemandeIntervention di = null;
         OrdreTravail ot = null;
         BonTravail bt = null;
@@ -81,39 +86,25 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         switch (typeDocument.toUpperCase()) {
             case "DI":
                 di = diRepository.findById(documentId).orElseThrow(() -> new ResourceNotFoundException("DI non trouvée"));
-                if (di.getNiveauIntervention() != NiveauIntervention.NIVEAU_2) throw new BusinessException("Seules les interventions de Niveau 2 nécessitent une AT.");
                 objet = di.getObjet();
                 description = di.getDescription();
                 documentNumero = di.getNumero();
                 break;
             case "OT":
                 ot = otRepository.findById(documentId).orElseThrow(() -> new ResourceNotFoundException("OT non trouvé"));
-                if (ot.getNiveauIntervention() != NiveauIntervention.NIVEAU_2) throw new BusinessException("Seules les interventions de Niveau 2 nécessitent une AT.");
                 objet = ot.getObjet();
                 description = ot.getDescription();
                 documentNumero = ot.getNumero();
                 break;
             case "BT":
                 bt = btRepository.findById(documentId).orElseThrow(() -> new ResourceNotFoundException("BT non trouvé"));
-                if (bt.getNiveauIntervention() != NiveauIntervention.NIVEAU_2) throw new BusinessException("Seules les interventions de Niveau 2 nécessitent une AT.");
                 objet = bt.getObjet();
                 description = bt.getDescription();
                 documentNumero = bt.getNumero();
                 break;
         }
 
-        // 3. Vérifier la visite préalable et l'analyse des risques
-        VisitePrealable visite = visiteRepository.findById(getVisiteIdFromDoc(di, ot, bt))
-                .orElseThrow(() -> new BusinessException("Une Visite Préalable est obligatoire pour créer l'AT."));
-        if (!visite.isEffectuee()) {
-            throw new BusinessException("La Visite Préalable doit être finalisée.");
-        }
-
-        if (!analyseRepository.existsByVisitePrealableId(visite.getId())) {
-            throw new BusinessException("Une Analyse des Risques est obligatoire pour créer l'AT.");
-        }
-
-        // 4. Créer l'AT
+        // 3. Créer l'AT brouillon (les vérifications strictes sont faites à la soumission)
         Utilisateur currentUtilisateur = getCurrentUser();
         String currentYear = String.valueOf(LocalDateTime.now().getYear());
         Long seq = atRepository.getNextSequence();
@@ -134,11 +125,33 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                 .build();
 
         AutorisationTravail savedAt = atRepository.save(at);
-
-        // Historique
         enregistrerHistorique(savedAt, TypeActionAT.CREATION, null, StatutAT.BROUILLON, "Création de l'AT depuis " + documentNumero);
-
         log.info("AT {} créée par {}", numero, currentUtilisateur.getNom());
+        return mapToResponse(savedAt);
+    }
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse createDirect() {
+        // Création d'une AT brouillon sans document source obligatoire
+        Utilisateur currentUtilisateur = getCurrentUser();
+        String currentYear = String.valueOf(LocalDateTime.now().getYear());
+        Long seq = atRepository.getNextSequence();
+        String numero = String.format("AT-%s-%06d", currentYear, seq);
+
+        AutorisationTravail at = AutorisationTravail.builder()
+                .numero(numero)
+                .objet("Nouvelle AT")
+                .statut(StatutAT.BROUILLON)
+                .version(1)
+                .etatVerrou(EtatVerrou.EN_COURS_EDITION)
+                .proprietaireBrouillon(currentUtilisateur)
+                .datePriseVerrou(LocalDateTime.now())
+                .build();
+
+        AutorisationTravail savedAt = atRepository.save(at);
+        enregistrerHistorique(savedAt, TypeActionAT.CREATION, null, StatutAT.BROUILLON, "Création directe de l'AT");
+        log.info("AT {} créée directement par {}", numero, currentUtilisateur.getNom());
         return mapToResponse(savedAt);
     }
 
@@ -172,8 +185,52 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setDateFin(request.getDateFin());
         at.setHeureDebut(request.getHeureDebut());
         at.setHeureFin(request.getHeureFin());
+        
+        at.setServicesIntervenants(request.getServicesIntervenants());
+        at.setEntreprisesIntervenantes(request.getEntreprisesIntervenantes());
+        at.setMesuresSecuriteExecutant(request.getMesuresSecuriteExecutant());
+
+        if (request.getRisquesIds() != null) {
+            at.setRisques(risqueRepository.findAllById(request.getRisquesIds()));
+        }
+        if (request.getMesuresIds() != null) {
+            at.setMesures(mesureRepository.findAllById(request.getMesuresIds()));
+        }
+        if (request.getEpisIds() != null) {
+            at.setEpis(epiRepository.findAllById(request.getEpisIds()));
+        }
+        if (request.getMoyensAccesIds() != null) {
+            at.setMoyensAcces(moyenAccesRepository.findAllById(request.getMoyensAccesIds()));
+        }
 
         AutorisationTravail savedAt = atRepository.save(at);
+
+        // Sync Permis
+        if (request.getPermisIds() != null) {
+            List<com.ocp.at.entity.Permis> existingPermis = permisRepository.findByAutorisationTravailId(savedAt.getId());
+            List<String> existingTypeIds = existingPermis.stream().map(p -> p.getTypePermis().getId()).toList();
+
+            for (String reqTypeId : request.getPermisIds()) {
+                if (!existingTypeIds.contains(reqTypeId)) {
+                    com.ocp.at.entity.TypePermis type = typePermisRepository.findById(reqTypeId).orElse(null);
+                    if (type != null) {
+                        com.ocp.at.entity.Permis newPermis = com.ocp.at.entity.Permis.builder()
+                                .typePermis(type)
+                                .autorisationTravail(savedAt)
+                                .estObligatoire(true)
+                                .statutVerification(com.ocp.at.entity.enums.StatutPermis.A_VERIFIER)
+                                .build();
+                        permisRepository.save(newPermis);
+                    }
+                }
+            }
+
+            for (com.ocp.at.entity.Permis ep : existingPermis) {
+                if (!request.getPermisIds().contains(ep.getTypePermis().getId())) {
+                    permisRepository.delete(ep);
+                }
+            }
+        }
         
         enregistrerHistorique(savedAt, TypeActionAT.AUTO_SAVE, savedAt.getStatut(), savedAt.getStatut(), "Sauvegarde automatique");
 
@@ -502,6 +559,27 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             response.setDocumentSourceId(at.getBonTravail().getId());
             response.setDocumentSourceNumero(at.getBonTravail().getNumero());
         }
+        
+        response.setServicesIntervenants(at.getServicesIntervenants());
+        response.setEntreprisesIntervenantes(at.getEntreprisesIntervenantes());
+        response.setMesuresSecuriteExecutant(at.getMesuresSecuriteExecutant());
+        
+        if (at.getRisques() != null) {
+            response.setRisquesIds(at.getRisques().stream().map(r -> r.getId()).toList());
+        }
+        if (at.getMesures() != null) {
+            response.setMesuresIds(at.getMesures().stream().map(m -> m.getId()).toList());
+        }
+        if (at.getEpis() != null) {
+            response.setEpisIds(at.getEpis().stream().map(e -> e.getId()).toList());
+        }
+        if (at.getMoyensAcces() != null) {
+            response.setMoyensAccesIds(at.getMoyensAcces().stream().map(m -> m.getId()).toList());
+        }
+        
+        List<com.ocp.at.entity.Permis> permisList = permisRepository.findByAutorisationTravailId(at.getId());
+        response.setPermisIds(permisList.stream().map(p -> p.getTypePermis().getId()).toList());
+        
         return response;
     }
 

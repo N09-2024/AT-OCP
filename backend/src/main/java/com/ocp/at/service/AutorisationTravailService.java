@@ -15,6 +15,8 @@ public interface AutorisationTravailService {
 
     AutorisationTravailResponse createFromDocument(String documentId, String typeDocument);
 
+    AutorisationTravailResponse createDirect();
+
     Page<AutorisationTravailResponse> findAll(Pageable pageable);
 
     AutorisationTravailResponse findById(String id);
