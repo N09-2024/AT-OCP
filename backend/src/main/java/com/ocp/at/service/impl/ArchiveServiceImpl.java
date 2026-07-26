@@ -286,7 +286,7 @@ public class ArchiveServiceImpl implements ArchiveService {
     private Utilisateur getCurrentUser() {
         String userId = getCurrentUserId();
         if ("SYSTEM".equals(userId)) return null;
-        return utilisateurRepository.findById(userId).orElse(null);
+        return utilisateurRepository.findByEmail(userId).orElse(null);
     }
 
     private void creerHistoriqueAT(AutorisationTravail at, TypeActionAT action, StatutAT nouveauStatut, String commentaire) {

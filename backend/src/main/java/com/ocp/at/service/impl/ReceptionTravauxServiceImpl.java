@@ -330,14 +330,14 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
 
     private String getCurrentMatricule() {
         return SecurityUtils.getCurrentUtilisateurId()
-                .flatMap(utilisateurRepository::findById)
+                .flatMap(utilisateurRepository::findByEmail)
                 .map(Utilisateur::getMatricule)
                 .orElse("SYSTEM");
     }
 
     private Utilisateur getCurrentUser() {
         return SecurityUtils.getCurrentUtilisateurId()
-                .flatMap(utilisateurRepository::findById)
+                .flatMap(utilisateurRepository::findByEmail)
                 .orElse(null);
     }
 

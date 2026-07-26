@@ -43,7 +43,7 @@ public class WorkflowATServiceImpl implements WorkflowATService {
         if (workflow.getRoleAutorise() != null && !workflow.getRoleAutorise().isEmpty()) {
             String userId = com.ocp.at.security.SecurityUtils.getCurrentUtilisateurId()
                     .orElseThrow(() -> new BusinessException("Non authentifié"));
-            com.ocp.at.entity.Utilisateur currentUser = utilisateurRepository.findById(userId)
+            com.ocp.at.entity.Utilisateur currentUser = utilisateurRepository.findByEmail(userId)
                     .orElseThrow(() -> new BusinessException("Utilisateur non trouvé"));
             
             boolean hasRole = currentUser.getRoles().stream()

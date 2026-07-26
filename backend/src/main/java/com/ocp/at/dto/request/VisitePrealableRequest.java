@@ -15,12 +15,10 @@ import java.util.List;
 @Schema(description = "Requête de création ou modification d'une Visite Préalable")
 public class VisitePrealableRequest {
 
-    @NotBlank(message = "L'ID du document source est obligatoire")
-    @Schema(description = "ID du document source (DI, OT ou BT)")
+    @Schema(description = "ID du document source (DI, OT ou BT - optionnel si création directe AT)")
     private String documentSourceId;
 
-    @NotNull(message = "Le type du document source est obligatoire")
-    @Schema(description = "Type du document source: DI, OT, BT", allowableValues = {"DI", "OT", "BT"})
+    @Schema(description = "Type du document source: DI, OT, BT (optionnel)", allowableValues = {"DI", "OT", "BT"})
     private String typeDocumentSource;
 
     @Schema(description = "ID de l'utilisateur visiteur (optionnel à la création)")

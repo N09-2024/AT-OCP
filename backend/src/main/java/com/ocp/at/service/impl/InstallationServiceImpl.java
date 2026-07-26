@@ -24,6 +24,7 @@ import com.ocp.at.repository.EquipementRepository;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class InstallationServiceImpl implements InstallationService {
 
     private final InstallationRepository repository;

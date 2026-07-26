@@ -54,14 +54,16 @@ export default function AutorisationFormPage() {
   // AT Draft
   const [createdAtId, setCreatedAtId] = useState<string | null>(null);
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
   // Form State
   const [formData, setFormData] = useState({
     objet: '',
     descriptionTravaux: '',
-    dateDebut: '',
-    dateFin: '',
-    heureDebut: '',
-    heureFin: '',
+    dateDebut: todayStr,
+    dateFin: todayStr,
+    heureDebut: '08:00',
+    heureFin: '17:00',
     servicesIntervenants: '',
     entreprisesIntervenantes: '',
     mesuresSecuriteExecutant: '',
@@ -95,18 +97,19 @@ export default function AutorisationFormPage() {
     setSelectedDoc(null);
     setDocList([]);
     apiClient.get(`${found.endpoint}?page=0&size=100`)
-      .then(res => setDocList(res.data.content || []))
+      .then(res => setDocList(Array.isArray(res.data) ? res.data : (res.data?.content || [])))
       .catch(() => setDocList([]))
       .finally(() => setLoading(false));
   }, [docType]);
 
   // Load referentials once
   useEffect(() => {
-    apiClient.get('/risques?size=100').then(res => setRefRisques(res.data.content || []));
-    apiClient.get('/mesures-preparation?size=100').then(res => setRefMesures(res.data.content || []));
-    apiClient.get('/epis?size=100').then(res => setRefEpis(res.data.content || []));
-    apiClient.get('/moyens-acces?size=100').then(res => setRefMoyens(res.data.content || []));
-    apiClient.get('/types-permis?size=100').then(res => setRefPermis(res.data.content || []));
+    const extractList = (res: any) => Array.isArray(res.data) ? res.data : (res.data?.content || []);
+    apiClient.get('/risques').then(res => setRefRisques(extractList(res)));
+    apiClient.get('/mesures-preparation').then(res => setRefMesures(extractList(res)));
+    apiClient.get('/epis').then(res => setRefEpis(extractList(res)));
+    apiClient.get('/moyens-acces').then(res => setRefMoyens(extractList(res)));
+    apiClient.get('/types-permis').then(res => setRefPermis(extractList(res)));
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -219,17 +222,32 @@ export default function AutorisationFormPage() {
           setPhotoUploaded(true);
         }
       } else if (activeStep > 1 && activeStep < STEPS.length - 1 && createdAtId) {
-        await apiClient.put(`/autorisations-travail/${createdAtId}/autosave`, formData);
+        const payload = {
+          ...formData,
+          dateDebut: formData.dateDebut || null,
+          dateFin: formData.dateFin || null,
+          heureDebut: formData.heureDebut || null,
+          heureFin: formData.heureFin || null,
+        };
+        await apiClient.put(`/autorisations-travail/${createdAtId}/autosave`, payload);
       } else if (activeStep === STEPS.length - 1 && createdAtId) {
-        await apiClient.put(`/autorisations-travail/${createdAtId}/autosave`, formData);
+        const payload = {
+          ...formData,
+          dateDebut: formData.dateDebut || null,
+          dateFin: formData.dateFin || null,
+          heureDebut: formData.heureDebut || null,
+          heureFin: formData.heureFin || null,
+        };
+        await apiClient.put(`/autorisations-travail/${createdAtId}/autosave`, payload);
         await apiClient.post(`/autorisations-travail/${createdAtId}/submit`);
         navigate('/autorisations');
         return;
       }
       setActiveStep(prev => prev + 1);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Une erreur s'est produite. Veuillez réessayer.");
+      const msg = err.response?.data?.message || err.message || "Une erreur s'est produite. Veuillez réessayer.";
+      alert(msg);
     } finally {
       setLoading(false);
     }

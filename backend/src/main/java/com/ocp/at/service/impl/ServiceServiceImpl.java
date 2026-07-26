@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class ServiceServiceImpl implements ServiceService {
 
     private final ServiceRepository repository;

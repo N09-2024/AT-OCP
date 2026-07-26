@@ -61,7 +61,8 @@ public class DataInitializer {
             new String[]{"EDIT_PERMIS", "Modifier un permis"},
             new String[]{"DELETE_PERMIS", "Supprimer un permis"},
             new String[]{"UPLOAD_PERMIS", "Uploader un fichier de permis"},
-            new String[]{"ANALYSE_PERMIS", "Analyser un permis avec l'IA"}
+            new String[]{"ANALYSE_PERMIS", "Analyser un permis avec l'IA"},
+            new String[]{"MANAGE_DOCUMENTS", "Gérer les documents source et visites"}
         );
 
         for (String[] perm : permissions) {
@@ -92,7 +93,7 @@ public class DataInitializer {
                     case "DEMANDEUR" ->
                         // Use case: Créer Demande d'Intervention, Consulter état AT, Clôturer AT
                         permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "CREATE_AT", "EDIT_AT", "SUBMIT_AT", "CLOSE_AT", "UPLOAD_FILES"
+                            "READ_AT", "CREATE_AT", "EDIT_AT", "SUBMIT_AT", "CLOSE_AT", "UPLOAD_FILES", "MANAGE_DOCUMENTS"
                         )).forEach(perms::add);
 
                     case "RESPONSABLE_OCP" ->
@@ -111,6 +112,12 @@ public class DataInitializer {
                 roleRepository.save(Role.builder()
                         .nom(roleData[0]).description(roleData[1]).permissions(perms).build());
                 logger.info("Rôle créé: {}", roleData[0]);
+            } else if ("ADMIN".equals(roleData[0])) {
+                // Toujours s'assurer que l'ADMIN a toutes les permissions (en cas d'ajout de nouvelles permissions)
+                Role adminRole = roleRepository.findByNom("ADMIN").get();
+                adminRole.setPermissions(new HashSet<>(permissionRepository.findAll()));
+                roleRepository.save(adminRole);
+                logger.info("Permissions du rôle ADMIN synchronisées");
             }
         }
     }

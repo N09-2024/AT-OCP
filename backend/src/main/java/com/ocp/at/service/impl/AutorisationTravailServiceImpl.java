@@ -504,7 +504,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
     private Utilisateur getCurrentUser() {
         return SecurityUtils.getCurrentUtilisateurId()
-                .flatMap(utilisateurRepository::findById)
+                .flatMap(utilisateurRepository::findByEmail)
                 .orElseThrow(() -> new BusinessException("Utilisateur non authentifié"));
     }
 

@@ -45,23 +45,25 @@ public class VisitePrealableServiceImpl implements VisitePrealableService {
     public VisitePrealableResponse create(VisitePrealableRequest request) {
         log.info("Création d'une visite préalable pour {} {}", request.getTypeDocumentSource(), request.getDocumentSourceId());
 
-        String type = request.getTypeDocumentSource().toUpperCase();
+        String type = request.getTypeDocumentSource() != null ? request.getTypeDocumentSource().toUpperCase() : null;
 
         // Vérification unicité : un document ne peut avoir qu'une visite
-        switch (type) {
-            case "DI" -> {
-                if (visiteRepository.existsForDI(request.getDocumentSourceId()))
-                    throw new BusinessException("Une visite préalable existe déjà pour cette DI");
+        if (type != null && request.getDocumentSourceId() != null) {
+            switch (type) {
+                case "DI" -> {
+                    if (visiteRepository.existsForDI(request.getDocumentSourceId()))
+                        throw new BusinessException("Une visite préalable existe déjà pour cette DI");
+                }
+                case "OT" -> {
+                    if (visiteRepository.existsForOT(request.getDocumentSourceId()))
+                        throw new BusinessException("Une visite préalable existe déjà pour cet OT");
+                }
+                case "BT" -> {
+                    if (visiteRepository.existsForBT(request.getDocumentSourceId()))
+                        throw new BusinessException("Une visite préalable existe déjà pour ce BT");
+                }
+                default -> throw new BusinessException("Type de document invalide : " + request.getTypeDocumentSource() + ". Valeurs acceptées : DI, OT, BT");
             }
-            case "OT" -> {
-                if (visiteRepository.existsForOT(request.getDocumentSourceId()))
-                    throw new BusinessException("Une visite préalable existe déjà pour cet OT");
-            }
-            case "BT" -> {
-                if (visiteRepository.existsForBT(request.getDocumentSourceId()))
-                    throw new BusinessException("Une visite préalable existe déjà pour ce BT");
-            }
-            default -> throw new BusinessException("Type de document invalide : " + request.getTypeDocumentSource() + ". Valeurs acceptées : DI, OT, BT");
         }
 
         VisitePrealable visite = VisitePrealable.builder()
@@ -88,8 +90,10 @@ public class VisitePrealableServiceImpl implements VisitePrealableService {
 
         visite = visiteRepository.save(visite);
 
-        // Liaison au document source
-        linkDocumentToVisite(type, request.getDocumentSourceId(), visite);
+        // Liaison au document source (si spécifié)
+        if (type != null && request.getDocumentSourceId() != null) {
+            linkDocumentToVisite(type, request.getDocumentSourceId(), visite);
+        }
 
         return buildResponse(visite, type, request.getDocumentSourceId());
     }
@@ -322,10 +326,12 @@ public class VisitePrealableServiceImpl implements VisitePrealableService {
         response.setDocumentSourceId(documentId);
 
         // Récupérer le numéro du document source pour le DTO
-        switch (type) {
-            case "DI" -> diRepository.findById(documentId).ifPresent(di -> response.setDocumentSourceNumero(di.getNumero()));
-            case "OT" -> otRepository.findById(documentId).ifPresent(ot -> response.setDocumentSourceNumero(ot.getNumero()));
-            case "BT" -> btRepository.findById(documentId).ifPresent(bt -> response.setDocumentSourceNumero(bt.getNumero()));
+        if (type != null && documentId != null) {
+            switch (type) {
+                case "DI" -> diRepository.findById(documentId).ifPresent(di -> response.setDocumentSourceNumero(di.getNumero()));
+                case "OT" -> otRepository.findById(documentId).ifPresent(ot -> response.setDocumentSourceNumero(ot.getNumero()));
+                case "BT" -> btRepository.findById(documentId).ifPresent(bt -> response.setDocumentSourceNumero(bt.getNumero()));
+            }
         }
         return response;
     }

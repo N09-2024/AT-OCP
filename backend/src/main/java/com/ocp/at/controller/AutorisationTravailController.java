@@ -105,21 +105,21 @@ public class AutorisationTravailController {
 
     // --- WORKFLOW ---
 
-    @PostMapping("/at/{id}/submit")
+    @PostMapping({"/autorisations-travail/{id}/submit", "/at/{id}/submit"})
     @Operation(summary = "Soumettre l'AT pour validation")
     @PreAuthorize("hasAuthority('SUBMIT_AT')")
     public ResponseEntity<AutorisationTravailResponse> soumettre(@PathVariable String id) {
         return ResponseEntity.ok(atService.soumettreAT(id));
     }
 
-    @PostMapping("/at/{id}/validate")
+    @PostMapping({"/autorisations-travail/{id}/validate", "/at/{id}/validate"})
     @Operation(summary = "Valider l'Autorisation de Travail")
     @PreAuthorize("hasAuthority('VALIDATE_AT')")
     public ResponseEntity<AutorisationTravailResponse> valider(@PathVariable String id) {
         return ResponseEntity.ok(atService.validerAT(id));
     }
 
-    @PostMapping("/at/{id}/reject")
+    @PostMapping({"/autorisations-travail/{id}/reject", "/at/{id}/reject"})
     @Operation(summary = "Refuser l'Autorisation de Travail avec motif")
     @PreAuthorize("hasAuthority('REFUSE_AT')")
     public ResponseEntity<AutorisationTravailResponse> refuser(
@@ -128,14 +128,14 @@ public class AutorisationTravailController {
         return ResponseEntity.ok(atService.refuserAT(id, request));
     }
 
-    @PostMapping("/at/{id}/renew")
+    @PostMapping({"/autorisations-travail/{id}/renew", "/at/{id}/renew"})
     @Operation(summary = "Renouveler une Autorisation de Travail (incrémente la version)")
     @PreAuthorize("hasAuthority('RENEW_AT')")
     public ResponseEntity<AutorisationTravailResponse> renouveler(@PathVariable String id) {
         return ResponseEntity.ok(atService.renouvelerAT(id));
     }
 
-    @PostMapping("/at/{id}/close")
+    @PostMapping({"/autorisations-travail/{id}/close", "/at/{id}/close"})
     @Operation(summary = "Réceptionner les travaux et clôturer l'AT")
     @PreAuthorize("hasAuthority('CLOSE_AT')")
     public ResponseEntity<AutorisationTravailResponse> receptionnerTravaux(@PathVariable String id) {

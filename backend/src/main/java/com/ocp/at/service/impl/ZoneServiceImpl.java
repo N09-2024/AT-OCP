@@ -24,6 +24,7 @@ import com.ocp.at.repository.ServiceRepository;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class ZoneServiceImpl implements ZoneService {
 
     private final ZoneRepository repository;

@@ -10,6 +10,7 @@ import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.VisaMapper;
 import com.ocp.at.repository.AutorisationTravailRepository;
+import com.ocp.at.repository.UtilisateurRepository;
 import com.ocp.at.repository.VisaRepository;
 import com.ocp.at.security.SecurityUtils;
 import com.ocp.at.service.AuditService;
@@ -42,6 +43,7 @@ public class VisaServiceImpl implements VisaService {
 
     private final VisaRepository visaRepository;
     private final AutorisationTravailRepository atRepository;
+    private final UtilisateurRepository utilisateurRepository;
     private final VisaMapper visaMapper;
     private final StorageService storageService;
     private final AuditService auditService;
@@ -55,8 +57,8 @@ public class VisaServiceImpl implements VisaService {
 
         String currentUserId = SecurityUtils.getCurrentUtilisateurId()
                 .orElseThrow(() -> new BusinessException("Non authentifié"));
-        Utilisateur currentUser = new Utilisateur(); // In a real scenario we fetch it, for now we set the ID since it's just a ref
-        currentUser.setId(currentUserId);
+        Utilisateur currentUser = utilisateurRepository.findByEmail(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
         
         Visa visa = Visa.builder()
                 .dateVisa(LocalDateTime.now())
@@ -87,7 +89,9 @@ public class VisaServiceImpl implements VisaService {
 
         String currentUserId = SecurityUtils.getCurrentUtilisateurId()
                 .orElseThrow(() -> new BusinessException("Non authentifié"));
-        if (!visa.getUtilisateur().getId().equals(currentUserId)) {
+        Utilisateur currentUser = utilisateurRepository.findByEmail(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
+        if (!visa.getUtilisateur().getId().equals(currentUser.getId())) {
             throw new BusinessException("Vous n'êtes pas autorisé à signer ce visa");
         }
 
