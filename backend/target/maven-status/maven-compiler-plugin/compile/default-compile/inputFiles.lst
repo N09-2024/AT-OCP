@@ -128,6 +128,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\mapper\RoleMapper.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\OrdreTravailRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\BonTravailService.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\security\ATContextService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\EntrepriseExterneRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\controller\UtilisateurController.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\VisaDTO.java
@@ -140,6 +141,7 @@ C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\PdfGeneratorService.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\ReceptionTravauxRepository.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\InstallationServiceImpl.java
+C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\security\ATContextSecurityExpressions.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\dto\response\TypePermisResponse.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\service\impl\DemandeInterventionServiceImpl.java
 C:\Users\pc\.gemini\antigravity-ide\scratch\ocp-at-system\backend\src\main\java\com\ocp\at\repository\FichierJointRepository.java

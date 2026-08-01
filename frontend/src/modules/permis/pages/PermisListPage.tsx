@@ -2,13 +2,13 @@ import { useEffect, useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Chip, Button,
-  TextField, InputAdornment, FormControl, InputLabel, Select,
+  TextField, InputAdornment,
   MenuItem, Stack, TablePagination, CircularProgress, Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { PermisService } from '../../../services/PermisService';
 import type { PermisResponse } from '../../../services/PermisService';
-import { PlusIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, EyeIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../../store/authStore';
 
 export default function PermisListPage() {

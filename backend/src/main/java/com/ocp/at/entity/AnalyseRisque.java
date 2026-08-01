@@ -14,14 +14,18 @@ import java.util.Set;
  */
 @Entity
 @Table(name = "analyses_risques")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 public class AnalyseRisque {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @CreationTimestamp
@@ -36,6 +40,7 @@ public class AnalyseRisque {
      */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "visite_prealable_id", unique = true)
+    @ToString.Exclude
     private VisitePrealable visitePrealable;
 
     /**
@@ -43,6 +48,7 @@ public class AnalyseRisque {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "analyseur_id")
+    @ToString.Exclude
     private Utilisateur analyseur;
 
     @ManyToMany
@@ -52,6 +58,7 @@ public class AnalyseRisque {
         inverseJoinColumns = @JoinColumn(name = "risque_id")
     )
     @Builder.Default
+    @ToString.Exclude
     private Set<Risque> risques = new HashSet<>();
 
     @ManyToMany
@@ -61,6 +68,7 @@ public class AnalyseRisque {
         inverseJoinColumns = @JoinColumn(name = "mesure_id")
     )
     @Builder.Default
+    @ToString.Exclude
     private Set<MesurePreparation> mesures = new HashSet<>();
 
     @ManyToMany
@@ -70,6 +78,7 @@ public class AnalyseRisque {
         inverseJoinColumns = @JoinColumn(name = "epi_id")
     )
     @Builder.Default
+    @ToString.Exclude
     private Set<EPI> epis = new HashSet<>();
 
     @ManyToMany
@@ -79,5 +88,6 @@ public class AnalyseRisque {
         inverseJoinColumns = @JoinColumn(name = "moyen_id")
     )
     @Builder.Default
+    @ToString.Exclude
     private Set<MoyenAcces> moyensAcces = new HashSet<>();
 }

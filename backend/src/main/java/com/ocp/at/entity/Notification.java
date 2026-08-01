@@ -3,20 +3,27 @@ package com.ocp.at.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notifications")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @Column(nullable = false)
@@ -25,7 +32,9 @@ public class Notification {
     @Column(nullable = false)
     private String message;
 
-    private LocalDateTime dateCreation;
+    @Column(nullable = false)
+    @Builder.Default
+    private LocalDateTime dateCreation = LocalDateTime.now();
 
     private LocalDateTime dateLecture;
 
@@ -37,6 +46,7 @@ public class Notification {
     private String lien;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "utilisateur_id", nullable = false)
+    @JoinColumn(name = "utilisateur_id")
+    @ToString.Exclude
     private Utilisateur utilisateur;
 }

@@ -41,15 +41,17 @@ public class VisitePrealableController {
     }
 
     @PostMapping
-    @Operation(summary = "Créer une visite préalable liée à un document (DI, OT ou BT)")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @Operation(summary = "Créer une visite préalable liée à un document (DI, OT ou BT)",
+               description = "§8.2 Standard S-HSE-SEC-31 : le CEEP exécute (E) la visite chantier.")
+    @PreAuthorize("hasAuthority('CREATE_VISITE')") // §8.2 CEEP exécute la visite chantier
     public ResponseEntity<VisitePrealableResponse> create(@Valid @RequestBody VisitePrealableRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier une visite préalable (impossible si finalisée)")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @Operation(summary = "Modifier une visite préalable (impossible si finalisée)",
+               description = "§8.2 CEEP (E) et CEEE (P) peuvent modifier la visite. HCEE/HMEP valident via /finaliser.")
+    @PreAuthorize("hasAnyAuthority('CREATE_VISITE', 'EDIT_AT')") // CEEP (E) et CEEE (P)
     public ResponseEntity<VisitePrealableResponse> update(
             @PathVariable String id,
             @Valid @RequestBody VisitePrealableRequest request) {
@@ -58,22 +60,24 @@ public class VisitePrealableController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une visite préalable (impossible si une analyse est liée)")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @PreAuthorize("hasAuthority('EDIT_AT')") // CEEP peut supprimer sa visite avant finalisation
     public ResponseEntity<Void> delete(@PathVariable String id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/finaliser")
-    @Operation(summary = "Finaliser une visite (GPS + commentaire + photo requis)")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @Operation(summary = "Finaliser une visite (GPS + commentaire + photo requis)",
+               description = "§8.2 Garants : HCEE (G côté E) et HMEP (G côté P) valident la visite.")
+    @PreAuthorize("hasAuthority('VALIDATE_VISITE')") // §8.2 HCEE (G) et HMEP (G) valident/garantissent
     public ResponseEntity<VisitePrealableResponse> finaliser(@PathVariable String id) {
         return ResponseEntity.ok(service.finaliser(id));
     }
 
     @PostMapping(value = "/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Ajouter une photo à la visite (upload multipart)")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @Operation(summary = "Ajouter une photo à la visite (upload multipart)",
+               description = "§8.2 CEEP et CEEE peuvent ajouter des photos durant la visite.")
+    @PreAuthorize("hasAnyAuthority('CREATE_VISITE', 'EDIT_AT')") // CEEP (E) et CEEE (P)
     public ResponseEntity<PhotoResponse> addPhoto(
             @PathVariable String id,
             @Parameter(description = "Fichier image") @RequestPart("file") MultipartFile file,
@@ -83,7 +87,7 @@ public class VisitePrealableController {
 
     @DeleteMapping("/{id}/photos/{photoId}")
     @Operation(summary = "Supprimer une photo de la visite (impossible si finalisée)")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @PreAuthorize("hasAnyAuthority('CREATE_VISITE', 'EDIT_AT')") // CEEP (E) et CEEE (P)
     public ResponseEntity<Void> deletePhoto(
             @PathVariable String id,
             @PathVariable String photoId) {

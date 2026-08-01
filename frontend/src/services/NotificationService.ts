@@ -31,10 +31,7 @@ export const NotificationService = {
   },
 
   countUnread: async (): Promise<number> => {
-    const res = await apiClient.get<Page<NotificationItem>>('/notifications', {
-      params: { page: 0, size: 1 },
-    });
-    // Count unread from full page — ideally backend would have a dedicated endpoint
+    // Fetch the first 100 notifications to count unread ones client-side
     const all = await apiClient.get<Page<NotificationItem>>('/notifications', {
       params: { page: 0, size: 100 },
     });

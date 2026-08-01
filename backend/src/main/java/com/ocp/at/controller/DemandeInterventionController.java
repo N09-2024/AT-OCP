@@ -38,8 +38,9 @@ public class DemandeInterventionController {
     }
 
     @PostMapping
-    @Operation(summary = "Créer une nouvelle DI")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @Operation(summary = "Créer une nouvelle DI",
+               description = "Conforme §8.1 Standard S-HSE-SEC-31 : le CEEP exécute la demande d'intervention.")
+    @PreAuthorize("hasAuthority('CREATE_AT')") // §8.1 — CEEP exécute la demande d'intervention
     public ResponseEntity<DemandeInterventionResponse> create(
             @Valid @RequestBody DemandeInterventionRequest request,
             Authentication authentication) {
@@ -49,8 +50,9 @@ public class DemandeInterventionController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Mettre à jour une DI")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @Operation(summary = "Mettre à jour une DI",
+               description = "CEEP peut modifier sa propre DI (§8.1). CEEE peut participer (P).")
+    @PreAuthorize("hasAuthority('EDIT_AT')") // CEEP/CEEE peuvent modifier la DI
     public ResponseEntity<DemandeInterventionResponse> update(
             @PathVariable String id,
             @Valid @RequestBody DemandeInterventionRequest request) {
@@ -58,8 +60,9 @@ public class DemandeInterventionController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Annuler une DI")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @Operation(summary = "Annuler une DI",
+               description = "Seul le CEEP (créateur) peut annuler une DI avant création de l'AT.")
+    @PreAuthorize("hasAuthority('CREATE_AT')") // Seul CEEP qui a créé la DI peut l'annuler
     public ResponseEntity<Void> delete(@PathVariable String id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

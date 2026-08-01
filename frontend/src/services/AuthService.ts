@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { useAuthStore } from '../store/authStore';
+import type { Service } from '../types';
 
 // -------------------------------------------------------
 // Types correspondant exactement aux DTOs du backend
@@ -29,6 +30,7 @@ export interface UtilisateurResponse {
   dateCreation: string;
   dateModification?: string;
   derniereConnexion?: string;
+  service?: Service;
   roles: RoleResponse[];
 }
 

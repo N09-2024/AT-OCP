@@ -5,7 +5,7 @@ import com.ocp.at.dto.response.UtilisateurResponse;
 import com.ocp.at.entity.Utilisateur;
 import org.mapstruct.*;
 
-@Mapper(componentModel = "spring", uses = {RoleMapper.class})
+@Mapper(componentModel = "spring", uses = {RoleMapper.class, ServiceMapper.class})
 public interface UtilisateurMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -16,6 +16,7 @@ public interface UtilisateurMapper {
     @Mapping(target = "compteVerrouille", ignore = true)
     @Mapping(target = "motDePasseExpire", ignore = true)
     @Mapping(target = "actif", ignore = true)
+    @Mapping(target = "service", ignore = true)
     Utilisateur toEntity(UtilisateurRequest request);
 
     UtilisateurResponse toResponse(Utilisateur utilisateur);
@@ -31,5 +32,6 @@ public interface UtilisateurMapper {
     @Mapping(target = "motDePasseExpire", ignore = true)
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "actif", ignore = true)
+    @Mapping(target = "service", ignore = true)
     void updateEntityFromRequest(com.ocp.at.dto.request.UtilisateurUpdateRequest request, @MappingTarget Utilisateur utilisateur);
 }

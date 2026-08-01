@@ -23,4 +23,6 @@ public interface ArchiveMapper {
     @Mapping(target = "autorisationTravailId", source = "autorisationTravail.id")
     @Mapping(target = "downloadUrl", expression = "java(\"/api/archives/\" + archive.getId() + \"/download\")")
     ArchiveResponse toResponse(ArchiveAT archive);
+
+    // Note: ArchiveAT has no collection fields, mapping should work
 }

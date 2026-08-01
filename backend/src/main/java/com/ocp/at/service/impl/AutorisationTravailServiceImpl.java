@@ -66,10 +66,17 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         // 1. Vérifier qu'aucune AT n'existe déjà pour ce document
         boolean atExists = false;
         switch (typeDocument.toUpperCase()) {
-            case "DI" -> atExists = atRepository.existsByDemandeInterventionId(documentId);
-            case "OT" -> atExists = atRepository.existsByOrdreTravailId(documentId);
-            case "BT" -> atExists = atRepository.existsByBonTravailId(documentId);
-            default -> throw new BusinessException("Type de document source invalide : " + typeDocument);
+            case "DI":
+                atExists = atRepository.existsByDemandeInterventionId(documentId);
+                break;
+            case "OT":
+                atExists = atRepository.existsByOrdreTravailId(documentId);
+                break;
+            case "BT":
+                atExists = atRepository.existsByBonTravailId(documentId);
+                break;
+            default:
+                throw new BusinessException("Type de document source invalide : " + typeDocument);
         }
         if (atExists) {
             throw new BusinessException("Une Autorisation de Travail existe déjà pour ce document.");
@@ -208,7 +215,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         // Sync Permis
         if (request.getPermisIds() != null) {
             List<com.ocp.at.entity.Permis> existingPermis = permisRepository.findByAutorisationTravailId(savedAt.getId());
-            List<String> existingTypeIds = existingPermis.stream().map(p -> p.getTypePermis().getId()).toList();
+            List<String> existingTypeIds = existingPermis.stream().map(p -> p.getTypePermis().getId()).collect(Collectors.toList());
 
             for (String reqTypeId : request.getPermisIds()) {
                 if (!existingTypeIds.contains(reqTypeId)) {
@@ -471,12 +478,62 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
         StatutAT ancienStatut = at.getStatut();
         at.setStatut(StatutAT.CLOTUREE);
+        at.setStatutWorkflow(StatutAT.TRAVAUX_RECEPTIONES);
         
         AutorisationTravail savedAt = atRepository.save(at);
         
         enregistrerHistorique(savedAt, TypeActionAT.CLOTURE, ancienStatut, StatutAT.CLOTUREE, "Clôture de l'AT");
         notificationService.createNotification(at.getProprietaireBrouillon(), "AT Clôturée", "Votre AT " + savedAt.getNumero() + " a été clôturée.", "INFO", "/at/" + savedAt.getId());
         
+        return mapToResponse(savedAt);
+    }
+
+    // --- Standard S-HSE-SEC-31 Workflow Methods ---
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse classifierIntervention(String documentId, String typeDocument, Integer niveau) {
+        log.info("Classification intervention docId={} type={} niveau={}", documentId, typeDocument, niveau);
+        if (niveau != null && niveau == 1) {
+            throw new BusinessException("L'intervention de Niveau 1 ne nécessite pas d'Autorisation de Travail (couverture par ADRPT + Plan de Prévention uniquement).");
+        }
+
+        AutorisationTravailResponse response = createFromDocument(documentId, typeDocument);
+        AutorisationTravail at = getEntityById(response.getId());
+        at.setStatutWorkflow(StatutAT.CLASSIFICATION_EFFECTUEE);
+        AutorisationTravail savedAt = atRepository.save(at);
+
+        enregistrerHistorique(savedAt, TypeActionAT.CLASSIFICATION, null, StatutAT.CLASSIFICATION_EFFECTUEE, "Classification Niveau 2 confirmée par HCEP");
+        return mapToResponse(savedAt);
+    }
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse demarrerIntervention(String id) {
+        AutorisationTravail at = getEntityById(id);
+        StatutAT ancienStatut = at.getStatut();
+
+        at.setStatutWorkflow(StatutAT.INTERVENTION_EN_COURS);
+        AutorisationTravail savedAt = atRepository.save(at);
+
+        enregistrerHistorique(savedAt, TypeActionAT.DEBUT_INTERVENTION, ancienStatut, StatutAT.INTERVENTION_EN_COURS, "Démarrage des travaux par le CEEE (Exécutant)");
+        notificationService.createNotification(at.getProprietaireBrouillon(), "Intervention Démarrée", "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré.", "INFO", "/at/" + savedAt.getId());
+
+        return mapToResponse(savedAt);
+    }
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse declarerFinTravaux(String id) {
+        AutorisationTravail at = getEntityById(id);
+        StatutAT ancienStatut = at.getStatut();
+
+        at.setStatutWorkflow(StatutAT.FIN_TRAVAUX_DECLAREE);
+        AutorisationTravail savedAt = atRepository.save(at);
+
+        enregistrerHistorique(savedAt, TypeActionAT.DECLARATION_FIN, ancienStatut, StatutAT.FIN_TRAVAUX_DECLAREE, "Déclaration de fin des travaux par le CEEE");
+        notificationService.createNotification(at.getProprietaireBrouillon(), "Fin des Travaux Déclarée", "Le CEEE a déclaré la fin des travaux sur l'AT " + savedAt.getNumero() + ".", "ACTION", "/at/" + savedAt.getId());
+
         return mapToResponse(savedAt);
     }
 
@@ -565,20 +622,20 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         response.setMesuresSecuriteExecutant(at.getMesuresSecuriteExecutant());
         
         if (at.getRisques() != null) {
-            response.setRisquesIds(at.getRisques().stream().map(r -> r.getId()).toList());
+            response.setRisquesIds(at.getRisques().stream().map(r -> r.getId()).collect(Collectors.toList()));
         }
         if (at.getMesures() != null) {
-            response.setMesuresIds(at.getMesures().stream().map(m -> m.getId()).toList());
+            response.setMesuresIds(at.getMesures().stream().map(m -> m.getId()).collect(Collectors.toList()));
         }
         if (at.getEpis() != null) {
-            response.setEpisIds(at.getEpis().stream().map(e -> e.getId()).toList());
+            response.setEpisIds(at.getEpis().stream().map(e -> e.getId()).collect(Collectors.toList()));
         }
         if (at.getMoyensAcces() != null) {
-            response.setMoyensAccesIds(at.getMoyensAcces().stream().map(m -> m.getId()).toList());
+            response.setMoyensAccesIds(at.getMoyensAcces().stream().map(m -> m.getId()).collect(Collectors.toList()));
         }
         
         List<com.ocp.at.entity.Permis> permisList = permisRepository.findByAutorisationTravailId(at.getId());
-        response.setPermisIds(permisList.stream().map(p -> p.getTypePermis().getId()).toList());
+        response.setPermisIds(permisList.stream().map(p -> p.getTypePermis().getId()).collect(Collectors.toList()));
         
         return response;
     }

@@ -41,8 +41,10 @@
 - 👁️ **Visites préalables** de site avec géolocalisation et photos
 - ⚠️ **Analyse des risques** (risques, mesures, EPI, moyens d'accès)
 - ✅ **Validation & Visas** multi-rôles avec audit trail
+- 👥 **Rôles métiers & Sécurité** conformes au **Standard OCP S-HSE-SEC-31 v1.0** (CEEP, CEEE, HCEP, HCEE, HMEP, HMEE, ADMIN, RESPONSABLE_ENTREPRISE)
+- 📍 **Résolution contextuelle P/E** (Propriétaire / Exécutant selon le territoire de l'intervention)
 - 📦 **Archivage PDF** avec QR Code et recherche avancée
-- 📊 **Tableaux de bord** adaptés par rôle (Admin, Responsable OCP, HSE, Demandeur…)
+- 📊 **Tableaux de bord** adaptés par rôle
 - 🔔 **Notifications** temps réel
 
 ---
@@ -266,6 +268,49 @@ curl http://localhost:8080/api/autorisations-travail \
 | 10 | Archives & Rapports (QR Code, PDF) | ✅ | 🚧 |
 
 > ✅ Terminé &nbsp;|&nbsp; 🚧 En développement &nbsp;|&nbsp; ⬜ À venir
+
+---
+
+## 👥 Rôles & Workflow — Standard OCP S-HSE-SEC-31 v1.0
+
+Le système implémente les 8 rôles opérationnels et les 9 étapes du workflow du **Standard OCP S-HSE-SEC-31 v1.0** :
+
+### Rôles Opérationnels
+
+| Rôle | Nom complet | Définition & Rôle dans le workflow |
+|------|-------------|-----------------------------------|
+| **CEEP** | Chef d'Équipe Entité Propriétaire | Opérationnel terrain P. Rédige l'AT (§8.3), réalise la visite (§8.2), réceptionne (§8.5). |
+| **CEEE** | Chef d'Équipe Entité Exécutante | Opérationnel terrain E. Démarre les travaux (§4), déclare la fin des travaux (§8.5). |
+| **HCEP** | Hors Cadre Entité Propriétaire | Cadre hiérarchique P. Classifie Niveau 1/2 (Étape 0), garant archivage (§8.6), habilitations (§9). |
+| **HCEE** | Hors Cadre Entité Exécutante | Cadre hiérarchique E. Garant de la visite (§8.2) et de l'AT (§8.3), exécute l'archivage (§8.6). |
+| **HMEP** | Haute Maîtrise Entité Propriétaire | Maîtrise P. Garant de la visite chantier (§8.2) et du démarrage d'intervention (§4). |
+| **HMEE** | Haute Maîtrise Entité Exécutante | Maîtrise E. Position fail-closed en lecture seule. |
+| **ADMIN** | Administrateur Système | Gestion globale du système et des référentiels. |
+| **RESPONSABLE_ENTREPRISE** | Responsable Entreprise Externe | Sous-traitant externe. Gestion des Bons de Travaux (BT) et des permis associés. |
+
+### Workflow des 9 Étapes (`statutWorkflow`)
+
+```
+[0. CLASSIFICATION_EFFECTUEE] (HCEP)
+             ↓
+[1. DEMANDE_CREEE]            (CEEP - DI/OT/BT)
+             ↓
+[2. VISITE_REALISEE]          (CEEP E, HCEE/HMEP G)
+             ↓
+[3. AT_REDIGEE]               (CEEP E, HCEE G, CEEE P)
+             ↓
+[4. INTERVENTION_EN_COURS]    (CEEE E)
+             ↓
+[5b. AT_RECONDUITE]           (Si dépassement poste ; retour Visite si > 24h)
+             ↓
+[6. FIN_TRAVAUX_DECLAREE]     (CEEE E)
+             ↓
+[7. TRAVAUX_RECEPTIONES]      (CEEP E, CEEE P)
+             ↓
+[8. ARCHIVEE]                 (HCEE E, HCEP G - min. 1 an)
+```
+
+> Pour plus de détails sur la procédure de migration et la matrice des permissions, consulter [MIGRATION_ROLES.md](MIGRATION_ROLES.md).
 
 ---
 

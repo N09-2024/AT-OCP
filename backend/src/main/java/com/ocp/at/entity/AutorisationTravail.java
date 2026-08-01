@@ -15,14 +15,18 @@ import java.util.List;
 
 @Entity
 @Table(name = "autorisations_travail")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 public class AutorisationTravail {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @Column(nullable = false)
@@ -52,6 +56,21 @@ public class AutorisationTravail {
 
     @Enumerated(EnumType.STRING)
     private StatutAT statut;
+
+    /**
+     * Statut du workflow conforme au Standard S-HSE-SEC-31 §7.
+     *
+     * Reflète fidèlement les 9 étapes du logigramme officiel :
+     * DEMANDE_CREEE → VISITE_REALISEE → AT_REDIGEE → INTERVENTION_EN_COURS
+     * → AT_RECONDUITE → FIN_TRAVAUX_DECLAREE → TRAVAUX_RECEPTIONES → ARCHIVEE
+     *
+     * Distinct du champ 'statut' (legacy) qui est conservé pour la rétrocompatibilité.
+     * Les nouvelles AT doivent utiliser ce champ pour les transitions de workflow.
+     * Mappé automatiquement depuis 'statut' lors de la migration V21.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statut_workflow")
+    private StatutAT statutWorkflow;
 
     @Enumerated(EnumType.STRING)
     private EtatVerrou etatVerrou;
@@ -84,20 +103,43 @@ public class AutorisationTravail {
     @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
     @BatchSize(size = 50)
     @Builder.Default
+    @ToString.Exclude
     private List<Visa> visas = new ArrayList<>();
 
     @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
     @BatchSize(size = 50)
     @Builder.Default
+    @ToString.Exclude
     private List<Permis> permis = new ArrayList<>();
 
     @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
     @BatchSize(size = 50)
     @Builder.Default
+    @ToString.Exclude
     private List<HistoriqueAT> historiques = new ArrayList<>();
 
     @OneToOne(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)
+    @ToString.Exclude
     private ReceptionTravaux receptionTravaux;
+
+    /**
+     * Zone/Service Propriétaire (P) — l'entité responsable de l'installation où se déroule l'intervention.
+     * Référence la même table Zone que zoneExecutante (P et E sont le même type d'objet,
+     * des rôles différents sur la même AT).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "zone_proprietaire_id")
+    @ToString.Exclude
+    private Zone zoneProprietaire;
+
+    /**
+     * Zone/Service Exécutant (E) — l'entité qui intervient dans le périmètre de P.
+     * Peut être le même Service/Zone que zoneProprietaire sur une autre AT (relation P/E contextuelle).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "zone_executante_id")
+    @ToString.Exclude
+    private Zone zoneExecutante;
 
     // --- Champs spécifiques du formulaire (PDF) ---
     private String servicesIntervenants;

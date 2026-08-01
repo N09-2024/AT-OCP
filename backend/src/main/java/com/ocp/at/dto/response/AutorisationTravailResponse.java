@@ -38,6 +38,12 @@ public class AutorisationTravailResponse {
     private String proprietaireBrouillonId;
     private String proprietaireBrouillonNomComplet;
     
+    // Zones territoriales P/E (standard OCP S-HSE-SEC-31)
+    private String zoneProprietaireId;
+    private String zoneProprietaireNom;
+    private String zoneExecutanteId;
+    private String zoneExecutanteNom;
+
     private LocalDateTime datePriseVerrou;
     private LocalDateTime dateLiberationVerrou;
 

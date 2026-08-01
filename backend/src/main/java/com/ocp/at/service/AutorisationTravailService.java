@@ -41,6 +41,14 @@ public interface AutorisationTravailService {
 
     AutorisationTravailResponse cloturerAT(String id);
 
+    // --- Standard S-HSE-SEC-31 Workflow Methods ---
+
+    AutorisationTravailResponse classifierIntervention(String documentId, String typeDocument, Integer niveau);
+
+    AutorisationTravailResponse demarrerIntervention(String id);
+
+    AutorisationTravailResponse declarerFinTravaux(String id);
+
     List<HistoriqueATResponse> getHistorique(String id);
 
     List<VisaResponse> getVisas(String id);

@@ -1,4 +1,4 @@
-import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider, Chip, Collapse } from '@mui/material';
+import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Collapse, Chip } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 import {
   HomeIcon,
@@ -14,28 +14,38 @@ import {
   PlusCircleIcon,
   ClipboardDocumentListIcon,
   UserPlusIcon,
-  CameraIcon,
-  CloudArrowUpIcon,
-  MagnifyingGlassCircleIcon,
-  ClockIcon,
+  FolderIcon,
   ChevronDownIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  MapPinIcon,
+  BellIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
 import { useState } from 'react';
 
 // OCP Primary Green
-const PRIMARY_COLOR = '#16a34a';
+const PRIMARY_COLOR = '#00875A';
 
 // ─── ADMIN ────────────────────────────────────────────────
 const ADMIN_MENU = {
-  label: 'Administration',
+  label: 'Administration System',
   sections: [
     {
-      title: 'Tableau de bord',
+      title: 'Vue d\'ensemble',
       items: [
-        { text: 'Vue d\'ensemble', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Statistiques', path: '/administration/statistiques', icon: <DocumentMagnifyingGlassIcon width={20} /> },
+        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Statistiques & KPI', path: '/administration/statistiques', icon: <DocumentMagnifyingGlassIcon width={20} /> },
+      ],
+    },
+    {
+      title: 'Gestion des AT & Travaux',
+      items: [
+        { text: 'Autorisations de Travail', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Documents source', path: '/documents', icon: <DocumentTextIcon width={20} /> },
+        { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
+        { text: 'Permis de travail', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
+        { text: 'Réceptions travaux', path: '/receptions', icon: <ArchiveBoxIcon width={20} /> },
+        { text: 'Archives & PDF', path: '/archives', icon: <FolderIcon width={20} /> },
       ],
     },
     {
@@ -43,20 +53,20 @@ const ADMIN_MENU = {
       items: [
         { text: 'Utilisateurs', path: '/administration/utilisateurs', icon: <UserGroupIcon width={20} /> },
         { text: 'Rôles & Permissions', path: '/administration/roles', icon: <ShieldCheckIcon width={20} /> },
-        { text: 'Inscriptions en attente', path: '/administration/inscriptions', icon: <UserPlusIcon width={20} />, badge: true },
+        { text: 'Inscriptions en attente', path: '/administration/inscriptions', icon: <UserPlusIcon width={20} /> },
       ],
     },
     {
-      title: 'Système',
+      title: 'Système & Audit',
       items: [
         { text: 'Journal d\'audit', path: '/administration/audit', icon: <DocumentMagnifyingGlassIcon width={20} /> },
         { text: 'Paramètres', path: '/administration/parametres', icon: <Cog6ToothIcon width={20} /> },
       ],
     },
     {
-      title: 'Référentiels',
+      title: 'Référentiels OCP',
       collapsible: true,
-      defaultOpen: true,
+      defaultOpen: false,
       items: [
         { text: 'Installations', path: '/administration/installations', icon: <BookOpenIcon width={20} /> },
         { text: 'Zones', path: '/administration/zones', icon: <BookOpenIcon width={20} /> },
@@ -73,71 +83,143 @@ const ADMIN_MENU = {
   ],
 };
 
-// ─── DEMANDEUR ────────────────────────────────────────────
-const DEMANDEUR_MENU = {
-  label: 'Demandeur',
+// ─── CEEP (Chef d'Équipe Entité Propriétaire) ────────────
+const CEEP_MENU = {
+  label: 'CEEP — Entité Propriétaire',
   sections: [
     {
-      title: 'Mon espace',
+      title: 'Mon Espace Terrain',
       items: [
         { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Mes autorisations', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Mes Autorisations (AT)', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
       ],
     },
     {
-      title: 'Actions',
+      title: 'Demande & Exécution',
       items: [
-        { text: 'Nouvelle demande', path: '/autorisations/nouvelle', icon: <PlusCircleIcon width={20} /> },
-        { text: 'Mes documents', path: '/documents', icon: <DocumentTextIcon width={20} /> },
+        { text: 'Nouvelle Autorisation F-HSE', path: '/autorisations/nouvelle', icon: <PlusCircleIcon width={20} /> },
+        { text: 'Documents source (DI/OT/BT)', path: '/documents', icon: <DocumentTextIcon width={20} /> },
+        { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
+        { text: 'Gestion des permis', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
+        { text: 'Réception travaux', path: '/receptions', icon: <ArchiveBoxIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
       ],
     },
   ],
 };
 
-// ─── RESPONSABLE OCP ─────────────────────────────────────
-const RESPONSABLE_OCP_MENU = {
-  label: 'Responsable OCP',
+// ─── CEEE (Chef d'Équipe Entité Exécutante) ─────────────
+const CEEE_MENU = {
+  label: 'CEEE — Entité Exécutante',
   sections: [
     {
-      title: 'Mon espace',
+      title: 'Mon Espace Intervention',
       items: [
         { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Autorisations à traiter', path: '/autorisations', icon: <ClipboardDocumentListIcon width={20} /> },
+        { text: 'Autorisations en cours', path: '/autorisations?filtre=INTERVENTION_EN_COURS', icon: <ClipboardDocumentListIcon width={20} /> },
       ],
     },
     {
-      title: 'Validation',
+      title: 'Participation & Clôture',
       items: [
-        { text: 'À signer', path: '/autorisations?filtre=a-signer', icon: <CheckBadgeIcon width={20} /> },
-        { text: 'À valider / Rejeter', path: '/autorisations?filtre=a-valider', icon: <ClockIcon width={20} /> },
+        { text: 'Toutes les ATs', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Gestion des permis', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
+        { text: 'Déclarer fin travaux', path: '/autorisations?action=declarer-fin', icon: <CheckBadgeIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
+      ],
+    },
+  ],
+};
+
+// ─── HCEE (Hors Cadre Entité Exécutante) ─────────────────
+const HCEE_MENU = {
+  label: 'HCEE — Garant Exécutant',
+  sections: [
+    {
+      title: 'Validation & Garantie',
+      items: [
+        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Autorisations à valider', path: '/autorisations?filtre=SOUMISE', icon: <ClipboardDocumentListIcon width={20} /> },
+      ],
+    },
+    {
+      title: 'Visas & Archivage',
+      items: [
+        { text: 'Toutes les ATs', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
         { text: 'Réceptionner travaux', path: '/receptions', icon: <ArchiveBoxIcon width={20} /> },
-      ],
-    },
-    {
-      title: 'Permis',
-      items: [
-        { text: 'Consulter les permis', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
+        { text: 'Coffre-fort Archives', path: '/archives', icon: <FolderIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
       ],
     },
   ],
 };
 
-// ─── RESPONSABLE ENTREPRISE EXTERNE ──────────────────────
-const RESPONSABLE_ENTREPRISE_MENU = {
-  label: 'Resp. Entreprise',
+// ─── HCEP (Hors Cadre Entité Propriétaire) ──────────────
+const HCEP_MENU = {
+  label: 'HCEP — Garant Propriétaire',
   sections: [
     {
-      title: 'Mon espace',
+      title: 'Gestion & Supervision',
       items: [
         { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Habilitations AT', path: '/habilitations', icon: <ShieldCheckIcon width={20} /> },
       ],
     },
     {
-      title: 'Permis de travail',
+      title: 'Archivage & Audit',
       items: [
-        { text: 'Importer un permis', path: '/permis/importer', icon: <CloudArrowUpIcon width={20} /> },
-        { text: 'Photographier un permis', path: '/permis/photographier', icon: <CameraIcon width={20} /> },
-        { text: 'Consulter les résultats', path: '/permis', icon: <MagnifyingGlassCircleIcon width={20} /> },
+        { text: 'Toutes les ATs', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Archives', path: '/archives', icon: <FolderIcon width={20} /> },
+        { text: 'Journal d\'audit', path: '/administration/audit', icon: <DocumentMagnifyingGlassIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
+      ],
+    },
+  ],
+};
+
+// ─── HMEP (Haute Maîtrise Entité Propriétaire) ──────────
+const HMEP_MENU = {
+  label: 'HMEP — Haute Maîtrise Propriétaire',
+  sections: [
+    {
+      title: 'Supervision & Garantie Visites',
+      items: [
+        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
+        { text: 'Autorisations', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
+      ],
+    },
+  ],
+};
+
+// ─── HMEE (Haute Maîtrise Entité Exécutante) ────────────
+const HMEE_MENU = {
+  label: 'HMEE — Haute Maîtrise Exécutante',
+  sections: [
+    {
+      title: 'Consultation',
+      items: [
+        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Autorisations', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
+      ],
+    },
+  ],
+};
+
+// ─── RESPONSABLE ENTREPRISE (hors logique P/E) ──────────
+const RESPONSABLE_ENTREPRISE_MENU = {
+  label: 'Responsable Entreprise',
+  sections: [
+    {
+      title: 'Gestion des Permis',
+      items: [
+        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Permis de travail', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
+        { text: 'Autorisations liées', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
       ],
     },
   ],
@@ -147,11 +229,9 @@ interface MenuItemRowProps {
   text: string;
   path: string;
   icon: React.ReactNode;
-  badge?: boolean;
-  pendingCount?: number;
 }
 
-function MenuItemRow({ text, path, icon, badge, pendingCount }: MenuItemRowProps) {
+function MenuItemRow({ text, path, icon }: MenuItemRowProps) {
   return (
     <ListItem disablePadding sx={{ mb: 0.5, px: 2 }}>
       <ListItemButton
@@ -165,12 +245,12 @@ function MenuItemRow({ text, path, icon, badge, pendingCount }: MenuItemRowProps
           '&.active': {
             bgcolor: `${PRIMARY_COLOR}15`,
             color: PRIMARY_COLOR,
-            fontWeight: 600,
+            fontWeight: 700,
             '& .MuiListItemIcon-root': { color: PRIMARY_COLOR },
           },
           '&:hover': {
             bgcolor: 'action.hover',
-          }
+          },
         }}
       >
         <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>
@@ -178,16 +258,8 @@ function MenuItemRow({ text, path, icon, badge, pendingCount }: MenuItemRowProps
         </ListItemIcon>
         <ListItemText
           primary={text}
-          slotProps={{ primary: { style: { fontSize: 14, fontWeight: 'inherit' } } }}
+          slotProps={{ primary: { style: { fontSize: 13, fontWeight: 'inherit' } } }}
         />
-        {badge && pendingCount !== undefined && pendingCount > 0 && (
-          <Chip
-            label={pendingCount}
-            size="small"
-            color="error"
-            sx={{ height: 20, fontSize: 11, fontWeight: 700, minWidth: 24 }}
-          />
-        )}
       </ListItemButton>
     </ListItem>
   );
@@ -198,12 +270,12 @@ function SectionMenuRow({ section }: { section: any }) {
 
   if (section.collapsible) {
     return (
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 1.5 }}>
         <Box
           onClick={() => setOpen(!open)}
           sx={{
             px: 4,
-            py: 1,
+            py: 0.75,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -211,21 +283,10 @@ function SectionMenuRow({ section }: { section: any }) {
             '&:hover': { bgcolor: 'action.hover' },
           }}
         >
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-              fontWeight: 600,
-              fontSize: 12,
-            }}
-          >
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, fontSize: 11, letterSpacing: 0.5 }}>
             {section.title}
           </Typography>
-          {open ? (
-            <ChevronDownIcon width={14} style={{ color: '#64748b' }} />
-          ) : (
-            <ChevronRightIcon width={14} style={{ color: '#64748b' }} />
-          )}
+          {open ? <ChevronDownIcon width={14} color="#64748b" /> : <ChevronRightIcon width={14} color="#64748b" />}
         </Box>
         <Collapse in={open} timeout="auto" unmountOnExit>
           <List disablePadding>
@@ -239,20 +300,12 @@ function SectionMenuRow({ section }: { section: any }) {
   }
 
   return (
-    <Box sx={{ mb: 2 }}>
-      <Typography
-        variant="caption"
-        sx={{
-          px: 4,
-          py: 1,
-          display: 'block',
-          color: 'text.secondary',
-          fontWeight: 600,
-          fontSize: 12,
-        }}
-      >
-        {section.title}
-      </Typography>
+    <Box sx={{ mb: 1.5 }}>
+      {section.title && (
+        <Typography variant="caption" sx={{ px: 4, py: 0.75, display: 'block', color: 'text.secondary', fontWeight: 700, fontSize: 11, letterSpacing: 0.5 }}>
+          {section.title}
+        </Typography>
+      )}
       <List disablePadding>
         {section.items.map((item: any) => (
           <MenuItemRow key={item.text} {...item} />
@@ -265,18 +318,22 @@ function SectionMenuRow({ section }: { section: any }) {
 export default function Sidebar() {
   const user = useAuthStore((s) => s.user);
 
-  const hasRole = (roleName: string) =>
-    user?.roles?.some((r) => r.nom === roleName) ?? false;
+  const hasRole = (roleName: string) => user?.roles?.some((r) => r.nom === roleName) ?? false;
 
-  let menuConfig = DEMANDEUR_MENU;
+  let menuConfig = CEEP_MENU; // Rôle CEEP par défaut (remplace DEMANDEUR)
   if (hasRole('ADMIN')) menuConfig = ADMIN_MENU;
-  else if (hasRole('RESPONSABLE_OCP')) menuConfig = RESPONSABLE_OCP_MENU;
+  else if (hasRole('HCEP')) menuConfig = HCEP_MENU;
+  else if (hasRole('HCEE')) menuConfig = HCEE_MENU;
+  else if (hasRole('HMEP')) menuConfig = HMEP_MENU;
+  else if (hasRole('HMEE')) menuConfig = HMEE_MENU;
+  else if (hasRole('CEEE')) menuConfig = CEEE_MENU;
+  else if (hasRole('CEEP')) menuConfig = CEEP_MENU;
   else if (hasRole('RESPONSABLE_ENTREPRISE')) menuConfig = RESPONSABLE_ENTREPRISE_MENU;
 
   return (
     <Box
       sx={{
-        width: 280,
+        width: 270,
         flexShrink: 0,
         height: '100vh',
         position: 'sticky',
@@ -291,40 +348,36 @@ export default function Sidebar() {
         '&::-webkit-scrollbar-thumb': { backgroundColor: '#cbd5e1', borderRadius: '4px' },
       }}
     >
-      {/* OCP Logo Header */}
-      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-        {/* Placeholder for the OCP star logo */}
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M50 10L61 40H93L67 59L77 89L50 70L23 89L33 59L7 40H39L50 10Z" fill={PRIMARY_COLOR} />
-              <circle cx="50" cy="50" r="15" fill="white" />
-              <circle cx="50" cy="50" r="10" fill={PRIMARY_COLOR} />
-            </svg>
-            <Typography variant="h5" sx={{ fontWeight: 900, color: PRIMARY_COLOR, letterSpacing: -0.5 }}>
-              OCP
+      {/* OCP Header */}
+      <Box sx={{ p: 2.5, borderBottom: '1px solid #f1f5f9' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <svg width="34" height="34" viewBox="0 0 100 100" fill="none">
+            <path d="M50 10L61 40H93L67 59L77 89L50 70L23 89L33 59L7 40H39L50 10Z" fill={PRIMARY_COLOR} />
+            <circle cx="50" cy="50" r="15" fill="white" />
+            <circle cx="50" cy="50" r="10" fill={PRIMARY_COLOR} />
+          </svg>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 900, color: PRIMARY_COLOR, letterSpacing: -0.5, lineHeight: 1 }}>
+              OCP GROUP
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#059669', fontWeight: 700, fontSize: 10, display: 'block' }}>
+              GESTION AT & HSE
             </Typography>
           </Box>
-          <Typography variant="caption" sx={{ color: PRIMARY_COLOR, fontWeight: 700, fontSize: '0.6rem', letterSpacing: 0.5, mt: -0.5, ml: 0.5 }}>
-            SUCCESSFUL TOGETHER
-          </Typography>
         </Box>
       </Box>
 
-      {/* Navigation */}
-      <Box sx={{ flexGrow: 1, py: 1 }}>
-        <SectionMenuRow section={{ title: '', collapsible: false, items: menuConfig.sections[0]?.items ?? [] }} />
-        {menuConfig.sections.slice(1).map((section) => (
+      {/* Menu Navigation */}
+      <Box sx={{ flexGrow: 1, py: 2 }}>
+        {menuConfig.sections.map((section) => (
           <SectionMenuRow key={section.title} section={section} />
         ))}
       </Box>
 
-      {/* Footer / Copyright */}
-      <Box sx={{ p: 3, mt: 'auto' }}>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 11 }}>
-          © 2026 OCP Group
-          <br />
-          Tous droits réservés
+      {/* Footer */}
+      <Box sx={{ p: 2, borderTop: '1px solid #f1f5f9' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 10, textAlign: 'center' }}>
+          © 2026 OCP Group — Système AT Intelligente
         </Typography>
       </Box>
     </Box>

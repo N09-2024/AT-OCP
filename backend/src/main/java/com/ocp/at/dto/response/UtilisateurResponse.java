@@ -27,5 +27,6 @@ public class UtilisateurResponse {
     private LocalDateTime dateCreation;
     private LocalDateTime dateModification;
     private LocalDateTime derniereConnexion;
+    private ServiceResponse service;
     private Set<RoleResponse> roles;
 }

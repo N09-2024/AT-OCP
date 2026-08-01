@@ -8,7 +8,7 @@ spring:
 
 app:
   jwt:
-    secret: f9a232e98b1a3121189afad1a805fe561c8a621d6f354a8a8cac605a132c49ba10eeecf1713e5d8151fc2135766a71abbf31e660d9d505c72876411e0aba7fff
+    secret: ${JWT_SECRET}
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
   security:

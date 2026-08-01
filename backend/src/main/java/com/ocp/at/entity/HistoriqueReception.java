@@ -3,8 +3,11 @@ package com.ocp.at.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -14,14 +17,18 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "historiques_reception")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 public class HistoriqueReception {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @CreationTimestamp
@@ -36,9 +43,11 @@ public class HistoriqueReception {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "utilisateur_id")
+    @ToString.Exclude
     private Utilisateur utilisateur;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reception_travaux_id", nullable = false)
+    @ToString.Exclude
     private ReceptionTravaux receptionTravaux;
 }

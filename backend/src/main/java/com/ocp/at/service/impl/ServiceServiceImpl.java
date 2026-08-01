@@ -2,7 +2,6 @@ package com.ocp.at.service.impl;
 
 import com.ocp.at.dto.request.ServiceRequest;
 import com.ocp.at.dto.response.ServiceResponse;
-import com.ocp.at.entity.Service;
 import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.ServiceMapper;
@@ -33,7 +32,7 @@ public class ServiceServiceImpl implements ServiceService {
     @Transactional
     public ServiceResponse create(ServiceRequest request) {
         log.info("Création d'un(e) Service");
-        Service entity = mapper.toEntity(request);
+        com.ocp.at.entity.Service entity = mapper.toEntity(request);
         entity = repository.save(entity);
         return mapper.toResponse(entity);
     }
@@ -42,7 +41,7 @@ public class ServiceServiceImpl implements ServiceService {
     @Transactional
     public ServiceResponse update(String id, ServiceRequest request) {
         log.info("Modification d'un(e) Service avec ID: {}", id);
-        Service entity = repository.findById(id)
+        com.ocp.at.entity.Service entity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service non trouvé(e)"));
         mapper.updateEntityFromRequest(request, entity);
         entity = repository.save(entity);
@@ -76,7 +75,7 @@ public class ServiceServiceImpl implements ServiceService {
     @Override
     public Page<ServiceResponse> search(String query, Pageable pageable) {
         log.info("Recherche Service avec query: {}", query);
-        Specification<Service> spec = Specification.where(null);
+        Specification<com.ocp.at.entity.Service> spec = Specification.where(null);
         // Implement search logic if needed
         return repository.findAll(spec, pageable).map(mapper::toResponse);
     }
@@ -85,7 +84,7 @@ public class ServiceServiceImpl implements ServiceService {
     @Transactional
     public void delete(String id) {
         log.info("Suppression d'un(e) Service avec ID: {}", id);
-        Service entity = repository.findById(id)
+        com.ocp.at.entity.Service entity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service non trouvé(e)"));
 
         if (installationRepository.existsByServiceId(id)) {

@@ -21,7 +21,7 @@ public interface VisitePrealableMapper {
     @Mapping(target = "visiteurNomComplet", expression = "java(entity.getVisiteur() != null ? entity.getVisiteur().getNom() + \" \" + entity.getVisiteur().getPrenom() : null)")
     @Mapping(target = "analyseCreee", expression = "java(entity.getAnalyseRisque() != null)")
     @Mapping(source = "analyseRisque.id", target = "analyseRisqueId")
-    @Mapping(source = "photos", target = "photos")
+    @Mapping(target = "photos", ignore = true)
     @Mapping(target = "nombrePhotos", expression = "java(entity.getPhotos() != null ? entity.getPhotos().size() : 0)")
     @Mapping(target = "risquesIdentifiesIds", expression = "java(mapRisquesIds(entity.getRisquesIdentifies()))")
     // Ces champs sont peuplés dans le service selon la source (DI, OT, BT)

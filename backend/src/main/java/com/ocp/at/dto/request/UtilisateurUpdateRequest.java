@@ -19,4 +19,6 @@ public class UtilisateurUpdateRequest {
     private String telephone;
 
     private String photo;
+
+    private String serviceId;
 }

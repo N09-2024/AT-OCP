@@ -172,15 +172,7 @@ public class ReceptionTravauxController {
     @PreAuthorize("hasAuthority('CLOSE_AT')")
     @Operation(
             summary = "Clôturer l'AT",
-            description = """
-                    Clôture l'AT associée à la réception. Conditions requises :
-                    - travaux conformes
-                    - zone nettoyée
-                    - consignation retirée
-                    - équipement remis en service
-                    - essais réalisés
-                    - signature présente
-                    """
+            description = "Clôture l'AT associée à la réception. Conditions requises : travaux conformes, zone nettoyée, consignation retirée, équipement remis en service, essais réalisés, signature présente."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "AT clôturée avec succès"),

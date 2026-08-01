@@ -11,14 +11,18 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ordres_travail")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 public class OrdreTravail {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @Column(nullable = false, unique = true, length = 30)
@@ -50,10 +54,12 @@ public class OrdreTravail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "demandeur_id")
+    @ToString.Exclude
     private Utilisateur demandeur;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "installation_id")
+    @ToString.Exclude
     private Installation installation;
 
     /**
@@ -62,5 +68,6 @@ public class OrdreTravail {
      */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "visite_prealable_id", unique = true)
+    @ToString.Exclude
     private VisitePrealable visitePrealable;
 }

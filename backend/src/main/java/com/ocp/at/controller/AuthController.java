@@ -64,7 +64,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Inscription", description = "Permet à un nouvel utilisateur de créer un compte. Le rôle DEMANDEUR est attribué par défaut. Un admin doit approuver le compte.")
+    @Operation(summary = "Inscription", description = "Permet à un nouvel utilisateur de créer un compte. Le rôle CEEP (Chef d'Équipe Entité Propriétaire) est attribué par défaut. Un admin doit approuver le compte.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Inscription réussie, en attente de validation"),
         @ApiResponse(responseCode = "400", description = "Données invalides ou email déjà existant")

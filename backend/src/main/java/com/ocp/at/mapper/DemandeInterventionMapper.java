@@ -29,4 +29,6 @@ public interface DemandeInterventionMapper {
     @Mapping(source = "visitePrealable.effectuee", target = "visiteEffectuee", defaultValue = "false")
     @Mapping(target = "atCreable", ignore = true) // Calculé dynamiquement dans le service
     DemandeInterventionResponse toResponse(DemandeIntervention entity);
+
+    // Note: DemandeIntervention has no collection fields, mapping should work
 }

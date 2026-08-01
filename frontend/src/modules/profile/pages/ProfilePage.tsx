@@ -60,11 +60,15 @@ export default function ProfilePage() {
 
   const roleConfig: Record<string, { color: string; bg: string; label: string }> = {
     ADMIN:                  { color: '#7c3aed', bg: '#f5f3ff', label: 'Administrateur' },
-    RESPONSABLE_OCP:        { color: '#16a34a', bg: '#f0fdf4', label: 'Responsable OCP' },
-    RESPONSABLE_ENTREPRISE: { color: '#ea580c', bg: '#fff7ed', label: 'Responsable Entreprise' },
-    DEMANDEUR:              { color: '#0891b2', bg: '#f0f9ff', label: 'Demandeur' },
+    CEEP:                   { color: '#0891b2', bg: '#f0f9ff', label: 'CEEP — Chef Équipe Propriétaire' },
+    CEEE:                   { color: '#0d9488', bg: '#f0fdfa', label: 'CEEE — Chef Équipe Exécutant' },
+    HCEP:                   { color: '#7c3aed', bg: '#f5f3ff', label: 'HCEP — Hors Cadre Propriétaire' },
+    HCEE:                   { color: '#6d28d9', bg: '#ede9fe', label: 'HCEE — Hors Cadre Exécutant' },
+    HMEP:                   { color: '#16a34a', bg: '#f0fdf4', label: 'HMEP — Haute Maîtrise Propriétaire' },
+    HMEE:                   { color: '#ea580c', bg: '#fff7ed', label: 'HMEE — Haute Maîtrise Exécutante' },
+    RESPONSABLE_ENTREPRISE: { color: '#ea580c', bg: '#fff7ed', label: 'Responsable Entreprise Externe' },
   };
-  const roleInfo = roleConfig[primaryRole] ?? { color: '#6b7280', bg: '#f9fafb', label: primaryRole };
+  const _roleInfo = roleConfig[primaryRole] ?? { color: '#6b7280', bg: '#f9fafb', label: primaryRole };
 
   const handleChangePassword = async () => {
     setError(null);

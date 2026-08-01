@@ -3,24 +3,30 @@ package com.ocp.at.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 /**
  * Représente un essai réalisé lors de la réception des travaux.
  */
 @Entity
 @Table(name = "essais")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 public class Essai {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reception_id", nullable = false)
+    @ToString.Exclude
     private ReceptionTravaux receptionTravaux;
 
     @Column(nullable = false)

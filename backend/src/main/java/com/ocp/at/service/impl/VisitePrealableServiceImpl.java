@@ -50,19 +50,20 @@ public class VisitePrealableServiceImpl implements VisitePrealableService {
         // Vérification unicité : un document ne peut avoir qu'une visite
         if (type != null && request.getDocumentSourceId() != null) {
             switch (type) {
-                case "DI" -> {
+                case "DI":
                     if (visiteRepository.existsForDI(request.getDocumentSourceId()))
                         throw new BusinessException("Une visite préalable existe déjà pour cette DI");
-                }
-                case "OT" -> {
+                    break;
+                case "OT":
                     if (visiteRepository.existsForOT(request.getDocumentSourceId()))
                         throw new BusinessException("Une visite préalable existe déjà pour cet OT");
-                }
-                case "BT" -> {
+                    break;
+                case "BT":
                     if (visiteRepository.existsForBT(request.getDocumentSourceId()))
                         throw new BusinessException("Une visite préalable existe déjà pour ce BT");
-                }
-                default -> throw new BusinessException("Type de document invalide : " + request.getTypeDocumentSource() + ". Valeurs acceptées : DI, OT, BT");
+                    break;
+                default:
+                    throw new BusinessException("Type de document invalide : " + request.getTypeDocumentSource() + ". Valeurs acceptées : DI, OT, BT");
             }
         }
 
@@ -270,24 +271,24 @@ public class VisitePrealableServiceImpl implements VisitePrealableService {
      */
     private void linkDocumentToVisite(String type, String documentId, VisitePrealable visite) {
         switch (type) {
-            case "DI" -> {
+            case "DI":
                 DemandeIntervention di = diRepository.findById(documentId)
                         .orElseThrow(() -> new ResourceNotFoundException("DI non trouvée : " + documentId));
                 di.setVisitePrealable(visite);
                 diRepository.save(di);
-            }
-            case "OT" -> {
+                break;
+            case "OT":
                 OrdreTravail ot = otRepository.findById(documentId)
                         .orElseThrow(() -> new ResourceNotFoundException("OT non trouvé : " + documentId));
                 ot.setVisitePrealable(visite);
                 otRepository.save(ot);
-            }
-            case "BT" -> {
+                break;
+            case "BT":
                 BonTravail bt = btRepository.findById(documentId)
                         .orElseThrow(() -> new ResourceNotFoundException("BT non trouvé : " + documentId));
                 bt.setVisitePrealable(visite);
                 btRepository.save(bt);
-            }
+                break;
         }
     }
 
@@ -328,9 +329,15 @@ public class VisitePrealableServiceImpl implements VisitePrealableService {
         // Récupérer le numéro du document source pour le DTO
         if (type != null && documentId != null) {
             switch (type) {
-                case "DI" -> diRepository.findById(documentId).ifPresent(di -> response.setDocumentSourceNumero(di.getNumero()));
-                case "OT" -> otRepository.findById(documentId).ifPresent(ot -> response.setDocumentSourceNumero(ot.getNumero()));
-                case "BT" -> btRepository.findById(documentId).ifPresent(bt -> response.setDocumentSourceNumero(bt.getNumero()));
+                case "DI":
+                    diRepository.findById(documentId).ifPresent(di -> response.setDocumentSourceNumero(di.getNumero()));
+                    break;
+                case "OT":
+                    otRepository.findById(documentId).ifPresent(ot -> response.setDocumentSourceNumero(ot.getNumero()));
+                    break;
+                case "BT":
+                    btRepository.findById(documentId).ifPresent(bt -> response.setDocumentSourceNumero(bt.getNumero()));
+                    break;
             }
         }
         return response;

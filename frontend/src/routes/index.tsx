@@ -17,35 +17,30 @@ import PermisListPage from '../modules/permis/pages/PermisListPage';
 import PermisDetailsPage from '../modules/permis/pages/PermisDetailsPage';
 import ProfilePage from '../modules/profile/pages/ProfilePage';
 import NotificationsPage from '../modules/profile/pages/NotificationsPage';
-import AutorisationFormPage from '../modules/autorisations/pages/AutorisationFormPage';
 
-// Référentiels existants
+// AT & Workflow Pages
+import AutorisationListPage from '../modules/autorisations/pages/AutorisationListPage';
+import AutorisationFormPage from '../modules/autorisations/pages/AutorisationFormPage';
+import AutorisationDetailPage from '../modules/autorisations/pages/AutorisationDetailPage';
+import ValidationOCPPage from '../modules/visas/pages/ValidationOCPPage';
+import ReceptionTravauxPage from '../modules/receptions/pages/ReceptionTravauxPage';
+import ArchiveListPage from '../modules/archives/pages/ArchiveListPage';
+import DocumentsListPage from '../modules/documents/pages/DocumentsListPage';
+import VisitesListPage from '../modules/visites/pages/VisitesListPage';
+
+// Référentiels
 import ZonesListPage from '../modules/administration/pages/ZonesListPage';
 import ZoneFormPage from '../modules/administration/pages/ZoneFormPage';
 import InstallationsListPage from '../modules/administration/pages/InstallationsListPage';
 import InstallationFormPage from '../modules/administration/pages/InstallationFormPage';
-
-// Pages dédiées pour les services (avec zones)
 import ServicesListPage from '../modules/administration/pages/ServicesListPage';
 import ServiceFormPage from '../modules/administration/pages/ServiceFormPage';
-
-// Pages génériques pour les référentiels simples
 import SimpleReferentielPage from '../modules/administration/pages/SimpleReferentielPage';
 import SimpleReferentielForm from '../modules/administration/pages/SimpleReferentielForm';
+import HabilitationsPage from '../modules/administration/pages/HabilitationsPage';
 
-import { useAuthStore } from '../store/authStore';
+import { ProtectedRoute, RoleGuard } from '../components/guards/Guards';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
-  }
-  return <>{children}</>;
-};
-
-// -------------------------------------------------------
-// Referentiel route configs — fields must match backend DTOs exactly
-// -------------------------------------------------------
 const REFERENTIEL_ROUTES = [
   {
     key: 'equipements',
@@ -55,8 +50,7 @@ const REFERENTIEL_ROUTES = [
     subtitle: 'Gestion des équipements utilisés dans les travaux',
     createLabel: 'Nouvel équipement',
     searchPlaceholder: 'Rechercher un équipement...',
-    // EquipementRequest: nomEquipement (required), codeEquipement (required), descriptionEquipement, installationId
-    labelField: 'nomEquipement' as 'nom',  // kept for SimpleReferentielPage display
+    labelField: 'nomEquipement' as 'nom',
     fields: [
       { key: 'nomEquipement', label: "Nom de l'équipement", required: true },
       { key: 'codeEquipement', label: "Code de l'équipement", required: true },
@@ -71,7 +65,6 @@ const REFERENTIEL_ROUTES = [
     subtitle: 'Équipements de protection individuelle',
     createLabel: 'Nouvel EPI',
     searchPlaceholder: 'Rechercher un EPI...',
-    // EPIRequest: nomEPI (required), descriptionEPI
     labelField: 'nomEPI' as 'nom',
     fields: [
       { key: 'nomEPI', label: "Nom de l'EPI", required: true },
@@ -86,7 +79,6 @@ const REFERENTIEL_ROUTES = [
     subtitle: 'Gestion des risques associés aux travaux',
     createLabel: 'Nouveau risque',
     searchPlaceholder: 'Rechercher un risque...',
-    // RisqueRequest: nomRisque (required), descriptionRisque, niveau
     labelField: 'nomRisque' as 'nom',
     fields: [
       { key: 'nomRisque', label: 'Nom du risque', required: true },
@@ -102,7 +94,6 @@ const REFERENTIEL_ROUTES = [
     subtitle: 'Gestion des mesures de prévention et de préparation',
     createLabel: 'Nouvelle mesure',
     searchPlaceholder: 'Rechercher une mesure...',
-    // MesurePreparationRequest: nomMesure (required), descriptionMesure
     labelField: 'nomMesure' as 'nom',
     fields: [
       { key: 'nomMesure', label: 'Nom de la mesure', required: true },
@@ -117,7 +108,6 @@ const REFERENTIEL_ROUTES = [
     subtitle: "Gestion des moyens d'accès aux zones de travail",
     createLabel: "Nouveau moyen d'accès",
     searchPlaceholder: "Rechercher un moyen d'accès...",
-    // MoyenAccesRequest: nomMoyen (required), descriptionMoyen
     labelField: 'nomMoyen' as 'nom',
     fields: [
       { key: 'nomMoyen', label: "Nom du moyen d'accès", required: true },
@@ -132,7 +122,6 @@ const REFERENTIEL_ROUTES = [
     subtitle: 'Gestion des entreprises sous-traitantes',
     createLabel: 'Nouvelle entreprise',
     searchPlaceholder: 'Rechercher une entreprise...',
-    // EntrepriseExterneRequest: nomEntreprise (required), adresse, telephone, responsable
     labelField: 'nomEntreprise' as 'nom',
     fields: [
       { key: 'nomEntreprise', label: "Nom de l'entreprise", required: true },
@@ -176,41 +165,71 @@ export default function AppRoutes() {
         }
       >
         <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="documents" element={<DocumentsListPage />} />
+        <Route path="visites" element={<VisitesListPage />} />
 
-        <Route path="administration" element={<AdminLayout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+        {/* Autorisations de travail */}
+        <Route path="autorisations">
+          <Route index element={<AutorisationListPage />} />
+          <Route path="nouvelle" element={<AutorisationFormPage />} />
+          <Route path=":id/editer" element={<AutorisationFormPage />} />
+          <Route path=":id" element={<AutorisationDetailPage />} />
+        </Route>
+
+        {/* Visas & Validation OCP */}
+        <Route path="visas">
+          <Route path="validation/:id" element={<ValidationOCPPage />} />
+        </Route>
+
+        {/* Réceptions des travaux */}
+        <Route path="receptions" element={<ReceptionTravauxPage />} />
+
+        {/* Archives & PDF */}
+        <Route path="archives" element={<ArchiveListPage />} />
+
+        {/* Permis */}
+        <Route path="permis">
+          <Route index element={<PermisListPage />} />
+          <Route path=":id" element={<PermisDetailsPage />} />
+        </Route>
+
+        {/* Profil & Notifications */}
+        <Route path="profil" element={<ProfilePage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+
+        {/* Habilitations AT (§9 HCEP - F-HSE-SEC-31-02) */}
+        <Route path="habilitations" element={<HabilitationsPage />} />
+
+        {/* Administration espace réservé */}
+        <Route
+          path="administration"
+          element={
+            <RoleGuard roles={['ADMIN']}>
+              <AdminLayout />
+            </RoleGuard>
+          }
+        >
+          <Route index element={<Navigate to="/administration/statistiques" replace />} />
           <Route path="statistiques" element={<StatistiquesPage />} />
-
-          {/* Utilisateurs */}
           <Route path="utilisateurs" element={<UsersListPage />} />
           <Route path="utilisateurs/:id" element={<UserFormPage />} />
-
-          {/* Rôles & Permissions */}
           <Route path="roles" element={<RolesListPage />} />
           <Route path="roles/nouveau" element={<RoleFormPage />} />
           <Route path="roles/:id" element={<RoleFormPage />} />
-
-          {/* Inscriptions / Paramètres / Audit */}
           <Route path="inscriptions" element={<PendingUsersPage />} />
           <Route path="parametres" element={<SettingsPage />} />
           <Route path="audit" element={<AuditLogPage />} />
 
-          {/* Référentiels — Zones (page dédiée existante) */}
           <Route path="zones" element={<ZonesListPage />} />
           <Route path="zones/nouveau" element={<ZoneFormPage />} />
           <Route path="zones/:id" element={<ZoneFormPage />} />
-
-          {/* Référentiels — Installations (page dédiée existante) */}
           <Route path="installations" element={<InstallationsListPage />} />
           <Route path="installations/nouveau" element={<InstallationFormPage />} />
           <Route path="installations/:id" element={<InstallationFormPage />} />
-
-          {/* Référentiels — Services (page dédiée avec zones) */}
           <Route path="services" element={<ServicesListPage />} />
           <Route path="services/nouveau" element={<ServiceFormPage />} />
           <Route path="services/:id" element={<ServiceFormPage />} />
 
-          {/* Référentiels — Pages génériques */}
           {REFERENTIEL_ROUTES.flatMap((ref) => [
             <Route
               key={`${ref.key}-list`}
@@ -254,19 +273,6 @@ export default function AppRoutes() {
             />,
           ])}
         </Route>
-
-        <Route path="permis">
-          <Route index element={<PermisListPage />} />
-          <Route path=":id" element={<PermisDetailsPage />} />
-        </Route>
-
-        <Route path="autorisations">
-          <Route index element={<div>TODO Liste AT</div>} />
-          <Route path="nouvelle" element={<AutorisationFormPage />} />
-        </Route>
-
-        <Route path="profil" element={<ProfilePage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

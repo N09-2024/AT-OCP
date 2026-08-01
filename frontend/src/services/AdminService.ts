@@ -118,6 +118,7 @@ const mapUserFromApi = (u: any): any => ({
   email: u.email,
   prenom: u.prenom,
   nom: u.nom,
+  service: u.service,
   roles: u.roles || [],
   actived: u.actif,
   derniereConnexion: u.derniereConnexion,
@@ -148,6 +149,8 @@ export const AdminService = {
       motDePasse: data.motDePasse,
       prenom: data.prenom,
       nom: data.nom,
+      serviceId: data.serviceId || null,
+      roleNom: data.roleNom || null,
     });
     return res.data;
   },
@@ -157,6 +160,7 @@ export const AdminService = {
       email: data.email,
       prenom: data.prenom,
       nom: data.nom,
+      serviceId: data.serviceId || null,
     };
     if (data.motDePasse) {
       payload.motDePasse = data.motDePasse;
@@ -352,7 +356,7 @@ export const AdminService = {
   },
 
   // --- Zones (Referentiels) ---
-  listZones: async (search?: string): Promise<Zone[]> => {
+  listZones: async (_search?: string): Promise<Zone[]> => {
     const res = await apiClient.get('/zones');
     // Backend GET /zones returns a List<ZoneResponse> directly (no pagination)
     const raw: any[] = Array.isArray(res.data) ? res.data : (res.data.content ?? []);

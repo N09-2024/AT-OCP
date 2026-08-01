@@ -37,6 +37,7 @@ public class UtilisateurServiceImpl implements UtilisateurService {
 
     private final UtilisateurRepository utilisateurRepository;
     private final RoleRepository roleRepository;
+    private final com.ocp.at.repository.ServiceRepository serviceRepository;
     private final UtilisateurMapper utilisateurMapper;
     private final RoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
@@ -54,9 +55,25 @@ public class UtilisateurServiceImpl implements UtilisateurService {
             throw new BusinessException("Un utilisateur avec le matricule " + request.getMatricule() + " existe déjà");
         }
 
+        // Validation métier : le service d'appartenance est obligatoire pour tous
+        // les rôles opérationnels (hors ADMIN). Sans service, la résolution P/E est impossible.
+        boolean isAdminRole = request.getRoleNom() != null && request.getRoleNom().equalsIgnoreCase("ADMIN");
+        if (!isAdminRole && (request.getServiceId() == null || request.getServiceId().isBlank())) {
+            throw new BusinessException(
+                "Le service d'appartenance est obligatoire pour les rôles opérationnels. " +
+                "Sans service, la position Propriétaire/Exécutant ne peut pas être résolue sur les AT."
+            );
+        }
+
         Utilisateur utilisateur = utilisateurMapper.toEntity(request);
         utilisateur.setMotDePasse(passwordEncoder.encode(request.getMotDePasse()));
         utilisateur.setActif(true);
+
+        if (request.getServiceId() != null && !request.getServiceId().isBlank()) {
+            com.ocp.at.entity.Service s = serviceRepository.findById(request.getServiceId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Service introuvable: " + request.getServiceId()));
+            utilisateur.setService(s);
+        }
 
         Utilisateur saved = utilisateurRepository.save(utilisateur);
         logger.info("Utilisateur créé par admin: {} ({})", saved.getEmail(), saved.getId());
@@ -109,6 +126,17 @@ public class UtilisateurServiceImpl implements UtilisateurService {
     public UtilisateurResponse modifier(String id, UtilisateurUpdateRequest request) {
         Utilisateur utilisateur = findUtilisateurById(id);
         utilisateurMapper.updateEntityFromRequest(request, utilisateur);
+
+        if (request.getServiceId() != null) {
+            if (request.getServiceId().isBlank()) {
+                utilisateur.setService(null);
+            } else {
+                com.ocp.at.entity.Service s = serviceRepository.findById(request.getServiceId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Service introuvable: " + request.getServiceId()));
+                utilisateur.setService(s);
+            }
+        }
+
         Utilisateur saved = utilisateurRepository.save(utilisateur);
         logger.info("Utilisateur modifié: {}", saved.getEmail());
         return utilisateurMapper.toResponse(saved);

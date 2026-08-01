@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -52,7 +53,7 @@ public class NotificationServiceImpl implements NotificationService {
         // This is a simplified version. Ideally we should have a query in UtilisateurRepository.
         List<Utilisateur> users = utilisateurRepository.findAll().stream()
                 .filter(u -> u.getRoles() != null && u.getRoles().stream().anyMatch(r -> r.getNom().contains(roleName)))
-                .toList();
+                .collect(Collectors.toList());
 
         for (Utilisateur u : users) {
             createNotification(u, titre, message, type, lien);
@@ -67,7 +68,7 @@ public class NotificationServiceImpl implements NotificationService {
         int end = Math.min((start + pageable.getPageSize()), notifs.size());
         List<NotificationResponse> content = notifs.subList(start, end).stream()
                 .map(mapper::toResponse)
-                .toList();
+                .collect(Collectors.toList());
         
         return new PageImpl<>(content, pageable, notifs.size());
     }

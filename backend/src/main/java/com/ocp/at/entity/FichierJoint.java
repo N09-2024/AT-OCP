@@ -3,20 +3,27 @@ package com.ocp.at.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fichiers_joints")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 public class FichierJoint {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @Column(nullable = false)
@@ -36,6 +43,7 @@ public class FichierJoint {
     private String uploadedBy;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "permis_id", unique = true)
+    @JoinColumn(name = "permis_id")
+    @ToString.Exclude
     private Permis permis;
 }

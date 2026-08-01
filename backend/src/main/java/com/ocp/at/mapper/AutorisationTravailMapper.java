@@ -14,5 +14,10 @@ public interface AutorisationTravailMapper {
     @Mapping(target = "typeDocumentSource", ignore = true)
     @Mapping(target = "documentSourceId", ignore = true)
     @Mapping(target = "documentSourceNumero", ignore = true)
+    // Zones territoriales P/E (standard OCP S-HSE-SEC-31)
+    @Mapping(target = "zoneProprietaireId", expression = "java(entity.getZoneProprietaire() != null ? entity.getZoneProprietaire().getId() : null)")
+    @Mapping(target = "zoneProprietaireNom", expression = "java(entity.getZoneProprietaire() != null ? entity.getZoneProprietaire().getNomZone() : null)")
+    @Mapping(target = "zoneExecutanteId", expression = "java(entity.getZoneExecutante() != null ? entity.getZoneExecutante().getId() : null)")
+    @Mapping(target = "zoneExecutanteNom", expression = "java(entity.getZoneExecutante() != null ? entity.getZoneExecutante().getNomZone() : null)")
     AutorisationTravailResponse toResponse(AutorisationTravail entity);
 }

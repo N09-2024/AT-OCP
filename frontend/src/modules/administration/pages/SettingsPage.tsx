@@ -136,7 +136,7 @@ export default function SettingsPage() {
         <Divider />
         <Box sx={{ p: 3 }}>
           <Grid container spacing={4}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <TimerIcon fontSize="small" color="action" /> Délai d'expiration (minutes)
               </Typography>
@@ -150,7 +150,7 @@ export default function SettingsPage() {
                 helperText="Inactivité avant déconnexion automatique"
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <VpnKeyIcon fontSize="small" color="action" /> Tentatives de connexion
               </Typography>
@@ -238,7 +238,7 @@ export default function SettingsPage() {
         <Divider />
         <Box sx={{ p: 3 }}>
           <Grid container spacing={4}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <HistoryIcon fontSize="small" color="action" /> Durée de conservation (jours)
               </Typography>

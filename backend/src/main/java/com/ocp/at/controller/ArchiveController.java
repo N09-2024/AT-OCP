@@ -80,7 +80,7 @@ public class ArchiveController {
             @ApiResponse(responseCode = "404", description = "AT non trouvée")
     })
     @PostMapping("/archive/{atId}")
-    @PreAuthorize("hasAuthority('EXPORT_PDF')")
+    @PreAuthorize("hasAuthority('ARCHIVE_AT')")
     public ResponseEntity<ArchiveResponse> archiverAT(@PathVariable String atId) {
         log.info("POST /api/archives/archive/{}", atId);
         ArchiveResponse response = archiveService.archiverAT(atId);
@@ -172,7 +172,7 @@ public class ArchiveController {
             @ApiResponse(responseCode = "404", description = "Archive non trouvée")
     })
     @GetMapping("/{id}/download")
-    @PreAuthorize("hasAuthority('DOWNLOAD_ARCHIVE')")
+    @PreAuthorize("hasAuthority('VIEW_ARCHIVE')")
     public ResponseEntity<ByteArrayResource> downloadArchive(@PathVariable String id) {
         byte[] pdfBytes = archiveService.downloadArchive(id);
         ByteArrayResource resource = new ByteArrayResource(pdfBytes);
@@ -198,7 +198,7 @@ public class ArchiveController {
             @ApiResponse(responseCode = "404", description = "Archive non trouvée")
     })
     @GetMapping("/{id}/verify")
-    @PreAuthorize("hasAuthority('VERIFY_ARCHIVE')")
+    @PreAuthorize("hasAuthority('VIEW_ARCHIVE')")
     public ResponseEntity<Boolean> verifyArchive(@PathVariable String id) {
         boolean valid = archiveService.verifyArchive(id);
         return ResponseEntity.ok(valid);
@@ -218,7 +218,7 @@ public class ArchiveController {
             @ApiResponse(responseCode = "403", description = "Permission SEARCH_ARCHIVE requise")
     })
     @GetMapping("/search")
-    @PreAuthorize("hasAuthority('SEARCH_ARCHIVE')")
+    @PreAuthorize("hasAuthority('VIEW_ARCHIVE')")
     public ResponseEntity<Page<ArchiveSearchResponse>> searchArchives(
             @RequestParam(required = false) String numeroAT,
             @RequestParam(required = false) String numeroArchive,

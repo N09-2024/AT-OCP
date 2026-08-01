@@ -29,4 +29,6 @@ public interface BonTravailMapper {
     @Mapping(source = "visitePrealable.effectuee", target = "visiteEffectuee", defaultValue = "false")
     @Mapping(target = "atCreable", ignore = true) // Calculé dynamiquement dans le service
     BonTravailResponse toResponse(BonTravail entity);
+
+    // Note: BonTravail has no collection fields in the entity, mapping should work
 }

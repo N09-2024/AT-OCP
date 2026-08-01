@@ -15,36 +15,44 @@ import {
   InputLabel,
   FormControl,
   FormHelperText,
+  Divider,
 } from '@mui/material';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { AdminService } from '../../../services/AdminService';
+import type { Service } from '../../../services/AdminService';
 
 // -------------------------------------------------------
-// Rôles fixes du système — l'admin choisit parmi ces 4 rôles
+// Rôles standard OCP S-HSE-SEC-31 — l'admin choisit le niveau d'habilitation
 // -------------------------------------------------------
 const FIXED_ROLES = [
   {
-    nom: 'RESPONSABLE_OCP',
-    label: 'Responsable OCP',
-    description: 'Responsable OCP validateur des autorisations de travail',
-    color: '#1565C0',
+    nom: 'CEEP',
+    label: "Chef d'Équipe",
+    description: "Chef d'Équipe terrain — position CEEP (Propriétaire) ou CEEE (Exécutant) résolue selon l'AT",
+    color: '#0891b2',
+  },
+  {
+    nom: 'HMEP',
+    label: "Haute Maîtrise",
+    description: "Agent de Maîtrise / Superviseur — position HMEP (Propriétaire) ou HMEE (Exécutant) résolue selon l'AT",
+    color: '#16a34a',
+  },
+  {
+    nom: 'HCEP',
+    label: "Hors Cadre (Responsable)",
+    description: "Cadre Responsable — position HCEP (Propriétaire) ou HCEE (Exécutant) résolue selon l'AT",
+    color: '#7c3aed',
   },
   {
     nom: 'RESPONSABLE_ENTREPRISE',
-    label: 'Responsable Externe',
-    description: "Responsable d'une entreprise externe (sous-traitant)",
+    label: "Responsable Entreprise Externe",
+    description: "Responsable d'entreprise sous-traitante (Bons de Travail et permis uniquement)",
     color: '#6A1B9A',
   },
   {
-    nom: 'DEMANDEUR',
-    label: 'Demandeur',
-    description: "Demandeur d'autorisation de travail",
-    color: '#2E7D32',
-  },
-  {
     nom: 'ADMIN',
-    label: 'Administrateur',
-    description: 'Administrateur système avec tous les droits',
+    label: "Administrateur Système",
+    description: "Administrateur système avec tous les droits de gestion",
     color: '#B71C1C',
   },
 ];
@@ -54,7 +62,8 @@ interface UserFormData {
   prenom: string;
   nom: string;
   motDePasse: string;
-  roleNom: string; // single role selection by name
+  roleNom: string;
+  serviceId: string;
   actived: boolean;
 }
 
@@ -64,6 +73,7 @@ const DEFAULT_FORM: UserFormData = {
   nom: '',
   motDePasse: '',
   roleNom: '',
+  serviceId: '',
   actived: true,
 };
 
@@ -73,10 +83,10 @@ export default function UserFormPage() {
   const isEdit = Boolean(id) && id !== 'nouveau';
 
   const [form, setForm] = useState<UserFormData>(DEFAULT_FORM);
-  // roleId resolved from the backend roles list
   const [resolvedRoleId, setResolvedRoleId] = useState<string>('');
   const [originalActived, setOriginalActived] = useState<boolean>(true);
   const [allRoles, setAllRoles] = useState<{ id: string; nom: string }[]>([]);
+  const [servicesList, setServicesList] = useState<Service[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -86,37 +96,50 @@ export default function UserFormPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load all roles from backend to get their IDs
-        const rolesRes = await AdminService.listRoles();
+        const [rolesRes, servicesRes] = await Promise.all([
+          AdminService.listRoles(),
+          AdminService.listServices(),
+        ]);
         setAllRoles(rolesRes.content);
+        setServicesList(servicesRes);
 
         if (isEdit) {
-          const data = await AdminService.getUser(id!);
-          // Get the first role the user has
-          const firstRole = data.roles?.[0];
-          const firstRoleNom = firstRole?.nom ?? '';
-          setForm({
-            email: data.email,
-            prenom: data.prenom,
-            nom: data.nom,
-            motDePasse: '',
-            roleNom: firstRoleNom,
-            actived: data.actived,
-          });
-          setResolvedRoleId(firstRole?.id ?? '');
-          setOriginalActived(data.actived);
+          try {
+            const data = await AdminService.getUser(id!);
+            const firstRole = data.roles?.[0];
+            const firstRoleNom = firstRole?.nom ?? '';
+            setForm({
+              email: data.email,
+              prenom: data.prenom,
+              nom: data.nom,
+              motDePasse: '',
+              roleNom: firstRoleNom,
+              serviceId: data.service?.id ?? '',
+              actived: data.actived,
+            });
+            setResolvedRoleId(firstRole?.id ?? '');
+            setOriginalActived(data.actived);
+          } catch (userErr: any) {
+            if (userErr?.response?.status === 404) {
+              // L'utilisateur n'existe plus (ex: DB réinitialisée) → redirection propre
+              navigate('/administration/utilisateurs', {
+                state: { error: "L'utilisateur demandé est introuvable. Il a peut-être été supprimé." },
+              });
+              return;
+            }
+            throw userErr;
+          }
         }
       } catch (err) {
         console.error('Erreur chargement données', err);
-        setError('Impossible de charger les données');
+        setError('Impossible de charger les données (rôles/services). Vérifiez la connexion au serveur.');
       } finally {
         setFetchLoading(false);
       }
     };
     loadData();
-  }, [id, isEdit]);
+  }, [id, isEdit, navigate]);
 
-  // When the admin picks a role name, resolve its ID from the backend list
   const handleRoleChange = (selectedNom: string) => {
     setForm((prev) => ({ ...prev, roleNom: selectedNom }));
     const found = allRoles.find((r) => r.nom === selectedNom);
@@ -139,13 +162,21 @@ export default function UserFormPage() {
       return;
     }
 
+    const serviceExempte = form.roleNom === 'ADMIN';
+    if (!serviceExempte && !form.serviceId) {
+      setError(
+        "Le service d'appartenance est obligatoire pour ce rôle. " +
+        "Sans service, le système ne pourra pas déterminer la position Propriétaire/Exécutant de cet utilisateur sur les AT."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (isEdit) {
         await AdminService.updateUser(id!, form);
 
-        // Sync role: remove all old roles, assign the new one
         const currentData = await AdminService.getUser(id!);
         const currentRoleIds: string[] = currentData.roles?.map((r: any) => r.id) || [];
 
@@ -156,8 +187,6 @@ export default function UserFormPage() {
           await AdminService.assignRole(id!, resolvedRoleId);
         }
 
-        // PUT /users/{id} ignores the actif field on the backend — the
-        // active/inactive state has to go through its own endpoints.
         if (form.actived !== originalActived) {
           if (form.actived) {
             await AdminService.activateUser(id!);
@@ -220,6 +249,16 @@ export default function UserFormPage() {
         </Alert>
       )}
 
+      {/* Note d'information Standard S-HSE-SEC-31 */}
+      <Alert severity="info" icon={<InformationCircleIcon width={24} />} sx={{ mb: 3, borderRadius: 2 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          Règle de résolution contextuelle (Standard S-HSE-SEC-31)
+        </Typography>
+        <Typography variant="caption">
+          La position <strong>Propriétaire (P)</strong> ou <strong>Exécutant (E)</strong> est calculée dynamiquement par le système pour chaque Autorisation de Travail en fonction du <strong>Service d'appartenance</strong> sélectionné ci-dessous.
+        </Typography>
+      </Alert>
+
       <Paper sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', p: 4, maxWidth: 1200 }}>
         <Box
           component="form"
@@ -272,13 +311,53 @@ export default function UserFormPage() {
             size="small"
           />
 
-          {/* Rôle — choix unique parmi les 4 rôles système */}
+          <Divider sx={{ my: 1 }} />
+
+          {/* Service d'appartenance (Fondamental pour P / E) */}
+          <FormControl
+            fullWidth
+            size="small"
+            required={form.roleNom !== 'ADMIN'}
+            error={!form.serviceId && !!form.roleNom && form.roleNom !== 'ADMIN'}
+          >
+            <InputLabel id="service-label">
+              Service d'appartenance (Zone OCP)
+            </InputLabel>
+            <Select
+              labelId="service-label"
+              value={form.serviceId}
+              label="Service d'appartenance (Zone OCP)"
+              onChange={(e) => setForm((prev) => ({ ...prev, serviceId: e.target.value as string }))}
+            >
+              {form.roleNom === 'ADMIN' && (
+                <MenuItem value="">
+                  <em>Aucun (Administrateur système)</em>
+                </MenuItem>
+              )}
+              {servicesList.map((svc) => (
+                <MenuItem key={svc.id} value={svc.id}>
+                  {svc.nomService} ({svc.codeService}) {svc.zone ? `— Zone: ${svc.zone.nomZone}` : ''}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText
+              error={!form.serviceId && !!form.roleNom && form.roleNom !== 'ADMIN'}
+            >
+              {form.roleNom === 'ADMIN'
+                ? "L'administrateur système n'est pas rattaché à un service opérationnel."
+                : !form.serviceId && form.roleNom
+                ? "⚠ Obligatoire — sans service, la position P/E ne pourra pas être résolue sur les AT."
+                : "Le service détermine la zone de rattachement pour la résolution dynamique P / E lors des AT."}
+            </FormHelperText>
+          </FormControl>
+
+          {/* Rôle — Fonction RH / Niveau d'habilitation */}
           <FormControl fullWidth size="small" required>
-            <InputLabel id="role-label">Rôle de l'utilisateur</InputLabel>
+            <InputLabel id="role-label">Habilitation / Rôle de l'utilisateur</InputLabel>
             <Select
               labelId="role-label"
               value={form.roleNom}
-              label="Rôle de l'utilisateur"
+              label="Habilitation / Rôle de l'utilisateur"
               onChange={(e) => handleRoleChange(e.target.value as string)}
             >
               {FIXED_ROLES.map((role) => (

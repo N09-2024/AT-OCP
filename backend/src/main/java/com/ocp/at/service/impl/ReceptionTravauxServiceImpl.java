@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -312,7 +313,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         return photoRepository.findByReceptionTravauxIdOrderByOrdreAsc(receptionId)
                 .stream()
                 .map(photoMapper::toResponse)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     // =================================================================
@@ -373,7 +374,13 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
             notificationService.createNotification(
                     at.getProprietaireBrouillon(), titre, message, type, "/at/" + at.getId());
         }
-        notificationService.sendNotificationToRole("RESPONSABLE_OCP", titre, message, type, "/at/" + at.getId());
+        // Notification aux rôles standard OCP concernés par la réception
+        // CEEP: E sur réception (8.5), CEEE: P sur réception (8.5)
+        // HCEE: G sur réception (8.5), HCEP: G sur archivage (8.6)
+        notificationService.sendNotificationToRole("CEEP", titre, message, type, "/at/" + at.getId());
+        notificationService.sendNotificationToRole("CEEE", titre, message, type, "/at/" + at.getId());
+        notificationService.sendNotificationToRole("HCEE", titre, message, type, "/at/" + at.getId());
+        // RESPONSABLE_ENTREPRISE reste inchangé (hors logique P/E, sous-traitant externe)
         notificationService.sendNotificationToRole("RESPONSABLE_ENTREPRISE", titre, message, type, "/at/" + at.getId());
     }
 

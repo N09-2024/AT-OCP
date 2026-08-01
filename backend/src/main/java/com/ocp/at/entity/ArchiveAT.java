@@ -3,8 +3,11 @@ package com.ocp.at.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
@@ -13,16 +16,20 @@ import com.ocp.at.entity.enums.ArchiveStatus;
 
 @Entity
 @Table(name = "archives_at")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 @SQLDelete(sql = "UPDATE archives_at SET deleted = true WHERE id = ?")
 @Where(clause = "deleted = false")
 public class ArchiveAT {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private String id;
 
     @Column(nullable = false, unique = true)
@@ -36,6 +43,7 @@ public class ArchiveAT {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "archive_par_id")
+    @ToString.Exclude
     private Utilisateur archivePar;
 
     @Column(nullable = false)
@@ -43,6 +51,7 @@ public class ArchiveAT {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "autorisation_travail_id", unique = true)
+    @ToString.Exclude
     private AutorisationTravail autorisationTravail;
 
     @Column(nullable = false)

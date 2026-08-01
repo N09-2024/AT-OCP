@@ -30,4 +30,9 @@ public class UtilisateurRequest {
     private String motDePasse;
 
     private String photo;
+
+    private String serviceId;
+
+    // Rôle demandé — utilisé pour la validation métier (service obligatoire hors ADMIN)
+    private String roleNom;
 }

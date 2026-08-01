@@ -41,12 +41,7 @@ class AtBackendApplicationTests {
 
     @Test
     void loginAvecIdentifiantsInvalides_Doit_RetournerUnauthorized() throws Exception {
-        String loginJson = """
-                {
-                    "email": "inexistant@ocp.ma",
-                    "motDePasse": "WrongPassword@1"
-                }
-                """;
+        String loginJson = "{\"email\":\"inexistant@ocp.ma\",\"motDePasse\":\"WrongPassword@1\"}";
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson))
@@ -55,12 +50,7 @@ class AtBackendApplicationTests {
 
     @Test
     void loginAvecDonneesInvalides_Doit_RetournerBadRequest() throws Exception {
-        String loginJson = """
-                {
-                    "email": "pasunemail",
-                    "motDePasse": ""
-                }
-                """;
+        String loginJson = "{\"email\":\"pasunemail\",\"motDePasse\":\"\"}";
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson))
@@ -69,12 +59,7 @@ class AtBackendApplicationTests {
 
     @Test
     void loginAdmin_Doit_Reussir_Et_RetournerToken() throws Exception {
-        String loginJson = """
-                {
-                    "email": "admin@ocp.ma",
-                    "motDePasse": "Admin@123"
-                }
-                """;
+        String loginJson = "{\"email\":\"admin@ocp.ma\",\"motDePasse\":\"Admin@123\"}";
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson))

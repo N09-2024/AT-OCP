@@ -3,6 +3,8 @@ package com.ocp.at.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -17,6 +19,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 public class Utilisateur {
 
     @Id
@@ -74,12 +77,31 @@ public class Utilisateur {
     @Column(nullable = false)
     private boolean inscriptionRejetee = false;
 
+    /**
+     * Service d'appartenance de l'utilisateur.
+     *
+     * FONDAMENTAL pour la résolution contextuelle P/E :
+     * - Si service == zoneProprietaire.service de l'AT → position Propriétaire (P)
+     * - Si service == zoneExecutante.service de l'AT → position Exécutant (E)
+     *
+     * Un même utilisateur peut être côté P sur une AT et côté E sur une autre.
+     * Nullable à la création du compte ; obligatoire pour toute action de workflow sur une AT.
+     *
+     * @see com.ocp.at.security.ATContextService
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Service service;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "utilisateur_roles",
         joinColumns = @JoinColumn(name = "utilisateur_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @Fetch(FetchMode.JOIN)
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
