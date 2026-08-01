@@ -21,11 +21,10 @@ export const visaApi = {
     if (commentaire) {
       formData.append('commentaire', commentaire);
     }
-    const response = await apiClient.post<Visa>(`/visa/${visaId}/sign`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // Pas de headers custom — Axios détecte FormData automatiquement
+    // et l'intercepteur ajoute Authorization correctement
+    // APRÈS
+    const response = await apiClient.post<Visa>(`/visa/${visaId}/sign`, formData);
     return response.data;
   },
 
