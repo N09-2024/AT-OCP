@@ -213,8 +213,18 @@ public class VisitePrealableServiceImpl implements VisitePrealableService {
             throw new BusinessException("Impossible d'ajouter une photo à une visite finalisée");
         }
 
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("Le fichier photo est obligatoire");
+        }
+
         // Stocker le fichier sur disque
-        String storedFilename = storageService.store(file);
+        String storedFilename;
+        try {
+            storedFilename = storageService.store(file);
+        } catch (Exception e) {
+            log.error("Échec stockage photo visite {}", visiteId, e);
+            throw new BusinessException("Échec de l'enregistrement de la photo : " + e.getMessage());
+        }
 
         int ordre = photoRepository.countByVisitePrealableId(visiteId) + 1;
 

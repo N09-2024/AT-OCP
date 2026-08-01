@@ -95,6 +95,44 @@ export const autorisationTravailApi = {
     return response.data;
   },
 
+
+  // --- Workflow S-HSE-SEC-31 ---
+  marquerVisite: async (id: string): Promise<AutorisationTravail> => {
+    const response = await apiClient.post<AutorisationTravail>(`/autorisations-travail/${id}/visite`);
+    return response.data;
+  },
+
+  rediger: async (id: string): Promise<AutorisationTravail> => {
+    const response = await apiClient.post<AutorisationTravail>(`/autorisations-travail/${id}/rediger`);
+    return response.data;
+  },
+
+  demarrerIntervention: async (id: string): Promise<AutorisationTravail> => {
+    const response = await apiClient.post<AutorisationTravail>(`/autorisations-travail/${id}/demarrer-intervention`);
+    return response.data;
+  },
+
+  reconduire: async (id: string, depasse24h = false): Promise<AutorisationTravail> => {
+    const response = await apiClient.post<AutorisationTravail>(`/autorisations-travail/${id}/reconduire?depasse24h=${depasse24h}`);
+    return response.data;
+  },
+
+  declarerFin: async (id: string): Promise<AutorisationTravail> => {
+    const response = await apiClient.post<AutorisationTravail>(`/autorisations-travail/${id}/declarer-fin`);
+    return response.data;
+  },
+
+  signalerIncident: async (id: string, motif?: string): Promise<AutorisationTravail> => {
+    const q = motif ? `?motif=${encodeURIComponent(motif)}` : '';
+    const response = await apiClient.post<AutorisationTravail>(`/autorisations-travail/${id}/incident${q}`);
+    return response.data;
+  },
+
+  receptionStandard: async (id: string): Promise<AutorisationTravail> => {
+    const response = await apiClient.post<AutorisationTravail>(`/autorisations-travail/${id}/reception-standard`);
+    return response.data;
+  },
+
   cloturer: async (id: string): Promise<AutorisationTravail> => {
     const response = await apiClient.post<AutorisationTravail>(`/autorisations-travail/${id}/close`);
     return response.data;

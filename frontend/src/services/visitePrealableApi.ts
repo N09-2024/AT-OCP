@@ -28,9 +28,8 @@ export const visitePrealableApi = {
   ajouterPhoto: async (visiteId: string, file: File): Promise<PhotoVisite> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await apiClient.post<PhotoVisite>(`/visites-prealables/${visiteId}/photos`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Ne PAS forcer Content-Type : le boundary doit être ajouté par le navigateur
+    const response = await apiClient.post<PhotoVisite>(`/visites-prealables/${visiteId}/photos`, formData);
     return response.data;
   },
 };

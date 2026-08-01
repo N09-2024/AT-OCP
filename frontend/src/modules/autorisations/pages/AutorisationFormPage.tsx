@@ -299,9 +299,8 @@ export default function AutorisationFormPage() {
         if (photoFile) {
           const fd = new FormData();
           fd.append('file', photoFile);
-          await apiClient.post(`/visites-prealables/${newVisiteId}/photos`, fd, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          // Pas de Content-Type manuel → boundary correct pour Spring
+          await apiClient.post(`/visites-prealables/${newVisiteId}/photos`, fd);
         }
       }
       setActiveStep((prev) => prev + 1);

@@ -21,10 +21,9 @@ export const visaApi = {
     if (commentaire) {
       formData.append('commentaire', commentaire);
     }
-    // Pas de headers custom — Axios détecte FormData automatiquement
-    // et l'intercepteur ajoute Authorization correctement
-    // APRÈS
-    const response = await apiClient.post<Visa>(`/visa/${visaId}/sign`, formData);
+    const response = await apiClient.post<Visa>(`/visa/${visaId}/sign`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
 
@@ -41,8 +40,20 @@ export const visaApi = {
     return response.data;
   },
 
-  // Obtenir l'URL de l'image de la signature manuscrite
+  // URL brute (NE PAS utiliser dans <img> : pas de JWT → 401)
   getSignatureImageUrl: (visaId: string): string => {
     return `/api/visa/${visaId}/signature`;
+  },
+
+  // Charger la signature avec le token JWT → Blob URL pour <img src>
+  fetchSignatureObjectUrl: async (visaId: string): Promise<string | null> => {
+    try {
+      const response = await apiClient.get(`/visa/${visaId}/signature`, {
+        responseType: 'blob',
+      });
+      return URL.createObjectURL(response.data);
+    } catch {
+      return null;
+    }
   },
 };

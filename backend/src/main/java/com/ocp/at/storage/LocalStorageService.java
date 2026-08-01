@@ -114,16 +114,26 @@ public class LocalStorageService implements StorageService {
             if (signatureFile.isEmpty()) {
                 throw new BusinessException("Échec de l'enregistrement d'une signature vide.");
             }
+            return saveSignatureBytes(signatureFile.getBytes(), filename);
+        } catch (IOException e) {
+            throw new BusinessException("Échec de l'enregistrement de la signature.");
+        }
+    }
+
+    @Override
+    public String saveSignatureBytes(byte[] content, String filename) {
+        try {
+            if (content == null || content.length == 0) {
+                throw new BusinessException("Échec de l'enregistrement d'une signature vide.");
+            }
             Path signaturesDir = this.rootLocation.resolve("signatures");
             Files.createDirectories(signaturesDir);
-            
+
             Path destinationFile = signaturesDir.resolve(filename).normalize().toAbsolutePath();
             if (!destinationFile.getParent().equals(signaturesDir.toAbsolutePath())) {
                 throw new BusinessException("Impossible d'enregistrer la signature en dehors du répertoire prévu.");
             }
-            try (InputStream inputStream = signatureFile.getInputStream()) {
-                Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
-            }
+            Files.write(destinationFile, content);
             return "signatures/" + filename;
         } catch (IOException e) {
             throw new BusinessException("Échec de l'enregistrement de la signature.");

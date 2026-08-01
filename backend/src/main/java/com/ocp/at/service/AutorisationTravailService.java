@@ -49,6 +49,18 @@ public interface AutorisationTravailService {
 
     AutorisationTravailResponse declarerFinTravaux(String id);
 
+    AutorisationTravailResponse marquerVisiteRealisee(String id);
+
+    AutorisationTravailResponse redigerAT(String id);
+
+    /** @param depasse24h si true → retour visite obligatoire (§8.4) */
+    AutorisationTravailResponse reconduireAT(String id, boolean depasse24h);
+
+    AutorisationTravailResponse signalerIncident(String id, String motif);
+
+    AutorisationTravailResponse receptionnerTravauxStandard(String id);
+
+
     List<HistoriqueATResponse> getHistorique(String id);
 
     List<VisaResponse> getVisas(String id);

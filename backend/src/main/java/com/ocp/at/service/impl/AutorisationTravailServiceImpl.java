@@ -122,6 +122,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                 .objet(objet)
                 .descriptionTravaux(description)
                 .statut(StatutAT.BROUILLON)
+                .statutWorkflow(StatutAT.DEMANDE_CREEE)
                 .version(1)
                 .etatVerrou(EtatVerrou.EN_COURS_EDITION)
                 .proprietaireBrouillon(currentUtilisateur)
@@ -150,6 +151,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                 .numero(numero)
                 .objet("Nouvelle AT")
                 .statut(StatutAT.BROUILLON)
+                .statutWorkflow(StatutAT.DEMANDE_CREEE)
                 .version(1)
                 .etatVerrou(EtatVerrou.EN_COURS_EDITION)
                 .proprietaireBrouillon(currentUtilisateur)
@@ -345,14 +347,21 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             throw new BusinessException("Certains permis ont une analyse IA invalide. Veuillez relancer l'analyse.");
         }
 
-        StatutAT ancienStatut = at.getStatut();
+        StatutAT ancienStatut = statutEffectif(at);
+        // §8.3 — soumission = AT prête pour signature / rédaction terrain → VISITE_REALISEE puis AT_REDIGEE
+        workflowService.verifierTransition(ancienStatut, TypeActionAT.SOUMISSION);
+        StatutAT nouvelEtat = StatutAT.VISITE_REALISEE;
+        if (ancienStatut == StatutAT.VISITE_REALISEE || ancienStatut == StatutAT.SOUMISE) {
+            nouvelEtat = StatutAT.AT_REDIGEE;
+        }
         at.setStatut(StatutAT.SOUMISE);
+        at.setStatutWorkflow(nouvelEtat);
         at.setEtatVerrou(EtatVerrou.LIBRE);
         at.setDateLiberationVerrou(LocalDateTime.now());
         
         AutorisationTravail savedAt = atRepository.save(at);
         
-        enregistrerHistorique(savedAt, TypeActionAT.SOUMISSION, ancienStatut, StatutAT.SOUMISE, "Soumission de l'AT pour validation");
+        enregistrerHistorique(savedAt, TypeActionAT.SOUMISSION, ancienStatut, nouvelEtat, "Soumission AT — workflow standard (visite / rédaction)");
         notificationService.sendNotificationToRole("Validateur", "AT à valider", "L'AT " + savedAt.getNumero() + " nécessite votre validation.", "ACTION", "/at/" + savedAt.getId() + "/validation");
 
         return mapToResponse(savedAt);
@@ -366,8 +375,11 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         AutorisationTravail at = getEntityById(id);
         workflowService.verifierTransition(at.getStatut(), TypeActionAT.VALIDATION);
 
-        StatutAT ancienStatut = at.getStatut();
+        StatutAT ancienStatut = statutEffectif(at);
+        workflowService.verifierTransition(ancienStatut, TypeActionAT.VALIDATION);
+        StatutAT nouvelEtat = StatutAT.AT_REDIGEE;
         at.setStatut(StatutAT.VALIDEE);
+        at.setStatutWorkflow(nouvelEtat);
         
         // Création du Visa
         Utilisateur currentUser = getCurrentUser();
@@ -381,7 +393,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
         AutorisationTravail savedAt = atRepository.save(at);
         
-        enregistrerHistorique(savedAt, TypeActionAT.VALIDATION, ancienStatut, StatutAT.VALIDEE, "AT validée");
+        enregistrerHistorique(savedAt, TypeActionAT.VALIDATION, ancienStatut, nouvelEtat, "AT validée — §8.3 AT_REDIGEE");
         notificationService.createNotification(at.getProprietaireBrouillon(), "AT Validée", "Votre AT " + savedAt.getNumero() + " a été validée.", "SUCCESS", "/at/" + savedAt.getId());
 
         return mapToResponse(savedAt);
@@ -419,18 +431,8 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     @Override
     @Transactional
     public AutorisationTravailResponse renouvelerAT(String id) {
-        AutorisationTravail at = getEntityById(id);
-        workflowService.verifierTransition(at.getStatut(), TypeActionAT.RENOUVELLEMENT);
-
-        StatutAT ancienStatut = at.getStatut();
-        at.setStatut(StatutAT.SOUMISE);
-        at.setVersion(at.getVersion() + 1); // Incrément de version
-        
-        AutorisationTravail savedAt = atRepository.save(at);
-        
-        enregistrerHistorique(savedAt, TypeActionAT.RENOUVELLEMENT, ancienStatut, StatutAT.SOUMISE, "Renouvellement de l'AT (Version " + savedAt.getVersion() + ")");
-        
-        return mapToResponse(savedAt);
+        // Délègue à reconduction standard §8.4 (sans dépassement 24h)
+        return reconduireAT(id, false);
     }
 
     @Override
@@ -453,7 +455,13 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     @Transactional
     public AutorisationTravailResponse cloturerAT(String id) {
         AutorisationTravail at = getEntityById(id);
-        workflowService.verifierTransition(at.getStatut(), TypeActionAT.CLOTURE);
+        StatutAT ancienStatut = statutEffectif(at);
+        // Accepte CLOTURE (legacy) ou RECEPTION_CONJOINTE (standard)
+        try {
+            workflowService.verifierTransition(ancienStatut, TypeActionAT.RECEPTION_CONJOINTE);
+        } catch (Exception e) {
+            workflowService.verifierTransition(ancienStatut, TypeActionAT.CLOTURE);
+        }
 
         // === Module 9 : Vérification de la réception des travaux ===
         ReceptionTravaux reception = receptionRepository.findByAutorisationTravailId(id)
@@ -476,13 +484,12 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         }
         // === Fin vérification Module 9 ===
 
-        StatutAT ancienStatut = at.getStatut();
         at.setStatut(StatutAT.CLOTUREE);
         at.setStatutWorkflow(StatutAT.TRAVAUX_RECEPTIONES);
         
         AutorisationTravail savedAt = atRepository.save(at);
         
-        enregistrerHistorique(savedAt, TypeActionAT.CLOTURE, ancienStatut, StatutAT.CLOTUREE, "Clôture de l'AT");
+        enregistrerHistorique(savedAt, TypeActionAT.RECEPTION_CONJOINTE, ancienStatut, StatutAT.TRAVAUX_RECEPTIONES, "§8.5 — Clôture / réception AT");
         notificationService.createNotification(at.getProprietaireBrouillon(), "AT Clôturée", "Votre AT " + savedAt.getNumero() + " a été clôturée.", "INFO", "/at/" + savedAt.getId());
         
         return mapToResponse(savedAt);
@@ -498,12 +505,14 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             throw new BusinessException("L'intervention de Niveau 1 ne nécessite pas d'Autorisation de Travail (couverture par ADRPT + Plan de Prévention uniquement).");
         }
 
+        // Niveau 2 → AT obligatoire : création demande (§8.1) après classification (§6)
         AutorisationTravailResponse response = createFromDocument(documentId, typeDocument);
         AutorisationTravail at = getEntityById(response.getId());
-        at.setStatutWorkflow(StatutAT.CLASSIFICATION_EFFECTUEE);
+        at.setStatutWorkflow(StatutAT.DEMANDE_CREEE);
         AutorisationTravail savedAt = atRepository.save(at);
 
-        enregistrerHistorique(savedAt, TypeActionAT.CLASSIFICATION, null, StatutAT.CLASSIFICATION_EFFECTUEE, "Classification Niveau 2 confirmée par HCEP");
+        enregistrerHistorique(savedAt, TypeActionAT.CLASSIFICATION, StatutAT.CLASSIFICATION_EFFECTUEE, StatutAT.DEMANDE_CREEE,
+                "Classification Niveau 2 (HCEP) → Demande d'intervention créée (CEEP)");
         return mapToResponse(savedAt);
     }
 
@@ -511,12 +520,15 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     @Transactional
     public AutorisationTravailResponse demarrerIntervention(String id) {
         AutorisationTravail at = getEntityById(id);
-        StatutAT ancienStatut = at.getStatut();
+        StatutAT ancienStatut = statutEffectif(at);
+        workflowService.verifierTransition(ancienStatut, TypeActionAT.DEBUT_INTERVENTION);
+        StatutAT nouvelEtat = StatutAT.INTERVENTION_EN_COURS;
 
-        at.setStatutWorkflow(StatutAT.INTERVENTION_EN_COURS);
+        at.setStatutWorkflow(nouvelEtat);
+        at.setStatut(StatutAT.VALIDEE);
         AutorisationTravail savedAt = atRepository.save(at);
 
-        enregistrerHistorique(savedAt, TypeActionAT.DEBUT_INTERVENTION, ancienStatut, StatutAT.INTERVENTION_EN_COURS, "Démarrage des travaux par le CEEE (Exécutant)");
+        enregistrerHistorique(savedAt, TypeActionAT.DEBUT_INTERVENTION, ancienStatut, nouvelEtat, "§8 — Démarrage travaux (CEEE E, HCEE/HMEP G)");
         notificationService.createNotification(at.getProprietaireBrouillon(), "Intervention Démarrée", "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré.", "INFO", "/at/" + savedAt.getId());
 
         return mapToResponse(savedAt);
@@ -526,12 +538,14 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     @Transactional
     public AutorisationTravailResponse declarerFinTravaux(String id) {
         AutorisationTravail at = getEntityById(id);
-        StatutAT ancienStatut = at.getStatut();
+        StatutAT ancienStatut = statutEffectif(at);
+        workflowService.verifierTransition(ancienStatut, TypeActionAT.DECLARATION_FIN);
+        StatutAT nouvelEtat = StatutAT.FIN_TRAVAUX_DECLAREE;
 
-        at.setStatutWorkflow(StatutAT.FIN_TRAVAUX_DECLAREE);
+        at.setStatutWorkflow(nouvelEtat);
         AutorisationTravail savedAt = atRepository.save(at);
 
-        enregistrerHistorique(savedAt, TypeActionAT.DECLARATION_FIN, ancienStatut, StatutAT.FIN_TRAVAUX_DECLAREE, "Déclaration de fin des travaux par le CEEE");
+        enregistrerHistorique(savedAt, TypeActionAT.DECLARATION_FIN, ancienStatut, nouvelEtat, "§8.5 — Fin des travaux déclarée (CEEE E, CEEP I)");
         notificationService.createNotification(at.getProprietaireBrouillon(), "Fin des Travaux Déclarée", "Le CEEE a déclaré la fin des travaux sur l'AT " + savedAt.getNumero() + ".", "ACTION", "/at/" + savedAt.getId());
 
         return mapToResponse(savedAt);
@@ -551,6 +565,96 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     public List<VisaResponse> getVisas(String id) {
         return visaRepository.findByAutorisationTravailId(id)
                 .stream().map(visaMapper::toResponse).collect(Collectors.toList());
+    }
+
+
+    // --- STANDARD S-HSE-SEC-31 : Visite / Rédaction / Reconduction / Incident / Réception ---
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse marquerVisiteRealisee(String id) {
+        AutorisationTravail at = getEntityById(id);
+        StatutAT ancienStatut = statutEffectif(at);
+        workflowService.verifierTransition(ancienStatut, TypeActionAT.VISITE_CHANTIER);
+        StatutAT nouvelEtat = StatutAT.VISITE_REALISEE;
+        at.setStatutWorkflow(nouvelEtat);
+        AutorisationTravail savedAt = atRepository.save(at);
+        enregistrerHistorique(savedAt, TypeActionAT.VISITE_CHANTIER, ancienStatut, nouvelEtat, "§8.2 — Visite préalable chantier réalisée");
+        return mapToResponse(savedAt);
+    }
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse redigerAT(String id) {
+        AutorisationTravail at = getEntityById(id);
+        StatutAT ancienStatut = statutEffectif(at);
+        workflowService.verifierTransition(ancienStatut, TypeActionAT.REDACTION_AT);
+        StatutAT nouvelEtat = StatutAT.AT_REDIGEE;
+        at.setStatutWorkflow(nouvelEtat);
+        at.setStatut(StatutAT.VALIDEE);
+        AutorisationTravail savedAt = atRepository.save(at);
+        enregistrerHistorique(savedAt, TypeActionAT.REDACTION_AT, ancienStatut, nouvelEtat, "§8.3 — AT et permis rédigés/signés sur le terrain");
+        return mapToResponse(savedAt);
+    }
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse reconduireAT(String id, boolean depasse24h) {
+        AutorisationTravail at = getEntityById(id);
+        StatutAT ancienStatut = statutEffectif(at);
+        if (depasse24h) {
+            // §8.4 — > 24h : nouvelle visite obligatoire
+            workflowService.verifierTransition(StatutAT.AT_RECONDUITE, TypeActionAT.VISITE_CHANTIER);
+            at.setStatutWorkflow(StatutAT.VISITE_REALISEE);
+            at.setVersion(at.getVersion() == null ? 2 : at.getVersion() + 1);
+            AutorisationTravail savedAt = atRepository.save(at);
+            enregistrerHistorique(savedAt, TypeActionAT.VISITE_CHANTIER, ancienStatut, StatutAT.VISITE_REALISEE,
+                    "§8.4 — Dépassement 24h : nouvelle visite chantier obligatoire");
+            return mapToResponse(savedAt);
+        }
+        workflowService.verifierTransition(ancienStatut, TypeActionAT.RECONDUCTION);
+        at.setStatutWorkflow(StatutAT.AT_RECONDUITE);
+        at.setStatut(StatutAT.RENOUVELEE);
+        at.setVersion(at.getVersion() == null ? 2 : at.getVersion() + 1);
+        AutorisationTravail savedAt = atRepository.save(at);
+        enregistrerHistorique(savedAt, TypeActionAT.RECONDUCTION, ancienStatut, StatutAT.AT_RECONDUITE,
+                "§8.4 — Reconduction AT (début de poste)");
+        return mapToResponse(savedAt);
+    }
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse signalerIncident(String id, String motif) {
+        AutorisationTravail at = getEntityById(id);
+        StatutAT ancienStatut = statutEffectif(at);
+        // Retour à VISITE_REALISEE (§8.4)
+        at.setStatutWorkflow(StatutAT.VISITE_REALISEE);
+        AutorisationTravail savedAt = atRepository.save(at);
+        enregistrerHistorique(savedAt, TypeActionAT.VISITE_CHANTIER, ancienStatut, StatutAT.VISITE_REALISEE,
+                "§8.4 — Incident/changement condition : " + (motif != null ? motif : "retour visite obligatoire"));
+        return mapToResponse(savedAt);
+    }
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse receptionnerTravauxStandard(String id) {
+        AutorisationTravail at = getEntityById(id);
+        StatutAT ancienStatut = statutEffectif(at);
+        workflowService.verifierTransition(ancienStatut, TypeActionAT.RECEPTION_CONJOINTE);
+        StatutAT nouvelEtat = StatutAT.TRAVAUX_RECEPTIONES;
+        at.setStatutWorkflow(nouvelEtat);
+        at.setStatut(StatutAT.CLOTUREE);
+        AutorisationTravail savedAt = atRepository.save(at);
+        enregistrerHistorique(savedAt, TypeActionAT.RECEPTION_CONJOINTE, ancienStatut, nouvelEtat,
+                "§8.5 — Réception conjointe CEEP+CEEE, clôture AT et permis");
+        return mapToResponse(savedAt);
+    }
+
+    private StatutAT statutEffectif(AutorisationTravail at) {
+        if (at.getStatutWorkflow() != null) {
+            return at.getStatutWorkflow();
+        }
+        return at.getStatut();
     }
 
     // --- METHODES PRIVEES ---

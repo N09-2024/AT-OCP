@@ -18,6 +18,9 @@ public interface StorageService {
     /** Sauvegarde une signature PNG dans le sous-dossier signatures/. Retourne le chemin relatif. */
     String saveSignature(MultipartFile signatureFile, String filename);
 
+    /** Sauvegarde une signature à partir de bytes (évite double lecture du MultipartFile). */
+    String saveSignatureBytes(byte[] content, String filename);
+
     /** Charge une signature par son chemin relatif (signatures/xxx.png). */
     Resource loadSignature(String relativePath);
 

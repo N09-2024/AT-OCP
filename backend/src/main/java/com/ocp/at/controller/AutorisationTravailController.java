@@ -176,6 +176,46 @@ public class AutorisationTravailController {
 
     // --- HISTORIQUE & VISAS & PDF ---
 
+
+    @PostMapping({"/autorisations-travail/{id}/visite", "/at/{id}/visite"})
+    @Operation(summary = "Étape 2 — Marquer la visite préalable du chantier (§8.2)")
+    @PreAuthorize("hasAuthority('CREATE_VISITE') or hasAuthority('SIGN_AT')")
+    public ResponseEntity<AutorisationTravailResponse> marquerVisite(@PathVariable String id) {
+        return ResponseEntity.ok(atService.marquerVisiteRealisee(id));
+    }
+
+    @PostMapping({"/autorisations-travail/{id}/rediger", "/at/{id}/rediger"})
+    @Operation(summary = "Étape 3 — Rédaction AT et permis sur le terrain (§8.3)")
+    @PreAuthorize("hasAuthority('SIGN_AT') or hasAuthority('VALIDATE_AT')")
+    public ResponseEntity<AutorisationTravailResponse> rediger(@PathVariable String id) {
+        return ResponseEntity.ok(atService.redigerAT(id));
+    }
+
+    @PostMapping({"/autorisations-travail/{id}/reconduire", "/at/{id}/reconduire"})
+    @Operation(summary = "Étape 5b — Reconduction AT (début de poste). Query depasse24h=true → nouvelle visite")
+    @PreAuthorize("hasAuthority('RENEW_AT')")
+    public ResponseEntity<AutorisationTravailResponse> reconduire(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "false") boolean depasse24h) {
+        return ResponseEntity.ok(atService.reconduireAT(id, depasse24h));
+    }
+
+    @PostMapping({"/autorisations-travail/{id}/incident", "/at/{id}/incident"})
+    @Operation(summary = "§8.4 — Signalement incident/changement → retour visite")
+    @PreAuthorize("hasAuthority('SIGN_AT') or hasAuthority('CREATE_VISITE')")
+    public ResponseEntity<AutorisationTravailResponse> incident(
+            @PathVariable String id,
+            @RequestParam(required = false) String motif) {
+        return ResponseEntity.ok(atService.signalerIncident(id, motif));
+    }
+
+    @PostMapping({"/autorisations-travail/{id}/reception-standard", "/at/{id}/reception-standard"})
+    @Operation(summary = "Étape 7 — Réception conjointe et clôture (§8.5)")
+    @PreAuthorize("hasAuthority('RECEIVE_AT') or hasAuthority('CLOSE_AT')")
+    public ResponseEntity<AutorisationTravailResponse> receptionStandard(@PathVariable String id) {
+        return ResponseEntity.ok(atService.receptionnerTravauxStandard(id));
+    }
+
     @GetMapping("/autorisations-travail/{id}/historique")
     @Operation(summary = "Consulter l'historique complet d'une AT")
     @PreAuthorize("hasAuthority('READ_AT')")

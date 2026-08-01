@@ -80,8 +80,11 @@ public class VisitePrealableController {
     @PreAuthorize("hasAnyAuthority('CREATE_VISITE', 'EDIT_AT')") // CEEP (E) et CEEE (P)
     public ResponseEntity<PhotoResponse> addPhoto(
             @PathVariable String id,
-            @Parameter(description = "Fichier image") @RequestPart("file") MultipartFile file,
+            @Parameter(description = "Fichier image") @RequestParam("file") MultipartFile file,
             @Parameter(description = "Légende optionnelle") @RequestParam(value = "legende", required = false) String legende) {
+        if (file == null || file.isEmpty()) {
+            throw new com.ocp.at.exception.BusinessException("Le fichier photo est obligatoire");
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(service.addPhoto(id, file, legende));
     }
 

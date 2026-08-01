@@ -28,7 +28,6 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
@@ -103,24 +102,39 @@ public class VisaServiceImpl implements VisaService {
             throw new BusinessException("La signature est obligatoire");
         }
 
-        if (!"image/png".equals(signature.getContentType())) {
+        String contentType = signature.getContentType();
+        String originalName = signature.getOriginalFilename();
+        boolean isPng = (contentType != null && "image/png".equalsIgnoreCase(contentType))
+                || (originalName != null && originalName.toLowerCase().endsWith(".png"))
+                || contentType == null
+                || "application/octet-stream".equalsIgnoreCase(contentType);
+        if (!isPng) {
             throw new BusinessException("Seules les images PNG sont acceptées pour la signature");
         }
 
-        // Generate signature hash
-        String hash = null;
+        // Read once — MultipartFile stream cannot be consumed twice
+        final byte[] signatureBytes;
         try {
-            hash = calculateSHA256(signature);
+            signatureBytes = signature.getBytes();
+        } catch (IOException e) {
+            log.error("Erreur lecture signature", e);
+            throw new BusinessException("Impossible de lire le fichier de signature");
+        }
+        if (signatureBytes.length == 0) {
+            throw new BusinessException("La signature est obligatoire");
+        }
+
+        final String hash;
+        try {
+            hash = calculateSHA256(signatureBytes);
         } catch (Exception e) {
             log.error("Erreur calcul SHA-256", e);
             throw new BusinessException("Erreur lors de la validation de la signature");
         }
 
-        // Store file
         String filename = UUID.randomUUID().toString() + ".png";
-        String path = storageService.saveSignature(signature, filename);
+        String path = storageService.saveSignatureBytes(signatureBytes, filename);
 
-        // Update visa
         visa.setSignaturePath(path);
         visa.setSignatureHash(hash);
         visa.setDateSignature(LocalDateTime.now());
@@ -129,7 +143,6 @@ public class VisaServiceImpl implements VisaService {
             visa.setCommentaire(commentaire);
         }
 
-        // Capture IP and UserAgent
         HttpServletRequest req = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
                 .getRequest();
         visa.setAdresseIP(req.getRemoteAddr());
@@ -137,7 +150,6 @@ public class VisaServiceImpl implements VisaService {
 
         visa = visaRepository.save(visa);
 
-        // Audit log
         auditService.logAction("SIGN_VISA", "SUCCES", visa.getUtilisateur(), req.getRemoteAddr(),
                 req.getHeader("User-Agent"));
 
@@ -156,16 +168,9 @@ public class VisaServiceImpl implements VisaService {
         return storageService.loadSignature(visa.getSignaturePath());
     }
 
-    private String calculateSHA256(MultipartFile file) throws NoSuchAlgorithmException, IOException {
+    private String calculateSHA256(byte[] data) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (InputStream is = file.getInputStream()) {
-            byte[] bytes = new byte[8192];
-            int read = 0;
-            while ((read = is.read(bytes)) != -1) {
-                digest.update(bytes, 0, read);
-            }
-        }
-        byte[] hash = digest.digest();
+        byte[] hash = digest.digest(data);
         StringBuilder hexString = new StringBuilder();
         for (byte b : hash) {
             String hex = Integer.toHexString(0xff & b);
