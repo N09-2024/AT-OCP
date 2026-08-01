@@ -130,7 +130,7 @@ export default function FormulaireOCPInteractive({
     apiClient.get('/zones').then((res) => setZonesList(extractList(res))).catch(() => {});
     apiClient.get('/services').then((res) => setServicesList(extractList(res))).catch(() => {});
     apiClient.get('/entreprises-externes').then((res) => setEntreprisesList(extractList(res))).catch(() => {});
-    apiClient.get('/utilisateurs?size=200').then((res) => setUsersList(extractList(res))).catch(() => {});
+    apiClient.get('/users?size=200').then((res) => setUsersList(extractList(res))).catch(() => {});
 
     apiClient.get('/risques').then((res) => setRefRisques(extractList(res))).catch(() => {});
     apiClient.get('/mesures-preparation').then((res) => setRefMesures(extractList(res))).catch(() => {});

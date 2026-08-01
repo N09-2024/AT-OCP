@@ -43,14 +43,14 @@ public class VisaController {
     }
 
     @GetMapping("/at/{atId}")
-    @PreAuthorize("hasAuthority('VIEW_AT')")
+    @PreAuthorize("hasAuthority('READ_AT')")
     @Operation(summary = "Obtenir tous les visas d'une Autorisation de Travail")
     public ResponseEntity<List<VisaResponse>> getVisasByAtId(@PathVariable String atId) {
         return ResponseEntity.ok(visaService.getVisasByAtId(atId));
     }
 
     @GetMapping("/{id}/signature")
-    @PreAuthorize("hasAuthority('VIEW_AT')")
+    @PreAuthorize("hasAuthority('READ_AT')")
     @Operation(summary = "Télécharger l'image de la signature PNG")
     public ResponseEntity<Resource> downloadSignature(@PathVariable String id) {
         Resource file = visaService.downloadSignature(id);
@@ -60,4 +60,3 @@ public class VisaController {
                 .body(file);
     }
 }
-

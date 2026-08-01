@@ -59,7 +59,7 @@ public class VisaServiceImpl implements VisaService {
                 .orElseThrow(() -> new BusinessException("Non authentifié"));
         Utilisateur currentUser = utilisateurRepository.findByEmail(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
-        
+
         Visa visa = Visa.builder()
                 .dateVisa(LocalDateTime.now())
                 .statut(StatutVisa.EN_ATTENTE)
@@ -68,7 +68,7 @@ public class VisaServiceImpl implements VisaService {
                 .utilisateur(currentUser)
                 .autorisationTravail(at)
                 .build();
-                
+
         visa = visaRepository.save(visa);
         return visaMapper.toResponse(visa);
     }
@@ -128,16 +128,18 @@ public class VisaServiceImpl implements VisaService {
         if (commentaire != null && !commentaire.trim().isEmpty()) {
             visa.setCommentaire(commentaire);
         }
-        
+
         // Capture IP and UserAgent
-        HttpServletRequest req = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+        HttpServletRequest req = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+                .getRequest();
         visa.setAdresseIP(req.getRemoteAddr());
         visa.setNavigateur(req.getHeader("User-Agent"));
 
         visa = visaRepository.save(visa);
 
         // Audit log
-        auditService.logAction("SIGN_VISA", "SUCCESS", visa.getUtilisateur(), req.getRemoteAddr(), req.getHeader("User-Agent"));
+        auditService.logAction("SIGN_VISA", "SUCCES", visa.getUtilisateur(), req.getRemoteAddr(),
+                req.getHeader("User-Agent"));
 
         return visaMapper.toResponse(visa);
     }
@@ -146,11 +148,11 @@ public class VisaServiceImpl implements VisaService {
     public Resource downloadSignature(String visaId) {
         Visa visa = visaRepository.findById(visaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Visa non trouvé"));
-                
+
         if (visa.getSignaturePath() == null) {
             throw new BusinessException("Aucune signature associée à ce visa");
         }
-        
+
         return storageService.loadSignature(visa.getSignaturePath());
     }
 
@@ -167,7 +169,8 @@ public class VisaServiceImpl implements VisaService {
         StringBuilder hexString = new StringBuilder();
         for (byte b : hash) {
             String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) hexString.append('0');
+            if (hex.length() == 1)
+                hexString.append('0');
             hexString.append(hex);
         }
         return hexString.toString();
