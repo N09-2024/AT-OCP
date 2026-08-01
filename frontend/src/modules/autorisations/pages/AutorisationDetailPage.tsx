@@ -158,7 +158,10 @@ export default function AutorisationDetailPage() {
   }
 
   // Rôles ayant des droits de validation/garantie sur l'AT (HCEE, HCEP, ADMIN)
-  const hasValidationRights = user?.roles?.some((r) => r.nom === 'HCEE' || r.nom === 'HCEP' || r.nom === 'ADMIN');
+  const roles = user?.roles?.map((r: any) => r.nom) || [];
+  const hasValidationRights = roles.some((n: string) => ['HCEE', 'HCEP', 'ADMIN'].includes(n));
+  const isCeee = roles.some((n: string) => ['CEEE', 'CEEP', 'ADMIN'].includes(n));
+  const canViserSoumise = hasValidationRights || isCeee;
 
   return (
     <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
@@ -180,15 +183,23 @@ export default function AutorisationDetailPage() {
             </Button>
           )}
 
-          {at.statut === 'SOUMISE' && hasValidationRights && (
+          {at.statut === 'SOUMISE' && canViserSoumise && (
             <Button
               variant="contained"
               color="success"
               startIcon={<CheckCircleIcon />}
-              onClick={() => navigate(`/visas/validation/${at.id}`)}
+              onClick={() => {
+                if (isCeee && !hasValidationRights) {
+                  navigate(`/autorisations/${at.id}/editer?mode=viser`);
+                } else {
+                  navigate(`/visas/validation/${at.id}`);
+                }
+              }}
               sx={{ fontWeight: 700 }}
             >
-              Étape 3 : Évaluer & Valider avec Visa (HCEE)
+              {isCeee && !hasValidationRights
+                ? "Étape 3 : Viser le formulaire (case CEEE)"
+                : 'Étape 3 : Évaluer & Valider avec Visa (HCEE)'}
             </Button>
           )}
 

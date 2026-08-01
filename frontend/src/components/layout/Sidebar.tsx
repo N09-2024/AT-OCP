@@ -116,7 +116,8 @@ const CEEE_MENU = {
       title: 'Mon Espace Intervention',
       items: [
         { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Autorisations en cours', path: '/autorisations?filtre=INTERVENTION_EN_COURS', icon: <ClipboardDocumentListIcon width={20} /> },
+        { text: 'AT à viser (soumises)', path: '/autorisations?filtre=SOUMISE', icon: <CheckBadgeIcon width={20} /> },
+        { text: 'Autorisations en cours', path: '/autorisations?filtre=VALIDEE', icon: <ClipboardDocumentListIcon width={20} /> },
       ],
     },
     {
@@ -124,7 +125,7 @@ const CEEE_MENU = {
       items: [
         { text: 'Toutes les ATs', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
         { text: 'Gestion des permis', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
-        { text: 'Déclarer fin travaux', path: '/autorisations?action=declarer-fin', icon: <CheckBadgeIcon width={20} /> },
+        { text: 'Déclarer fin travaux', path: '/autorisations?filtre=VALIDEE', icon: <CheckBadgeIcon width={20} /> },
         { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
       ],
     },
