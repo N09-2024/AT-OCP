@@ -115,8 +115,28 @@ export default function AutorisationFormPage() {
     apiClient
       .get(`/autorisations-travail/${draftId}`)
       .then((res) => {
-        setInitialData(res.data);
-        setAtStatut(res.data.statut || null);
+        const at = res.data;
+        setInitialData(at);
+        setAtStatut(at.statut || null);
+        setAtId(at.id);
+        // Préremplir le formulaire F-HSE avec toutes les données de l'AT (CEEE voit tout)
+        setFormInteractiveData({
+          description: at.descriptionTravaux || at.objet || '',
+          dateIntervention: at.dateDebut || '',
+          heureDebut: at.heureDebut || '',
+          heureFin: at.heureFin || '',
+          servicesIntervenants: at.servicesIntervenants || '',
+          entreprisesIntervenantes: at.entreprisesIntervenantes || '',
+          sectionF: at.mesuresSecuriteExecutant || '',
+          risquesIds: at.risquesIds || [],
+          mesuresIds: at.mesuresIds || [],
+          episIds: at.episIds || [],
+          moyensAccesIds: at.moyensAccesIds || [],
+          permisIds: at.permisIds || [],
+          g1NomCeep: at.g1NomCeep || '',
+          g1NomCeee: at.g1NomCeee || '',
+        });
+        setActiveStep(2);
         setFormInteractiveData(res.data);
       })
       .catch((err) => {
@@ -190,6 +210,7 @@ export default function AutorisationFormPage() {
         heureDebut: data.heureDebut || '08:00',
         heureFin: data.heureFin || '17:00',
         servicesIntervenants: data.servicesIntervenants || '',
+        serviceIntervenantId: data.serviceIntervenantId || null,
         entreprisesIntervenantes: data.entreprisesIntervenantes || '',
         mesuresSecuriteExecutant: data.sectionF || '',
         risquesIds: data.risquesIds || [],
@@ -260,6 +281,7 @@ export default function AutorisationFormPage() {
         heureDebut: data.heureDebut || '08:00',
         heureFin: data.heureFin || '17:00',
         servicesIntervenants: data.servicesIntervenants || '',
+        serviceIntervenantId: data.serviceIntervenantId || null,
         entreprisesIntervenantes: data.entreprisesIntervenantes || '',
         mesuresSecuriteExecutant: data.sectionF || '',
         risquesIds: data.risquesIds || [],

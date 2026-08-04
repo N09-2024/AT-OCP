@@ -97,13 +97,10 @@ public class DataInitializer {
     private void initRoles() {
         List<String[]> roles = Arrays.asList(
             new String[]{"ADMIN", "Administrateur système"},
-            new String[]{"CEEP", "Chef d'Équipe de l'Entité Propriétaire — opérationnel terrain, rédige l'AT"},
-            new String[]{"CEEE", "Chef d'Équipe de l'Entité Exécutante — terrain, déclare fin des travaux"},
-            new String[]{"HCEP", "Hors Cadre Responsable de l'Entité Propriétaire — garant archivage, désignateur agents habilités"},
-            new String[]{"HCEE", "Hors Cadre Responsable de l'Entité Exécutante — garant visites, rédaction AT, début intervention"},
-            new String[]{"HMEP", "Haute Maîtrise de l'Entité Propriétaire — garant visite chantier et début intervention"},
-            new String[]{"HMEE", "Haute Maîtrise de l'Entité Exécutante — rôle non clarifié par le standard, permissions minimales"},
-            new String[]{"RESPONSABLE_ENTREPRISE", "Responsable d'entreprise externe (sous-traitant) — gestion des permis liés au BT"}
+            new String[]{"CE", "Chef d'Équipe — position CEEP ou CEEE selon le territoire de l'AT"},
+            new String[]{"HM", "Haute Maîtrise — position HMEP ou HMEE selon le territoire de l'AT"},
+            new String[]{"HC", "Hors Cadre — position HCEP ou HCEE selon le territoire de l'AT"},
+            new String[]{"RESPONSABLE_EXTERIEUR", "Responsable Entreprise Extérieure (BT + permis uniquement)"}
         );
 
         for (String[] roleData : roles) {
@@ -115,88 +112,38 @@ public class DataInitializer {
                         perms.addAll(permissionRepository.findAll());
                         break;
 
-                    case "CEEP":
-                        // §8.1 E (demande), §8.2 E (visite), §8.3/§8.4 E (rédaction/reconduction), §8.5 E (réception)
+                    case "CE":
                         permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "CREATE_AT", "EDIT_AT", "SUBMIT_AT",
-                            "SIGN_AT",           // §8.3 signe l'AT, §8.4 vise la reconduction
-                            "RENEW_AT",          // §8.4 reconduire en cas de dépassement poste
-                            "RECEIVE_AT",        // §8.5 réceptionner les travaux
-                            "CLOSE_AT",          // §8.5 clôturer AT et permis après réception
-                            "CREATE_VISITE",     // §8.2 exécuter la visite chantier
-                            "TRANSFER_AT",       // Transférer le verrou
+                            "CREATE_AT", "EDIT_AT", "SUBMIT_AT", "READ_AT",
+                            "CREATE_VISITE", "SIGN_AT", "CLOSE_AT", "RECEIVE_AT",
+                            "START_INTERVENTION", "DECLARE_FIN_TRAVAUX", "RENEW_AT",
+                            "VIEW_PERMIS", "EDIT_PERMIS", "UPLOAD_FILES", "EXPORT_PDF",
+                            "RECEIVE_NOTIFICATION", "TRANSFER_AT"
+                        )).forEach(perms::add);
+                        break;
+
+                    case "HM":
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "READ_AT", "VALIDATE_VISITE", "SIGN_AT", "START_INTERVENTION",
+                            "EXPORT_PDF", "RECEIVE_NOTIFICATION", "VIEW_PERMIS"
+                        )).forEach(perms::add);
+                        break;
+
+                    case "HC":
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "READ_AT", "CLASSIFY_INTERVENTION", "VALIDATE_AT", "REJECT_AT",
+                            "VALIDATE_VISITE", "SIGN_AT", "ARCHIVE_AT", "VIEW_ARCHIVE",
+                            "MANAGE_HABILITATIONS", "MANAGE_REFERENTIALS", "VIEW_AUDIT",
+                            "VIEW_PERMIS", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
+                        )).forEach(perms::add);
+                        break;
+
+                    case "RESPONSABLE_EXTERIEUR":
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "READ_AT", "VIEW_PERMIS", "EDIT_PERMIS", "UPLOAD_PERMIS",
                             "UPLOAD_FILES", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
                         )).forEach(perms::add);
                         break;
-
-                    case "CEEE":
-                        // §8.1 I (informé), §8.2 P, §8.3 P, §4 E (début), §8.4 P, §8.5 E (déclaration fin), §8.5 P (réception)
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "EDIT_AT",
-                            "SIGN_AT",             // §8.3 P co-signe, §8.4 P vise la reconduction
-                            "START_INTERVENTION",  // §4 Exécute le démarrage
-                            "DECLARE_FIN_TRAVAUX", // §8.5 Exécute la déclaration de fin
-                            "VIEW_PERMIS", "EDIT_PERMIS",
-                            "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "HCEP":
-                        // §8.6 G (garant archivage), §9 (désignation agents habilités), Étape 0 (classification)
-                        // TODO: à valider avec OCP — signature opérationnelle directe sur l'AT non confirmée par le standard
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT",
-                            "CLASSIFY_INTERVENTION",  // Étape 0 : classifie Niveau 1/2
-                            "MANAGE_HABILITATIONS",   // §9 : désigne agents habilités AT
-                            "VIEW_ARCHIVE",           // §8.6 G : consulte/supervise les archives
-                            "MANAGE_REFERENTIALS", "VIEW_AUDIT",
-                            "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "HCEE":
-                        // §8.2 G (visite), §8.3 G (rédaction AT), §4 G (début intervention), §8.4 G (reconduction), §8.6 E (archivage)
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT",
-                            "VALIDATE_AT", "REJECT_AT",  // §8.3 Garant — valide/refuse l'AT
-                            "SIGN_AT",                   // §8.3 G co-signe l'AT
-                            "VALIDATE_VISITE",           // §8.2 Garant de la visite chantier
-                            "ARCHIVE_AT",               // §8.6 Exécute l'archivage officiel
-                            "VIEW_ARCHIVE",             // §8.6 Consulte les archives
-                            "VIEW_PERMIS",
-                            "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "HMEP":
-                        // §8.2 G (visite chantier), §4 G (démarrage intervention) — rôle de garant à ces deux étapes uniquement
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT",
-                            "VALIDATE_VISITE",  // §8.2 Garant de la visite chantier
-                            "SIGN_AT",          // §4 Garant du démarrage (co-signe)
-                            "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "HMEE":
-                        // TODO: à valider avec OCP — rôle non clarifié par le standard
-                        // Le logigramme §7 présente la colonne HMEE mais les cases sont non renseignées.
-                        // Comportement fail-closed intentionnel : lecture + notifications seules.
-                        // Aucun droit d'écriture tant que le rôle n'est pas clarifié.
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT",
-                            "EXPORT_PDF",
-                            "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "RESPONSABLE_ENTREPRISE":
-                        // Hors logique P/E — sous-traitant externe, uniquement via BT (Bon de Travail)
-                        // Gère les permis liés au BT. Ne participe PAS au workflow AT normal.
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "VIEW_PERMIS", "UPLOAD_PERMIS", "ANALYSE_PERMIS", "CREATE_PERMIS",
-                            "READ_AT", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
                 }
 
                 roleRepository.save(Role.builder()

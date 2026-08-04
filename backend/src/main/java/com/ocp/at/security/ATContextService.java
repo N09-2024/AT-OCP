@@ -1,9 +1,10 @@
 package com.ocp.at.security;
 
 import com.ocp.at.entity.AutorisationTravail;
-import com.ocp.at.entity.Service;
+import com.ocp.at.entity.Role;
 import com.ocp.at.entity.Utilisateur;
 import com.ocp.at.entity.Zone;
+import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.repository.AutorisationTravailRepository;
 import com.ocp.at.repository.UtilisateurRepository;
@@ -12,173 +13,270 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
- * Service de résolution contextuelle de la position P/E d'un utilisateur sur une AT.
+ * Résolution contextuelle P/E + guards métier (Standard S-HSE-SEC-31).
  *
- * <h2>Principe métier (Standard S-HSE-SEC-31)</h2>
- * <p>Les codes P (Propriétaire) et E (Exécutant) ne sont pas des propriétés fixes de l'utilisateur.
- * Ils désignent une position <em>relative au territoire de l'AT</em> :</p>
- * <ul>
- *   <li><b>P</b> = le service dont la zone est {@code zoneProprietaire} de l'AT (hôte de l'intervention)</li>
- *   <li><b>E</b> = le service dont la zone est {@code zoneExecutante} de l'AT (intervenant externe)</li>
- * </ul>
- *
- * <p>Un même utilisateur peut être côté P sur une AT et côté E sur une autre.
- * C'est le champ {@code Utilisateur.service} qui permet cette résolution.</p>
- *
- * <h2>Conditions préalables</h2>
- * <ul>
- *   <li>L'utilisateur doit être rattaché à un service ({@code utilisateur.service != null})</li>
- *   <li>L'AT doit avoir ses zones définies ({@code zoneProprietaire}, {@code zoneExecutante})</li>
- * </ul>
- *
- * @see com.ocp.at.entity.Utilisateur#getService()
- * @see com.ocp.at.entity.AutorisationTravail#getZoneProprietaire()
- * @see com.ocp.at.entity.AutorisationTravail#getZoneExecutante()
+ * <p>Rôles applicatifs : CE, HM, HC, ADMIN, RESPONSABLE_EXTERIEUR.
+ * Positions P/E calculées via {@code utilisateur.service.zone} vs zones de l'AT.</p>
  */
 @Component("atContext")
 @RequiredArgsConstructor
 @Slf4j
 public class ATContextService {
 
-    /**
-     * Position contextuelle d'un utilisateur sur une AT donnée.
-     * Déterminée à l'exécution en comparant le service de l'utilisateur aux zones de l'AT.
-     */
     public enum PositionAT {
-        /** L'utilisateur appartient au service hébergeant l'intervention (zone propriétaire). */
         PROPRIETAIRE,
-        /** L'utilisateur appartient au service intervenant (zone exécutante). */
         EXECUTANT,
-        /** L'utilisateur n'est ni P ni E sur cette AT (accès en lecture seule uniquement). */
         AUCUNE
     }
+
+    /** Rôles applicatifs V28 */
+    public static final String ROLE_CE = "CE";
+    public static final String ROLE_HM = "HM";
+    public static final String ROLE_HC = "HC";
+    public static final String ROLE_ADMIN = "ADMIN";
+    public static final String ROLE_RESP_EXT = "RESPONSABLE_EXTERIEUR";
 
     private final AutorisationTravailRepository atRepository;
     private final UtilisateurRepository utilisateurRepository;
 
-    /**
-     * Résout la position (P, E ou Aucune) de l'utilisateur courant sur l'AT identifiée par {@code atId}.
-     *
-     * @param atId identifiant de l'AT
-     * @return {@link PositionAT} de l'utilisateur courant
-     */
+    // =========================================================================
+    // Position P / E
+    // =========================================================================
+
     @Transactional(readOnly = true)
     public PositionAT resoudrePosition(String atId) {
         Utilisateur user = getCurrentUser();
-        if (user.getService() == null) {
-            log.warn("[ATContext] Utilisateur {} sans service rattaché — position AUCUNE sur AT {}",
-                    user.getEmail(), atId);
+        if (user.getService() == null || user.getService().getZone() == null) {
+            log.warn("[ATContext] {} sans service/zone — position AUCUNE sur AT {}", user.getEmail(), atId);
             return PositionAT.AUCUNE;
         }
 
-        AutorisationTravail at = atRepository.findById(atId)
-                .orElseThrow(() -> new ResourceNotFoundException("AT non trouvée : " + atId));
+        AutorisationTravail at = getAt(atId);
+        String userZoneId = user.getService().getZone().getId();
 
-        String userServiceId = user.getService().getId();
-
-        // Résolution côté Propriétaire
-        if (at.getZoneProprietaire() != null) {
-            Zone zoneP = at.getZoneProprietaire();
-            // La zone propriétaire correspond au service de l'utilisateur via zone.id
-            // Note : Zone n'a pas de lien direct vers Service — la comparaison se fait via
-            // le service de l'utilisateur et la zone assignée à ce service.
-            // Ici on compare zone.id == utilisateur.service.zone.id
-            if (user.getService().getZone() != null &&
-                    user.getService().getZone().getId().equals(zoneP.getId())) {
-                return PositionAT.PROPRIETAIRE;
-            }
+        if (at.getZoneProprietaire() != null
+                && userZoneId.equals(at.getZoneProprietaire().getId())) {
+            return PositionAT.PROPRIETAIRE;
         }
-
-        // Résolution côté Exécutant
-        if (at.getZoneExecutante() != null) {
-            Zone zoneE = at.getZoneExecutante();
-            if (user.getService().getZone() != null &&
-                    user.getService().getZone().getId().equals(zoneE.getId())) {
-                return PositionAT.EXECUTANT;
-            }
+        if (at.getZoneExecutante() != null
+                && userZoneId.equals(at.getZoneExecutante().getId())) {
+            return PositionAT.EXECUTANT;
         }
-
-        log.debug("[ATContext] Utilisateur {} (service={}) n'est ni P ni E sur AT {}",
-                user.getEmail(), userServiceId, atId);
         return PositionAT.AUCUNE;
     }
 
-    // =========================================================================
-    // Méthodes de commodité
-    // =========================================================================
-
-    /** @return true si l'utilisateur courant est côté Propriétaire sur cette AT. */
     @Transactional(readOnly = true)
     public boolean estProprietaire(String atId) {
         return resoudrePosition(atId) == PositionAT.PROPRIETAIRE;
     }
 
-    /** @return true si l'utilisateur courant est côté Exécutant sur cette AT. */
     @Transactional(readOnly = true)
     public boolean estExecutant(String atId) {
         return resoudrePosition(atId) == PositionAT.EXECUTANT;
     }
 
+    // =========================================================================
+    // Rôles applicatifs
+    // =========================================================================
+
+    public Set<String> rolesCourants() {
+        Utilisateur user = getCurrentUser();
+        if (user.getRoles() == null) {
+            return Set.of();
+        }
+        return user.getRoles().stream()
+                .map(Role::getNom)
+                .map(n -> n == null ? "" : n.toUpperCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+    }
+
+    public boolean hasRole(String role) {
+        return rolesCourants().contains(role.toUpperCase(Locale.ROOT));
+    }
+
+    public boolean isAdmin() {
+        return hasRole(ROLE_ADMIN);
+    }
+
+    public boolean isCE() {
+        return hasRole(ROLE_CE) || isAdmin();
+    }
+
+    public boolean isHM() {
+        return hasRole(ROLE_HM) || isAdmin();
+    }
+
+    public boolean isHC() {
+        return hasRole(ROLE_HC) || isAdmin();
+    }
+
+    public boolean isResponsableExterieur() {
+        return hasRole(ROLE_RESP_EXT);
+    }
+
     /**
-     * Vérifie que l'utilisateur a un service rattaché.
-     * À appeler avant toute action de workflow sur une AT.
-     *
-     * @throws com.ocp.at.exception.BusinessException si l'utilisateur n'a pas de service
+     * Rôle principal pour redirection UI (priorité ADMIN > HC > HM > CE > RESP_EXT).
      */
+    public String rolePrincipal() {
+        Set<String> roles = rolesCourants();
+        if (roles.contains(ROLE_ADMIN)) return ROLE_ADMIN;
+        if (roles.contains(ROLE_HC)) return ROLE_HC;
+        if (roles.contains(ROLE_HM)) return ROLE_HM;
+        if (roles.contains(ROLE_CE)) return ROLE_CE;
+        if (roles.contains(ROLE_RESP_EXT)) return ROLE_RESP_EXT;
+        return ROLE_CE; // défaut terrain
+    }
+
+    // =========================================================================
+    // Guards d'actions workflow (à appeler dans les services)
+    // =========================================================================
+
     public void verifierServiceRattache() {
         Utilisateur user = getCurrentUser();
         if (user.getService() == null) {
-            throw new com.ocp.at.exception.BusinessException(
-                "Votre compte n'est rattaché à aucun service. " +
-                "Contactez un administrateur pour définir votre service d'appartenance.");
+            throw new BusinessException(
+                    "Votre compte n'est rattaché à aucun service. "
+                            + "Contactez un administrateur pour définir votre service d'appartenance.");
+        }
+    }
+
+    /** Classification Niveau 1/2 — HC (position P / HCEP) ou ADMIN */
+    public void requireClassifier() {
+        if (isAdmin()) return;
+        if (!isHC()) {
+            throw new BusinessException("Seuls les Hors Cadre (HC) peuvent classifier une intervention.");
+        }
+    }
+
+    /** Créer demande / AT — CE ou ADMIN */
+    public void requireCreerDemande() {
+        if (isAdmin()) return;
+        if (!isCE()) {
+            throw new BusinessException("Seuls les Chefs d'Équipe (CE) peuvent créer une demande d'intervention.");
+        }
+    }
+
+    /** Visite chantier — CE (P exécute / E participe) ou HM/HC garant, ou ADMIN */
+    public void requireVisite(String atId) {
+        if (isAdmin()) return;
+        if (isCE() || isHM() || isHC()) return;
+        throw new BusinessException("Vous n'êtes pas habilité à intervenir sur la visite chantier.");
+    }
+
+    /** Rédaction AT sur le terrain — CE position P (exécute) ou CE position E (participe) ou HC garant */
+    public void requireRedaction(String atId) {
+        if (isAdmin()) return;
+        if (isCE() || isHC()) return;
+        throw new BusinessException("Vous n'êtes pas habilité à rédiger / participer à la rédaction de l'AT.");
+    }
+
+    /** Signature / visa — CE, HM (P), HC, ADMIN */
+    public void requireSigner(String atId) {
+        if (isAdmin()) return;
+        if (isCE() || isHC()) return;
+        if (isHM() && estProprietaire(atId)) return;
+        throw new BusinessException("Vous n'êtes pas habilité à signer / viser cette AT.");
+    }
+
+    /** Démarrer intervention — CE position E (exécute) ; HM/HC garant */
+    public void requireDemarrer(String atId) {
+        if (isAdmin()) return;
+        if (isCE() && estExecutant(atId)) return;
+        if (isHM() && estProprietaire(atId)) return; // garant HMEP
+        if (isHC()) return; // garant HCEE
+        throw new BusinessException(
+                "Seul le Chef d'Équipe Exécutant (CE en position E) peut démarrer l'intervention "
+                        + "(HM/HC en garant).");
+    }
+
+    /** Déclarer fin des travaux — CE position E */
+    public void requireDeclarerFin(String atId) {
+        if (isAdmin()) return;
+        if (isCE() && estExecutant(atId)) return;
+        throw new BusinessException(
+                "Seul le Chef d'Équipe Exécutant (CE en position E) peut déclarer la fin des travaux.");
+    }
+
+    /** Réception — CE position P (exécute) ; CE position E participe */
+    public void requireReception(String atId) {
+        if (isAdmin()) return;
+        if (isCE() && (estProprietaire(atId) || estExecutant(atId))) return;
+        throw new BusinessException(
+                "La réception est réservée aux Chefs d'Équipe (CE) du périmètre P ou E.");
+    }
+
+    /** Reconduction / visa poste — CE (P exécute / E participe) ou HC garant */
+    public void requireReconduction(String atId) {
+        if (isAdmin()) return;
+        if (isCE() || isHC()) return;
+        throw new BusinessException("Vous n'êtes pas habilité à reconduire / viser cette AT.");
+    }
+
+    /** Archivage — HC (P garant / E exécute) ou ADMIN */
+    public void requireArchiver() {
+        if (isAdmin()) return;
+        if (!isHC()) {
+            throw new BusinessException("Seuls les Hors Cadre (HC) peuvent archiver une AT.");
+        }
+    }
+
+    /** HM en position E = lecture seule (fail-closed standard) */
+    public void requireHmEcriture(String atId) {
+        if (isAdmin()) return;
+        if (isHM() && estExecutant(atId)) {
+            throw new BusinessException(
+                    "Haute Maîtrise en position Exécutant (HMEE) : accès en lecture seule uniquement.");
         }
     }
 
     // =========================================================================
-    // Méthode privée
+    // Listes acteurs
     // =========================================================================
 
-    private Utilisateur getCurrentUser() {
-        return SecurityUtils.getCurrentUtilisateurId()
-                .flatMap(utilisateurRepository::findByEmail)
-                .orElseThrow(() -> new com.ocp.at.exception.BusinessException("Utilisateur non authentifié"));
-    }
-
-
-    /**
-     * Chefs d'équipe du service intervenant (zone exécutante) → acteurs CEEE sur cette AT.
-     * À afficher dans le formulaire et à notifier à la soumission.
-     */
     @Transactional(readOnly = true)
-    public java.util.List<Utilisateur> findChefsEquipeExecutants(String atId) {
-        AutorisationTravail at = atRepository.findById(atId)
-                .orElseThrow(() -> new ResourceNotFoundException("AT non trouvée : " + atId));
+    public List<Utilisateur> findChefsEquipeExecutants(String atId) {
+        AutorisationTravail at = getAt(atId);
         if (at.getZoneExecutante() == null) {
-            return java.util.Collections.emptyList();
+            return List.of();
         }
         return utilisateurRepository.findChefsEquipeByZoneId(at.getZoneExecutante().getId());
     }
 
-    /**
-     * Chefs d'équipe du service propriétaire (zone propriétaire) → acteurs CEEP sur cette AT.
-     */
     @Transactional(readOnly = true)
-    public java.util.List<Utilisateur> findChefsEquipeProprietaires(String atId) {
-        AutorisationTravail at = atRepository.findById(atId)
-                .orElseThrow(() -> new ResourceNotFoundException("AT non trouvée : " + atId));
+    public List<Utilisateur> findChefsEquipeProprietaires(String atId) {
+        AutorisationTravail at = getAt(atId);
         if (at.getZoneProprietaire() == null) {
-            return java.util.Collections.emptyList();
+            return List.of();
         }
         return utilisateurRepository.findChefsEquipeByZoneId(at.getZoneProprietaire().getId());
     }
 
-    /** Chefs d'équipe rattachés à un service (pour le formulaire : sélection service intervenant). */
     @Transactional(readOnly = true)
-    public java.util.List<Utilisateur> findChefsEquipeByService(String serviceId) {
+    public List<Utilisateur> findChefsEquipeByService(String serviceId) {
         if (serviceId == null || serviceId.isBlank()) {
-            return java.util.Collections.emptyList();
+            return List.of();
         }
         return utilisateurRepository.findChefsEquipeByServiceId(serviceId);
+    }
+
+    // =========================================================================
+    // Privé
+    // =========================================================================
+
+    private AutorisationTravail getAt(String atId) {
+        return atRepository.findById(atId)
+                .orElseThrow(() -> new ResourceNotFoundException("AT non trouvée : " + atId));
+    }
+
+    private Utilisateur getCurrentUser() {
+        return SecurityUtils.getCurrentUtilisateurId()
+                .flatMap(utilisateurRepository::findByEmail)
+                .orElseThrow(() -> new BusinessException("Utilisateur non authentifié"));
     }
 }

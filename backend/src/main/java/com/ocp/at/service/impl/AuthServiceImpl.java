@@ -196,9 +196,10 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("Un compte avec cet email existe déjà");
         }
 
-        // Récupérer le rôle CEEP par défaut (nouveau rôle standard OCP — remplace DEMANDEUR)
-        Role roleCEEP = roleRepository.findByNom("CEEP")
-                .orElseThrow(() -> new RuntimeException("Rôle CEEP introuvable"));
+        // Récupérer le rôle CE par défaut (Chef d'Équipe)
+        Role roleCE = roleRepository.findByNom("CE")
+                .orElseGet(() -> roleRepository.findByNom("CEEP")
+                        .orElseThrow(() -> new RuntimeException("Rôle CE introuvable")));
 
         // Générer un matricule automatique
         String matricule = "USER-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
@@ -212,7 +213,7 @@ public class AuthServiceImpl implements AuthService {
                 .motDePasse(passwordEncoder.encode(request.getMotDePasse()))
                 .actif(false) // Compte inactif en attendant validation
                 .enAttenteValidation(true) // En attente de validation par l'admin
-                .roles(java.util.Set.of(roleCEEP))
+                .roles(java.util.Set.of(roleCE))
                 .build();
 
         utilisateurRepository.save(utilisateur);

@@ -150,7 +150,19 @@ public class ATContextSecurityExpressions {
         return SecurityUtils.getCurrentUtilisateurId()
                 .flatMap(utilisateurRepository::findByEmail)
                 .map(user -> user.getRoles().stream()
-                        .anyMatch(r -> r.getNom().equals(roleNom)))
+                        .anyMatch(r -> {
+                            String nom = r.getNom();
+                            if ("CEEP".equals(roleNom) || "CEEE".equals(roleNom)) {
+                                return nom.equals("CE") || nom.equals(roleNom);
+                            }
+                            if ("HMEP".equals(roleNom) || "HMEE".equals(roleNom)) {
+                                return nom.equals("HM") || nom.equals(roleNom);
+                            }
+                            if ("HCEP".equals(roleNom) || "HCEE".equals(roleNom)) {
+                                return nom.equals("HC") || nom.equals(roleNom);
+                            }
+                            return nom.equals(roleNom);
+                        }))
                 .orElse(false);
     }
 }

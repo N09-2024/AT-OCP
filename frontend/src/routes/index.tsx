@@ -4,6 +4,12 @@ import MainLayout from '../layouts/MainLayout';
 import LoginPage from '../modules/auth/pages/LoginPage';
 import RegisterPage from '../modules/auth/pages/RegisterPage';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
+import DashboardRouter from '../modules/dashboard/pages/DashboardRouter';
+import CEDashboardPage from '../modules/dashboard/pages/CEDashboardPage';
+import HMDashboardPage from '../modules/dashboard/pages/HMDashboardPage';
+import HCDashboardPage from '../modules/dashboard/pages/HCDashboardPage';
+import AdminDashboardPage from '../modules/dashboard/pages/AdminDashboardPage';
+import ResponsableExterieurDashboardPage from '../modules/dashboard/pages/ResponsableExterieurDashboardPage';
 import AdminLayout from '../modules/administration/AdminLayout';
 import UsersListPage from '../modules/administration/pages/UsersListPage';
 import UserFormPage from '../modules/administration/pages/UserFormPage';
@@ -164,7 +170,16 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="dashboard" element={<DashboardPage />} />
+        {/* Dashboard Router & Sub-dashboards per role */}
+        <Route path="dashboard">
+          <Route index element={<DashboardRouter />} />
+          <Route path="ce" element={<RoleGuard roles={['CE', 'CEEP', 'CEEE', 'ADMIN']}><CEDashboardPage /></RoleGuard>} />
+          <Route path="hm" element={<RoleGuard roles={['HM', 'HMEP', 'HMEE', 'ADMIN']}><HMDashboardPage /></RoleGuard>} />
+          <Route path="hc" element={<RoleGuard roles={['HC', 'HCEP', 'HCEE', 'ADMIN']}><HCDashboardPage /></RoleGuard>} />
+          <Route path="admin" element={<RoleGuard roles={['ADMIN']}><AdminDashboardPage /></RoleGuard>} />
+          <Route path="externe" element={<RoleGuard roles={['RESPONSABLE_EXTERIEUR', 'RESPONSABLE_ENTREPRISE', 'ADMIN']}><ResponsableExterieurDashboardPage /></RoleGuard>} />
+          <Route path="global" element={<DashboardPage />} />
+        </Route>
         <Route path="documents" element={<DocumentsListPage />} />
         <Route path="visites" element={<VisitesListPage />} />
 

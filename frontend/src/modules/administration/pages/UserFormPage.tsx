@@ -26,33 +26,33 @@ import type { Service } from '../../../services/AdminService';
 // -------------------------------------------------------
 const FIXED_ROLES = [
   {
-    nom: 'CEEP',
-    label: "Chef d'Équipe",
-    description: "Chef d'Équipe terrain — position CEEP (Propriétaire) ou CEEE (Exécutant) résolue selon l'AT",
+    nom: 'CE',
+    label: "Chef d'Équipe (CE)",
+    description: "Chef d'Équipe terrain — position CEEP (Propriétaire) ou CEEE (Exécutant) résolue dynamiquement par le service",
     color: '#0891b2',
   },
   {
-    nom: 'HMEP',
-    label: "Haute Maîtrise",
-    description: "Agent de Maîtrise / Superviseur — position HMEP (Propriétaire) ou HMEE (Exécutant) résolue selon l'AT",
+    nom: 'HM',
+    label: "Haute Maîtrise (HM)",
+    description: "Superviseur / Agent de Maîtrise — position HMEP (Propriétaire) ou HMEE (Exécutant - lecture seule)",
     color: '#16a34a',
   },
   {
-    nom: 'HCEP',
-    label: "Hors Cadre (Responsable)",
-    description: "Cadre Responsable — position HCEP (Propriétaire) ou HCEE (Exécutant) résolue selon l'AT",
+    nom: 'HC',
+    label: "Hors Cadre (HC)",
+    description: "Cadre Responsable — position HCEP (Classification/Archivage) ou HCEE (Garant/Validation)",
     color: '#7c3aed',
   },
   {
-    nom: 'RESPONSABLE_ENTREPRISE',
-    label: "Responsable Entreprise Externe",
+    nom: 'RESPONSABLE_EXTERIEUR',
+    label: "Responsable Entreprise Extérieure",
     description: "Responsable d'entreprise sous-traitante (Bons de Travail et permis uniquement)",
     color: '#6A1B9A',
   },
   {
     nom: 'ADMIN',
     label: "Administrateur Système",
-    description: "Administrateur système avec tous les droits de gestion",
+    description: "Administrateur système avec tous les droits de gestion et supervision",
     color: '#B71C1C',
   },
 ];

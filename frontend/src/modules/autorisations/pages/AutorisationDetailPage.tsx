@@ -159,9 +159,15 @@ export default function AutorisationDetailPage() {
 
   // Rôles ayant des droits de validation/garantie sur l'AT (HCEE, HCEP, ADMIN)
   const roles = user?.roles?.map((r: any) => r.nom) || [];
-  const hasValidationRights = roles.some((n: string) => ['HCEE', 'HCEP', 'ADMIN'].includes(n));
-  const isCeee = roles.some((n: string) => ['CEEE', 'CEEP', 'ADMIN'].includes(n));
-  const canViserSoumise = hasValidationRights || isCeee;
+  // HC = HCEP/HCEE | HM = HMEP/HMEE | CE = CEEP/CEEE (standard S-HSE-SEC-31)
+  const isHc = roles.some((n: string) => ['HCEE', 'HCEP', 'ADMIN'].includes(n));
+  const isHm = roles.some((n: string) => ['HMEP', 'HMEE', 'ADMIN'].includes(n));
+  const isCe = roles.some((n: string) => ['CEEE', 'CEEP'].includes(n));
+  const hasValidationRights = isHc; // validation formelle souvent HCEE
+  const isCeee = roles.includes('CEEE') || roles.includes('ADMIN');
+  // Garantir une AT soumise : HC ou HM ; viser case CEEE : CEEE
+  const canGarantirSoumise = isHc || isHm;
+  const canViserSoumise = canGarantirSoumise || isCeee;
 
   return (
     <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
@@ -189,7 +195,7 @@ export default function AutorisationDetailPage() {
               color="success"
               startIcon={<CheckCircleIcon />}
               onClick={() => {
-                if (isCeee && !hasValidationRights) {
+                if (isCeee && !canGarantirSoumise) {
                   navigate(`/autorisations/${at.id}/editer?mode=viser`);
                 } else {
                   navigate(`/visas/validation/${at.id}`);
@@ -197,9 +203,11 @@ export default function AutorisationDetailPage() {
               }}
               sx={{ fontWeight: 700 }}
             >
-              {isCeee && !hasValidationRights
+              {isCeee && !canGarantirSoumise
                 ? "Étape 3 : Viser le formulaire (case CEEE)"
-                : 'Étape 3 : Évaluer & Valider avec Visa (HCEE)'}
+                : isHm && !isHc
+                  ? 'Étape 3 : Garantir l\'AT (Haute Maîtrise)'
+                  : 'Étape 3 : Garantir / Valider (Hors Cadre HCEE)'}
             </Button>
           )}
 

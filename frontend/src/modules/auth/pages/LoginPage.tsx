@@ -33,8 +33,16 @@ export default function LoginPage() {
       const response = await AuthService.login(data);
       login(response.user, response.token, response.permissions);
       navigate('/dashboard');
-    } catch {
-      setError('Identifiants incorrects ou erreur de connexion au serveur.');
+    } catch (err: any) {
+      console.error('[LoginPage] Error logging in:', err);
+      const backendMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message;
+      if (err?.response?.status === 401) {
+        setError(backendMsg || 'Email ou mot de passe incorrect.');
+      } else if (err?.code === 'ERR_NETWORK') {
+        setError('Impossible de contacter le serveur backend. Vérifiez que le serveur est démarré.');
+      } else {
+        setError(backendMsg || 'Erreur lors de la connexion. Veuillez réessayer.');
+      }
     }
   };
 

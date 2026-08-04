@@ -34,8 +34,14 @@ public class AutoSaveRequest {
     @Schema(description = "Heure de fin prévue")
     private LocalTime heureFin;
 
-    @Schema(description = "Services intervenants")
+    @Schema(description = "Services intervenants (libellé)")
     private String servicesIntervenants;
+
+    @Schema(description = "ID du service intervenant (E) — fixe zoneExecutante pour CEEE")
+    private String serviceIntervenantId;
+
+    @Schema(description = "ID zone propriétaire (P) optionnel")
+    private String zoneProprietaireId;
 
     @Schema(description = "Entreprises intervenantes")
     private String entreprisesIntervenantes;

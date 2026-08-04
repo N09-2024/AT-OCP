@@ -30,8 +30,11 @@ export function useATActions(at: AutorisationTravail | null) {
     };
   }
 
-  const role = user.roles?.[0]?.nom as RoleNom | undefined;
-  const isHmee = role === 'HMEE';
+  const userRoles = (user.roles || []).map((r) => (r.nom || '').toUpperCase());
+  const isAdmin = userRoles.includes('ADMIN');
+  const isCE = userRoles.includes('CE') || userRoles.includes('CEEP') || userRoles.includes('CEEE');
+  const isHM = userRoles.includes('HM') || userRoles.includes('HMEP') || userRoles.includes('HMEE');
+  const isHC = userRoles.includes('HC') || userRoles.includes('HCEP') || userRoles.includes('HCEE');
 
   // Position P/E contextuelle issue de la réponse du backend ou calculée localement
   let position = at.positionUtilisateurCourant || 'AUCUNE';
@@ -44,7 +47,9 @@ export function useATActions(at: AutorisationTravail | null) {
     }
   }
 
-  // HMEE : fail-closed intentionnel (lecture seule) tant que le rôle n'est pas clarifié par OCP
+  // HMEE (Haute Maîtrise en position Exécutante) : fail-closed intentionnel (lecture seule)
+  const isHmee = (isHM || userRoles.includes('HMEE')) && position === 'EXECUTANT' && !isAdmin;
+
   if (isHmee) {
     return {
       position,
@@ -65,31 +70,31 @@ export function useATActions(at: AutorisationTravail | null) {
   return {
     position,
 
-    // Étape 0 : Classification (HCEP)
-    peutClassifier: hasPermission('CLASSIFY_INTERVENTION'),
+    // Étape 0 : Classification (HC / ADMIN)
+    peutClassifier: (isHC || isAdmin) && hasPermission('CLASSIFY_INTERVENTION'),
 
-    // Étape 2 : Visite chantier (CEEP E, HCEE/HMEP garants)
-    peutCreerVisite: hasPermission('CREATE_VISITE') && (position === 'PROPRIETAIRE' || role === 'ADMIN'),
-    peutValiderVisite: hasPermission('VALIDATE_VISITE'),
+    // Étape 2 : Visite chantier (CE pour création, HM/HC/ADMIN pour validation)
+    peutCreerVisite: (isCE || isAdmin) && hasPermission('CREATE_VISITE'),
+    peutValiderVisite: (isHM || isHC || isAdmin) && hasPermission('VALIDATE_VISITE'),
 
-    // Étape 3 : Rédaction AT (CEEP E, HCEE G)
-    peutRedigerAT: hasPermission('EDIT_AT') && (position === 'PROPRIETAIRE' || role === 'ADMIN'),
-    peutValiderAT: hasPermission('VALIDATE_AT'),
+    // Étape 3 : Rédaction & Validation AT
+    peutRedigerAT: (isCE || isAdmin) && hasPermission('EDIT_AT'),
+    peutValiderAT: (isHC || isAdmin) && hasPermission('VALIDATE_AT'),
 
-    // Étape 4 : Démarrage travaux (CEEE E)
-    peutDemarrerIntervention: hasPermission('START_INTERVENTION') && (position === 'EXECUTANT' || role === 'ADMIN'),
+    // Étape 4 : Démarrage travaux (CE en position E, HM/HC garants)
+    peutDemarrerIntervention: (isCE || isHM || isHC || isAdmin) && hasPermission('START_INTERVENTION'),
 
-    // Étape 5b : Reconduction (CEEP E)
-    peutReconduire: hasPermission('RENEW_AT') && (position === 'PROPRIETAIRE' || role === 'ADMIN'),
+    // Étape 5b : Reconduction
+    peutReconduire: (isCE || isHC || isAdmin) && hasPermission('RENEW_AT'),
 
-    // Étape 6 : Déclaration fin (CEEE E)
-    peutDeclarerFin: hasPermission('DECLARE_FIN_TRAVAUX') && (position === 'EXECUTANT' || role === 'ADMIN'),
+    // Étape 6 : Déclaration fin (CE en position E)
+    peutDeclarerFin: (isCE || isAdmin) && (position === 'EXECUTANT' || isAdmin) && hasPermission('DECLARE_FIN_TRAVAUX'),
 
-    // Étape 7 : Réception (CEEP E)
-    peutReceptionner: hasPermission('RECEIVE_AT') && (position === 'PROPRIETAIRE' || role === 'ADMIN'),
+    // Étape 7 : Réception (CE position P / E)
+    peutReceptionner: (isCE || isAdmin) && hasPermission('RECEIVE_AT'),
 
-    // Étape 8 : Archivage (HCEE E)
-    peutArchiver: hasPermission('ARCHIVE_AT'),
+    // Étape 8 : Archivage (HC / ADMIN)
+    peutArchiver: (isHC || isAdmin) && hasPermission('ARCHIVE_AT'),
 
     estLectureSeule: false,
   };

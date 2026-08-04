@@ -21,6 +21,7 @@ import {
   BellIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
+import { usePrimaryRole } from '../../hooks/usePrimaryRole';
 import { useState } from 'react';
 
 // OCP Primary Green
@@ -28,13 +29,14 @@ const PRIMARY_COLOR = '#00875A';
 
 // ─── ADMIN ────────────────────────────────────────────────
 const ADMIN_MENU = {
-  label: 'Administration System',
+  label: 'Administration Système',
   sections: [
     {
       title: 'Vue d\'ensemble',
       items: [
-        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Tableau de bord Admin', path: '/dashboard/admin', icon: <HomeIcon width={20} /> },
         { text: 'Statistiques & KPI', path: '/administration/statistiques', icon: <DocumentMagnifyingGlassIcon width={20} /> },
+        { text: 'Vue globale AT', path: '/dashboard/global', icon: <ClipboardDocumentCheckIcon width={20} /> },
       ],
     },
     {
@@ -49,10 +51,11 @@ const ADMIN_MENU = {
       ],
     },
     {
-      title: 'Gestion des comptes',
+      title: 'Gestion des comptes & Habilitations',
       items: [
         { text: 'Utilisateurs', path: '/administration/utilisateurs', icon: <UserGroupIcon width={20} /> },
         { text: 'Rôles & Permissions', path: '/administration/roles', icon: <ShieldCheckIcon width={20} /> },
+        { text: 'Habilitations agents', path: '/habilitations', icon: <CheckBadgeIcon width={20} /> },
         { text: 'Inscriptions en attente', path: '/administration/inscriptions', icon: <UserPlusIcon width={20} /> },
       ],
     },
@@ -83,21 +86,21 @@ const ADMIN_MENU = {
   ],
 };
 
-// ─── CEEP (Chef d'Équipe Entité Propriétaire) ────────────
-const CEEP_MENU = {
-  label: 'CEEP — Entité Propriétaire',
+// ─── CE (Chef d'Équipe) ──────────────────────────────────
+const CE_MENU = {
+  label: "Chef d'Équipe (CE)",
   sections: [
     {
-      title: 'Mon Espace Terrain',
+      title: 'Espace Terrain & Intervention',
       items: [
-        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Tableau de bord CE', path: '/dashboard/ce', icon: <HomeIcon width={20} /> },
         { text: 'Mes Autorisations (AT)', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Nouvelle Demande / AT', path: '/autorisations/nouvelle', icon: <PlusCircleIcon width={20} /> },
       ],
     },
     {
-      title: 'Demande & Exécution',
+      title: 'Suivi du Processus',
       items: [
-        { text: 'Nouvelle Autorisation F-HSE', path: '/autorisations/nouvelle', icon: <PlusCircleIcon width={20} /> },
         { text: 'Documents source (DI/OT/BT)', path: '/documents', icon: <DocumentTextIcon width={20} /> },
         { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
         { text: 'Gestion des permis', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
@@ -108,118 +111,64 @@ const CEEP_MENU = {
   ],
 };
 
-// ─── CEEE (Chef d'Équipe Entité Exécutante) ─────────────
-const CEEE_MENU = {
-  label: 'CEEE — Entité Exécutante',
+// ─── HM (Haute Maîtrise) ──────────────────────────────────
+const HM_MENU = {
+  label: 'Haute Maîtrise (HM)',
   sections: [
     {
-      title: 'Mon Espace Intervention',
+      title: 'Garantie & Surveillance',
       items: [
-        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'AT à viser (soumises)', path: '/autorisations?filtre=SOUMISE', icon: <CheckBadgeIcon width={20} /> },
-        { text: 'Autorisations en cours', path: '/autorisations?filtre=VALIDEE', icon: <ClipboardDocumentListIcon width={20} /> },
+        { text: 'Tableau de bord HM', path: '/dashboard/hm', icon: <HomeIcon width={20} /> },
+        { text: 'Visites à garantir', path: '/visites', icon: <MapPinIcon width={20} /> },
+        { text: 'AT à valider (soumises)', path: '/autorisations?filtre=SOUMISE', icon: <CheckBadgeIcon width={20} /> },
       ],
     },
     {
-      title: 'Participation & Clôture',
+      title: 'Consultation & Suivi',
       items: [
-        { text: 'Toutes les ATs', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
-        { text: 'Gestion des permis', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
-        { text: 'Déclarer fin travaux', path: '/autorisations?filtre=VALIDEE', icon: <CheckBadgeIcon width={20} /> },
-        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
-      ],
-    },
-  ],
-};
-
-// ─── HCEE (Hors Cadre Entité Exécutante) ─────────────────
-const HCEE_MENU = {
-  label: 'HCEE — Garant Exécutant',
-  sections: [
-    {
-      title: 'Validation & Garantie',
-      items: [
-        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Autorisations à valider', path: '/autorisations?filtre=SOUMISE', icon: <ClipboardDocumentListIcon width={20} /> },
-      ],
-    },
-    {
-      title: 'Visas & Archivage',
-      items: [
-        { text: 'Toutes les ATs', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
-        { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
-        { text: 'Réceptionner travaux', path: '/receptions', icon: <ArchiveBoxIcon width={20} /> },
-        { text: 'Coffre-fort Archives', path: '/archives', icon: <FolderIcon width={20} /> },
-        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
-      ],
-    },
-  ],
-};
-
-// ─── HCEP (Hors Cadre Entité Propriétaire) ──────────────
-const HCEP_MENU = {
-  label: 'HCEP — Garant Propriétaire',
-  sections: [
-    {
-      title: 'Gestion & Supervision',
-      items: [
-        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Habilitations AT', path: '/habilitations', icon: <ShieldCheckIcon width={20} /> },
-      ],
-    },
-    {
-      title: 'Archivage & Audit',
-      items: [
-        { text: 'Toutes les ATs', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
-        { text: 'Archives', path: '/archives', icon: <FolderIcon width={20} /> },
-        { text: 'Journal d\'audit', path: '/administration/audit', icon: <DocumentMagnifyingGlassIcon width={20} /> },
-        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
-      ],
-    },
-  ],
-};
-
-// ─── HMEP (Haute Maîtrise Entité Propriétaire) ──────────
-const HMEP_MENU = {
-  label: 'HMEP — Haute Maîtrise Propriétaire',
-  sections: [
-    {
-      title: 'Supervision & Garantie Visites',
-      items: [
-        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
-        { text: 'Autorisations', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
-        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
-      ],
-    },
-  ],
-};
-
-// ─── HMEE (Haute Maîtrise Entité Exécutante) ────────────
-const HMEE_MENU = {
-  label: 'HMEE — Haute Maîtrise Exécutante',
-  sections: [
-    {
-      title: 'Consultation',
-      items: [
-        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
-        { text: 'Autorisations', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
-        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
-      ],
-    },
-  ],
-};
-
-// ─── RESPONSABLE ENTREPRISE (hors logique P/E) ──────────
-const RESPONSABLE_ENTREPRISE_MENU = {
-  label: 'Responsable Entreprise',
-  sections: [
-    {
-      title: 'Gestion des Permis',
-      items: [
-        { text: 'Tableau de bord', path: '/dashboard', icon: <HomeIcon width={20} /> },
+        { text: 'Toutes les AT du secteur', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
         { text: 'Permis de travail', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
-        { text: 'Autorisations liées', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
+      ],
+    },
+  ],
+};
+
+// ─── HC (Hors Cadre) ──────────────────────────────────────
+const HC_MENU = {
+  label: 'Hors Cadre (HC)',
+  sections: [
+    {
+      title: 'Classification & Garantie (§6-§8)',
+      items: [
+        { text: 'Tableau de bord HC', path: '/dashboard/hc', icon: <HomeIcon width={20} /> },
+        { text: 'Classifier intervention (Niv 1/2)', path: '/documents', icon: <DocumentTextIcon width={20} /> },
+        { text: 'AT à garantir / valider', path: '/autorisations?filtre=a-valider', icon: <CheckBadgeIcon width={20} /> },
+      ],
+    },
+    {
+      title: 'Pilotage & Archivage',
+      items: [
+        { text: 'Archives officielles AT', path: '/archives', icon: <FolderIcon width={20} /> },
+        { text: 'Habilitations agents AT', path: '/habilitations', icon: <ShieldCheckIcon width={20} /> },
+        { text: 'Toutes les ATs', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
+      ],
+    },
+  ],
+};
+
+// ─── RESPONSABLE_EXTERIEUR ───────────────────────────────
+const RESPONSABLE_EXTERIEUR_MENU = {
+  label: 'Entreprise Extérieure',
+  sections: [
+    {
+      title: 'Bons de Travaux & Permis',
+      items: [
+        { text: 'Tableau de bord Extérieur', path: '/dashboard/externe', icon: <HomeIcon width={20} /> },
+        { text: 'Gestion des permis', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
+        { text: 'Documents source (BT)', path: '/documents', icon: <DocumentTextIcon width={20} /> },
+        { text: 'ATs associées', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
         { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
       ],
     },
@@ -317,19 +266,14 @@ function SectionMenuRow({ section }: { section: any }) {
 }
 
 export default function Sidebar() {
-  const user = useAuthStore((s) => s.user);
+  const primaryRole = usePrimaryRole();
 
-  const hasRole = (roleName: string) => user?.roles?.some((r) => r.nom === roleName) ?? false;
-
-  let menuConfig = CEEP_MENU; // Rôle CEEP par défaut (remplace DEMANDEUR)
-  if (hasRole('ADMIN')) menuConfig = ADMIN_MENU;
-  else if (hasRole('HCEP')) menuConfig = HCEP_MENU;
-  else if (hasRole('HCEE')) menuConfig = HCEE_MENU;
-  else if (hasRole('HMEP')) menuConfig = HMEP_MENU;
-  else if (hasRole('HMEE')) menuConfig = HMEE_MENU;
-  else if (hasRole('CEEE')) menuConfig = CEEE_MENU;
-  else if (hasRole('CEEP')) menuConfig = CEEP_MENU;
-  else if (hasRole('RESPONSABLE_ENTREPRISE')) menuConfig = RESPONSABLE_ENTREPRISE_MENU;
+  let menuConfig = CE_MENU;
+  if (primaryRole === 'ADMIN') menuConfig = ADMIN_MENU;
+  else if (primaryRole === 'HC') menuConfig = HC_MENU;
+  else if (primaryRole === 'HM') menuConfig = HM_MENU;
+  else if (primaryRole === 'CE') menuConfig = CE_MENU;
+  else if (primaryRole === 'RESPONSABLE_EXTERIEUR') menuConfig = RESPONSABLE_EXTERIEUR_MENU;
 
   return (
     <Box

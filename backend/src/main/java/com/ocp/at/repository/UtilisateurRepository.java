@@ -29,15 +29,15 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, String
     Optional<Utilisateur> findByEmailAndIdNot(String email, String id);
     int countByRolesId(String roleId);
 
-    /** Chefs d'équipe (CEEP/CEEE) rattachés à un service — pour affichage CEEE dans le formulaire AT. */
+    /** Chefs d'équipe (CE/CEEP/CEEE) rattachés à un service — pour affichage CEEE dans le formulaire AT. */
     @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.roles r JOIN u.service s " +
-           "WHERE s.id = :serviceId AND UPPER(r.nom) IN ('CEEP','CEEE') " +
+           "WHERE s.id = :serviceId AND UPPER(r.nom) IN ('CE','CEEP','CEEE') " +
            "AND (u.compteVerrouille = false OR u.compteVerrouille IS NULL)")
     List<Utilisateur> findChefsEquipeByServiceId(@Param("serviceId") String serviceId);
 
     /** Chefs d'équipe dont le service est sur une zone donnée (zone exécutante de l'AT). */
     @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.roles r JOIN u.service s JOIN s.zone z " +
-           "WHERE z.id = :zoneId AND UPPER(r.nom) IN ('CEEP','CEEE') " +
+           "WHERE z.id = :zoneId AND UPPER(r.nom) IN ('CE','CEEP','CEEE') " +
            "AND (u.compteVerrouille = false OR u.compteVerrouille IS NULL)")
     List<Utilisateur> findChefsEquipeByZoneId(@Param("zoneId") String zoneId);
 }

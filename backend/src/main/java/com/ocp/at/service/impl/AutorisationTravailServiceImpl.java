@@ -51,6 +51,8 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     private final EPIRepository epiRepository;
     private final MoyenAccesRepository moyenAccesRepository;
     private final TypePermisRepository typePermisRepository;
+    private final com.ocp.at.repository.ServiceRepository serviceRepository;
+    private final com.ocp.at.repository.ZoneRepository zoneRepository;
     
     private final WorkflowATService workflowService;
     private final NotificationService notificationService;
@@ -200,6 +202,9 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setServicesIntervenants(request.getServicesIntervenants());
         at.setEntreprisesIntervenantes(request.getEntreprisesIntervenantes());
         at.setMesuresSecuriteExecutant(request.getMesuresSecuriteExecutant());
+
+        // Lier zone exécutante (E) pour résoudre/notifier les CEEE
+        resoudreEtAffecterZones(at, request);
 
         if (request.getRisquesIds() != null) {
             at.setRisques(risqueRepository.findAllById(request.getRisquesIds()));
@@ -389,40 +394,65 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         
         enregistrerHistorique(savedAt, TypeActionAT.SOUMISSION, ancienStatut, nouvelEtat, "Soumission AT — workflow standard (visite / rédaction)");
 
-        // Notifications best-effort (ne doivent jamais faire échouer la soumission)
+        // Notifications best-effort — parcours standard CE → HM → HC
+        String lienAt = "/autorisations/" + savedAt.getId();
+        String lienViser = "/autorisations/" + savedAt.getId() + "/editer?mode=viser";
+        String lienValider = "/visas/validation/" + savedAt.getId();
+
+        // 1) CEEE (service intervenant / zone exécutante)
         try {
-            notificationService.sendNotificationToRole("HCEE", "AT à viser",
-                    "L'AT " + savedAt.getNumero() + " a été soumise par le CEEP et nécessite un visa.",
-                    "ACTION", "/at/" + savedAt.getId());
-        } catch (Exception e) {
-            log.warn("Notif HCEE: {}", e.getMessage());
-        }
-        try {
-            notificationService.sendNotificationToRole("Validateur", "AT à valider",
-                    "L'AT " + savedAt.getNumero() + " nécessite votre validation.",
-                    "ACTION", "/at/" + savedAt.getId() + "/validation");
-        } catch (Exception e) {
-            log.warn("Notif Validateur: {}", e.getMessage());
-        }
-        try {
+            java.util.List<Utilisateur> ceees = new java.util.ArrayList<>();
             if (atContextService != null) {
-                atContextService.findChefsEquipeExecutants(savedAt.getId()).forEach(ceee -> {
-                    if (ceee == null) return;
-                    if (savedAt.getProprietaireBrouillon() != null
-                            && ceee.getId().equals(savedAt.getProprietaireBrouillon().getId())) {
-                        return;
-                    }
-                    notificationService.createNotification(
-                            ceee,
-                            "AT à viser (CEEE)",
-                            "L'AT " + savedAt.getNumero() + " a été soumise. Vous devez la viser en tant que Chef d'Équipe Exécutant.",
-                            "ACTION",
-                            "/at/" + savedAt.getId()
-                    );
-                });
+                ceees.addAll(atContextService.findChefsEquipeExecutants(savedAt.getId()));
             }
+            // Fallback : tous CEEP/CEEE du service nommé
+            if (ceees.isEmpty() && savedAt.getServicesIntervenants() != null) {
+                serviceRepository.findAll().stream()
+                        .filter(s -> savedAt.getServicesIntervenants().equalsIgnoreCase(s.getNomService()))
+                        .findFirst()
+                        .ifPresent(s -> ceees.addAll(utilisateurRepository.findChefsEquipeByServiceId(s.getId())));
+            }
+            for (Utilisateur ceee : ceees) {
+                if (ceee == null) continue;
+                if (savedAt.getProprietaireBrouillon() != null
+                        && ceee.getId().equals(savedAt.getProprietaireBrouillon().getId())) {
+                    continue;
+                }
+                notificationService.createNotification(
+                        ceee,
+                        "AT à viser (CEEE)",
+                        "L'AT " + savedAt.getNumero() + " est soumise. Signez la case Visa CEEE sur le formulaire F-HSE-SEC-31-04.",
+                        "ACTION",
+                        lienViser
+                );
+            }
+            log.info("Notifs CEEE: {} destinataire(s) pour AT {}", ceees.size(), savedAt.getNumero());
         } catch (Exception e) {
-            log.warn("Notification CEEE non envoyée pour AT {}: {}", savedAt.getId(), e.getMessage());
+            log.warn("Notif CEEE: {}", e.getMessage());
+        }
+
+        // 2) HM (HMEP / HMEE) — garants terrain
+        try {
+            notificationService.sendNotificationToRole("HMEP", "AT soumise — garantie HMEP",
+                    "L'AT " + savedAt.getNumero() + " nécessite votre garantie (Haute Maîtrise Propriétaire).",
+                    "ACTION", lienValider);
+            notificationService.sendNotificationToRole("HMEE", "AT soumise — garantie HMEE",
+                    "L'AT " + savedAt.getNumero() + " nécessite votre garantie (Haute Maîtrise Exécutante).",
+                    "ACTION", lienValider);
+        } catch (Exception e) {
+            log.warn("Notif HM: {}", e.getMessage());
+        }
+
+        // 3) HC (HCEE / HCEP) — validation / pilotage
+        try {
+            notificationService.sendNotificationToRole("HCEE", "AT soumise — validation HCEE",
+                    "L'AT " + savedAt.getNumero() + " est soumise. Garantir / valider le dossier.",
+                    "ACTION", lienValider);
+            notificationService.sendNotificationToRole("HCEP", "AT soumise (info HCEP)",
+                    "L'AT " + savedAt.getNumero() + " a été soumise dans votre périmètre.",
+                    "INFO", lienAt);
+        } catch (Exception e) {
+            log.warn("Notif HC: {}", e.getMessage());
         }
 
         try {
@@ -751,6 +781,57 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             throw new BusinessException("Une AT au statut " + at.getStatut() + " ne peut pas être modifiée.");
         }
     }
+
+    /**
+ * Résout et affecte zoneProprietaire (P) et zoneExecutante (E) pour la logique P/E
+ * du Standard S-HSE-SEC-31.
+ *
+ * - zoneProprietaire : zone du service de l'utilisateur connecté (rédacteur CEEP),
+ *   si non encore renseignée.
+ * - zoneExecutante  : zone du service nommé dans servicesIntervenants (si renseigné),
+ *   sinon fallback sur la zone du rédacteur.
+ */
+private void resoudreEtAffecterZones(AutorisationTravail at, AutoSaveRequest request) {
+    try {
+        Utilisateur currentUser = getCurrentUser();
+
+        // 1) Zone propriétaire (P) = zone du service du rédacteur
+        if (at.getZoneProprietaire() == null
+                && currentUser.getService() != null
+                && currentUser.getService().getZone() != null) {
+            at.setZoneProprietaire(currentUser.getService().getZone());
+            log.debug("AT {} — zoneProprietaire affectée : {}",
+                    at.getNumero(), currentUser.getService().getZone().getCodeZone());
+        }
+
+        // 2) Zone exécutante (E) à partir de servicesIntervenants
+        String servicesIntervenants = request.getServicesIntervenants();
+        if (servicesIntervenants != null && !servicesIntervenants.isBlank()) {
+            String nomCible = servicesIntervenants.trim();
+            serviceRepository.findAll().stream()
+                    .filter(s -> nomCible.equalsIgnoreCase(s.getNomService())
+                            || nomCible.equalsIgnoreCase(s.getCodeService()))
+                    .findFirst()
+                    .ifPresent(s -> {
+                        if (s.getZone() != null) {
+                            at.setZoneExecutante(s.getZone());
+                            log.debug("AT {} — zoneExecutante affectée via service '{}' : {}",
+                                    at.getNumero(), s.getNomService(), s.getZone().getCodeZone());
+                        }
+                    });
+        }
+
+        // 3) Fallback : si pas de zone exécutante, reprendre la zone propriétaire
+        //    (intervention interne au même périmètre)
+        if (at.getZoneExecutante() == null && at.getZoneProprietaire() != null) {
+            at.setZoneExecutante(at.getZoneProprietaire());
+            log.debug("AT {} — zoneExecutante = zoneProprietaire (intervention interne)", at.getNumero());
+        }
+    } catch (Exception e) {
+        // Ne jamais faire échouer l'auto-save pour une résolution de zone
+        log.warn("Impossible de résoudre les zones pour l'AT {} : {}", at.getId(), e.getMessage());
+    }
+}
 
     private void enregistrerHistorique(AutorisationTravail at, TypeActionAT action, StatutAT ancien, StatutAT nouveau, String com) {
         Utilisateur currentUser = null;
