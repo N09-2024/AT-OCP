@@ -146,6 +146,22 @@ public class AutorisationTravail {
     private String entreprisesIntervenantes;
     private String mesuresSecuriteExecutant;
 
+    /** Cases cochées formulaire F-HSE (JSON array d'IDs) — indépendant des ManyToMany */
+    @Column(name = "form_risques_ids", columnDefinition = "TEXT")
+    private String formRisquesIds;
+
+    @Column(name = "form_mesures_ids", columnDefinition = "TEXT")
+    private String formMesuresIds;
+
+    @Column(name = "form_epis_ids", columnDefinition = "TEXT")
+    private String formEpisIds;
+
+    @Column(name = "form_moyens_ids", columnDefinition = "TEXT")
+    private String formMoyensIds;
+
+    @Column(name = "form_permis_ids", columnDefinition = "TEXT")
+    private String formPermisIds;
+
     @ManyToMany
     @JoinTable(
         name = "at_risques",

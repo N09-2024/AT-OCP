@@ -50,7 +50,7 @@ export default function AdminDashboardPage() {
     <Box sx={{ p: 3 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 0.5 }}>
+        <Stack direction="row" spacing={1.5} sx={{ mb: 0.5, alignItems: 'center' }}>
           <Typography variant="h4" sx={{ fontWeight: 800, color: '#0f172a' }}>
             Administration Système
           </Typography>
@@ -80,9 +80,9 @@ export default function AdminDashboardPage() {
               }}
             >
               <CardContent>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+                <Stack direction="row" spacing={1.5} sx={{ mb: 1, alignItems: 'center' }}>
                   <Box sx={{ color: c.color }}>{c.icon}</Box>
-                  <Typography variant="subtitle1" fontWeight={800}>{c.title}</Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{c.title}</Typography>
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
                   {c.subtitle}
@@ -119,9 +119,9 @@ export default function AdminDashboardPage() {
               }}
             >
               <CardContent>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+                <Stack direction="row" spacing={1.5} sx={{ mb: 1, alignItems: 'center' }}>
                   <Box sx={{ color: c.color }}>{c.icon}</Box>
-                  <Typography variant="subtitle2" fontWeight={800}>{c.title}</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{c.title}</Typography>
                 </Stack>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                   {c.subtitle}

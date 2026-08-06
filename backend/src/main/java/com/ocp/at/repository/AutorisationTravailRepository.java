@@ -17,8 +17,7 @@ import java.util.Optional;
 
 @Repository
 public interface AutorisationTravailRepository extends JpaRepository<AutorisationTravail, String>, JpaSpecificationExecutor<AutorisationTravail> {
-
-    @Query(value = "SELECT nextval('seq_at_' || cast(extract(year from current_date) as text))", nativeQuery = true)
+@Query(value = "SELECT nextval('seq_at_' || cast(extract(year from current_date) as text))", nativeQuery = true)
     Long getNextSequence();
 
     boolean existsByDemandeInterventionId(String diId);

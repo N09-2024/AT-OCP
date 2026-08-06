@@ -32,9 +32,9 @@ export default function HMDashboardPage() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', borderTop: '4px solid #0284c7' }}>
             <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
                 <VerifiedUserIcon color="primary" />
-                <Typography fontWeight={800}>Visites à garantir</Typography>
+                <Typography sx={{ fontWeight: 800 }}>Visites à garantir</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 Position P — garantir la visite préalable chantier (§8.2)
@@ -49,9 +49,9 @@ export default function HMDashboardPage() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', borderTop: '4px solid #d97706' }}>
             <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
                 <PlayCircleIcon sx={{ color: '#d97706' }} />
-                <Typography fontWeight={800}>Démarrages à cautionner</Typography>
+                <Typography sx={{ fontWeight: 800 }}>Démarrages à cautionner</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 Position P — garantir le début d’intervention
@@ -66,9 +66,9 @@ export default function HMDashboardPage() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', borderTop: '4px solid #64748b' }}>
             <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
                 <VisibilityIcon />
-                <Typography fontWeight={800}>Consultation périmètre</Typography>
+                <Typography sx={{ fontWeight: 800 }}>Consultation périmètre</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 Toutes les AT de mon territoire (lecture)

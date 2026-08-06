@@ -46,14 +46,14 @@ public class ZoneController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Créer un(e) Zone")
     public ZoneResponse create(@Valid @RequestBody ZoneRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Modifier un(e) Zone")
     public ZoneResponse update(@PathVariable String id, @Valid @RequestBody ZoneRequest request) {
         return service.update(id, request);
@@ -61,7 +61,7 @@ public class ZoneController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Supprimer un(e) Zone")
     public void delete(@PathVariable String id) {
         service.delete(id);

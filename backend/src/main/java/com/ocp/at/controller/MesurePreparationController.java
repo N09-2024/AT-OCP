@@ -43,14 +43,14 @@ public class MesurePreparationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Créer un(e) MesurePreparation")
     public MesurePreparationResponse create(@Valid @RequestBody MesurePreparationRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Modifier un(e) MesurePreparation")
     public MesurePreparationResponse update(@PathVariable String id, @Valid @RequestBody MesurePreparationRequest request) {
         return service.update(id, request);
@@ -58,7 +58,7 @@ public class MesurePreparationController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Supprimer un(e) MesurePreparation")
     public void delete(@PathVariable String id) {
         service.delete(id);

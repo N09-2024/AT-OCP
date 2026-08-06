@@ -149,12 +149,54 @@ public class DataInitializer {
                 roleRepository.save(Role.builder()
                         .nom(roleData[0]).description(roleData[1]).permissions(perms).build());
                 logger.info("Rôle créé: {}", roleData[0]);
-            } else if ("ADMIN".equals(roleData[0])) {
-                // Toujours s'assurer que l'ADMIN a toutes les permissions (en cas d'ajout de nouvelles permissions)
-                Role adminRole = roleRepository.findByNom("ADMIN").get();
-                adminRole.setPermissions(new HashSet<>(permissionRepository.findAll()));
-                roleRepository.save(adminRole);
-                logger.info("Permissions du rôle ADMIN synchronisées");
+            } else {
+                // Synchroniser les permissions des rôles existants (corrige gaps post-V28)
+                Role existing = roleRepository.findByNom(roleData[0]).orElse(null);
+                if (existing == null) {
+                    continue;
+                }
+                Set<Permission> perms = new HashSet<>();
+                switch (roleData[0]) {
+                    case "ADMIN":
+                        perms.addAll(permissionRepository.findAll());
+                        break;
+                    case "CE":
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "CREATE_AT", "EDIT_AT", "SUBMIT_AT", "READ_AT",
+                            "CREATE_VISITE", "SIGN_AT", "CLOSE_AT", "RECEIVE_AT",
+                            "START_INTERVENTION", "DECLARE_FIN_TRAVAUX", "RENEW_AT",
+                            "VIEW_PERMIS", "EDIT_PERMIS", "UPLOAD_FILES", "EXPORT_PDF",
+                            "RECEIVE_NOTIFICATION", "TRANSFER_AT"
+                        )).forEach(perms::add);
+                        break;
+                    case "HM":
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "READ_AT", "VALIDATE_VISITE", "SIGN_AT", "START_INTERVENTION",
+                            "EXPORT_PDF", "RECEIVE_NOTIFICATION", "VIEW_PERMIS"
+                        )).forEach(perms::add);
+                        break;
+                    case "HC":
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "READ_AT", "CLASSIFY_INTERVENTION", "VALIDATE_AT", "REJECT_AT",
+                            "VALIDATE_VISITE", "SIGN_AT", "ARCHIVE_AT", "VIEW_ARCHIVE",
+                            "MANAGE_HABILITATIONS", "MANAGE_REFERENTIALS", "VIEW_AUDIT",
+                            "VIEW_PERMIS", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
+                        )).forEach(perms::add);
+                        break;
+                    case "RESPONSABLE_EXTERIEUR":
+                        permissionRepository.findByNomIn(Arrays.asList(
+                            "READ_AT", "VIEW_PERMIS", "EDIT_PERMIS", "UPLOAD_PERMIS",
+                            "UPLOAD_FILES", "EXPORT_PDF", "RECEIVE_NOTIFICATION", "MANAGE_BT"
+                        )).forEach(perms::add);
+                        break;
+                    default:
+                        continue;
+                }
+                if (!perms.isEmpty()) {
+                    existing.setPermissions(perms);
+                    roleRepository.save(existing);
+                    logger.info("Permissions du rôle {} synchronisées ({} perms)", roleData[0], perms.size());
+                }
             }
         }
     }

@@ -44,14 +44,14 @@ public class AnalyseRisqueController {
 
     @PostMapping
     @Operation(summary = "Créer une analyse des risques (visite doit être finalisée)")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AnalyseRisqueResponse> create(@Valid @RequestBody AnalyseRisqueRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une analyse des risques")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AnalyseRisqueResponse> update(
             @PathVariable String id,
             @Valid @RequestBody AnalyseRisqueRequest request) {
@@ -60,7 +60,7 @@ public class AnalyseRisqueController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une analyse des risques")
-    @PreAuthorize("hasAuthority('MANAGE_DOCUMENTS')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

@@ -13,7 +13,8 @@ import java.util.Optional;
 
 @Repository
 public interface UtilisateurRepository extends JpaRepository<Utilisateur, String> {
-    Optional<Utilisateur> findByEmail(String email);
+    @Query("SELECT DISTINCT u FROM Utilisateur u LEFT JOIN FETCH u.roles r LEFT JOIN FETCH r.permissions WHERE u.email = :email")
+    Optional<Utilisateur> findByEmail(@Param("email") String email);
     Optional<Utilisateur> findByMatricule(String matricule);
     Boolean existsByEmail(String email);
     Boolean existsByMatricule(String matricule);

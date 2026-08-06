@@ -32,13 +32,13 @@ public class TypePermisController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TypePermisResponse> createTypePermis(@Valid @RequestBody TypePermisRequest request) {
         return new ResponseEntity<>(typePermisService.createTypePermis(request), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TypePermisResponse> updateTypePermis(
             @PathVariable String id,
             @Valid @RequestBody TypePermisRequest request) {
@@ -46,7 +46,7 @@ public class TypePermisController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteTypePermis(@PathVariable String id) {
         typePermisService.deleteTypePermis(id);
         return ResponseEntity.noContent().build();

@@ -33,12 +33,13 @@ public class AutorisationTravailController {
 
     private final AutorisationTravailService atService;
     private final PdfGeneratorService pdfService;
+    private final com.ocp.at.repository.AutorisationTravailRepository atRepository;
 
     // --- CRÉATION (CEEP = E sur 8.1, 8.3; CEEE = P sur 8.3) ---
 
     @PostMapping("/documents/{type}/{id}/creer-at")
     @Operation(summary = "Créer une Autorisation de Travail à partir d'un document (DI, OT, BT)")
-    @PreAuthorize("hasAnyAuthority('CREATE_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AutorisationTravailResponse> createFromDocument(
             @PathVariable String type,
             @PathVariable String id) {
@@ -57,7 +58,7 @@ public class AutorisationTravailController {
 
     @PostMapping("/autorisations-travail")
     @Operation(summary = "Créer une Autorisation de Travail sans document source obligatoire")
-    @PreAuthorize("hasAnyAuthority('CREATE_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AutorisationTravailResponse> createDirect() {
         return ResponseEntity.status(HttpStatus.CREATED).body(atService.createDirect());
     }
@@ -66,14 +67,14 @@ public class AutorisationTravailController {
 
     @GetMapping("/autorisations-travail")
     @Operation(summary = "Lister toutes les Autorisations de Travail")
-    @PreAuthorize("hasAuthority('READ_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<AutorisationTravailResponse>> findAll(Pageable pageable) {
         return ResponseEntity.ok(atService.findAll(pageable));
     }
 
     @GetMapping("/autorisations-travail/{id}")
     @Operation(summary = "Consulter une Autorisation de Travail par ID")
-    @PreAuthorize("hasAuthority('READ_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AutorisationTravailResponse> findById(@PathVariable String id) {
         return ResponseEntity.ok(atService.findById(id));
     }
@@ -82,7 +83,7 @@ public class AutorisationTravailController {
 
     @PutMapping("/autorisations-travail/{id}/autosave")
     @Operation(summary = "Sauvegarder automatiquement le brouillon d'une AT")
-    @PreAuthorize("hasAuthority('EDIT_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AutorisationTravailResponse> autoSave(
             @PathVariable String id,
             @Valid @RequestBody AutoSaveRequest request) {
@@ -91,7 +92,7 @@ public class AutorisationTravailController {
 
     @PutMapping("/autorisations-travail/{id}/prendre-verrou")
     @Operation(summary = "Prendre le verrou pour édition exclusive")
-    @PreAuthorize("hasAuthority('EDIT_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> prendreVerrou(@PathVariable String id) {
         atService.prendreVerrou(id);
         return ResponseEntity.ok().build();
@@ -99,7 +100,7 @@ public class AutorisationTravailController {
 
     @PutMapping("/autorisations-travail/{id}/liberer-verrou")
     @Operation(summary = "Libérer le verrou")
-    @PreAuthorize("hasAuthority('EDIT_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> libererVerrou(@PathVariable String id) {
         atService.libererVerrou(id);
         return ResponseEntity.ok().build();
@@ -119,7 +120,7 @@ public class AutorisationTravailController {
     // Soumission: CEEP (E sur 8.3)
     @PostMapping({"/autorisations-travail/{id}/submit", "/at/{id}/submit"})
     @Operation(summary = "Soumettre l'AT pour validation")
-    @PreAuthorize("hasAuthority('SUBMIT_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AutorisationTravailResponse> soumettre(@PathVariable String id) {
         return ResponseEntity.ok(atService.soumettreAT(id));
     }
@@ -218,41 +219,32 @@ public class AutorisationTravailController {
 
     @GetMapping("/autorisations-travail/{id}/historique")
     @Operation(summary = "Consulter l'historique complet d'une AT")
-    @PreAuthorize("hasAuthority('READ_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<HistoriqueATResponse>> getHistorique(@PathVariable String id) {
         return ResponseEntity.ok(atService.getHistorique(id));
     }
 
     @GetMapping("/autorisations-travail/{id}/visas")
     @Operation(summary = "Consulter les visas d'une AT")
-    @PreAuthorize("hasAuthority('READ_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<VisaResponse>> getVisas(@PathVariable String id) {
         return ResponseEntity.ok(atService.getVisas(id));
     }
 
     @GetMapping("/autorisations-travail/{id}/export-pdf")
-    @Operation(summary = "Exporter l'AT au format PDF (uniquement si Validée ou Clôturée)")
+    @Operation(summary = "Exporter l'AT au format PDF (uniquement si HM + HC + permis conformes)")
     @PreAuthorize("hasAuthority('EXPORT_PDF')")
     public ResponseEntity<byte[]> exportPdf(@PathVariable String id) {
-        AutorisationTravailResponse at = atService.findById(id);
-        if (!"VALIDEE".equals(at.getStatut().name()) && !"CLOTUREE".equals(at.getStatut().name())) {
-            throw new com.ocp.at.exception.BusinessException("L'export PDF n'est disponible que pour les AT Validées ou Clôturées.");
-        }
+        atService.verifierDroitExportPdf(id);
         
-        // Fetch full entity for the PDF generator
-        // In a real scenario we could fetch it via repository directly or have the service handle the check
-        com.ocp.at.entity.AutorisationTravail entity = new com.ocp.at.entity.AutorisationTravail();
-        entity.setId(at.getId());
-        entity.setNumero(at.getNumero());
-        entity.setStatut(at.getStatut());
-        entity.setVersion(at.getVersion());
-        entity.setObjet(at.getObjet());
+        com.ocp.at.entity.AutorisationTravail entity = atRepository.findById(id)
+                .orElseThrow(() -> new com.ocp.at.exception.ResourceNotFoundException("AutorisationTravail non trouvée"));
         
-        byte[] pdfBytes = pdfService.generateATPdf(entity);
+        byte[] pdfBytes = pdfService.generateCompleteDossierPdf(entity);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", at.getNumero() + "_v" + at.getVersion() + ".pdf");
+        headers.setContentDispositionFormData("attachment", entity.getNumero() + "_v" + (entity.getVersion() != null ? entity.getVersion() : 1) + ".pdf");
         
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }

@@ -26,14 +26,14 @@ public class AssistanceIAController {
 
     @PostMapping("/analyser-intervention")
     @Operation(summary = "Suggestions risques / EPI / mesures / permis à partir de la description")
-    @PreAuthorize("hasAuthority('CREATE_AT') or hasAuthority('EDIT_AT') or hasAuthority('READ_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AnalyseInterventionIAResponse> analyser(@RequestBody AnalyseRequest body) {
         return ResponseEntity.ok(assistanceIAService.analyserIntervention(body.getDescription()));
     }
 
     @PostMapping("/controler-dossier")
     @Operation(summary = "Contrôle de complétude avant soumission CEEP (agents CrewAI)")
-    @PreAuthorize("hasAuthority('CREATE_AT') or hasAuthority('EDIT_AT') or hasAuthority('SUBMIT_AT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AnalyseInterventionIAResponse> controler(@RequestBody ControleRequest body) {
         return ResponseEntity.ok(assistanceIAService.controlerDossier(
                 body.getDescription(),

@@ -80,12 +80,12 @@ export default function CEDashboardPage() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800, color: '#0f172a' }}>
             Espace Chef d’Équipe
           </Typography>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+          <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
               {user?.prenom} {user?.nom} — {user?.service?.nomService || 'Service CE'}
             </Typography>
@@ -121,7 +121,7 @@ export default function CEDashboardPage() {
               }}
             >
               <CardContent>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
                   <Box sx={{ color: c.color }}>{c.icon}</Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
                     {c.title}

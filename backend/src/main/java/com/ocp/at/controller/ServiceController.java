@@ -48,14 +48,14 @@ public class ServiceController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Créer un(e) Service")
     public ServiceResponse create(@Valid @RequestBody ServiceRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Modifier un(e) Service")
     public ServiceResponse update(@PathVariable String id, @Valid @RequestBody ServiceRequest request) {
         return service.update(id, request);
@@ -63,7 +63,7 @@ public class ServiceController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Supprimer un(e) Service")
     public void delete(@PathVariable String id) {
         service.delete(id);
@@ -77,7 +77,7 @@ public class ServiceController {
      */
     @GetMapping("/{id}/chefs-equipe")
     @Operation(summary = "Lister les chefs d'équipe rattachés à un service (pour CEEE formulaire)")
-    @PreAuthorize("hasAuthority('READ_AT') or hasAuthority('CREATE_AT')")
+    @PreAuthorize("isAuthenticated()")
     public List<Map<String, String>> getChefsEquipe(@PathVariable String id) {
         return atContextService.findChefsEquipeByService(id).stream()
                 .map(u -> Map.of(

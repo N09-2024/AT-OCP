@@ -34,7 +34,7 @@ public class PermisController {
     private final AnalyseIAMapper analyseIAMapper;
     
     @PostMapping
-    @PreAuthorize("hasAuthority('EDIT_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Créer un nouveau permis pour une AT")
     public ResponseEntity<PermisResponse> createPermis(@Valid @RequestBody PermisRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -42,28 +42,28 @@ public class PermisController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('VIEW_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Consulter un permis par son ID")
     public ResponseEntity<PermisResponse> getPermis(@PathVariable String id) {
         return ResponseEntity.ok(permisService.getPermisById(id));
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('VIEW_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Lister tous les permis")
     public ResponseEntity<List<PermisResponse>> getAllPermis() {
         return ResponseEntity.ok(permisService.getAllPermis());
     }
 
     @GetMapping("/at/{atId}")
-    @PreAuthorize("hasAuthority('VIEW_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Lister tous les permis d'une Autorisation de Travail")
     public ResponseEntity<List<PermisResponse>> getPermisByAT(@PathVariable String atId) {
         return ResponseEntity.ok(permisService.getPermisByAT(atId));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('EDIT_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Modifier un permis existant")
     public ResponseEntity<PermisResponse> updatePermis(
             @PathVariable String id,
@@ -72,7 +72,7 @@ public class PermisController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('DELETE_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Supprimer un permis")
     public ResponseEntity<Void> deletePermis(@PathVariable String id) {
         permisService.deletePermis(id);
@@ -80,7 +80,7 @@ public class PermisController {
     }
 
     @PostMapping(value = "/{id}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('UPLOAD_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Uploader un fichier de permis (PDF, PNG, JPEG, WEBP) et lancer l'analyse IA")
     public ResponseEntity<UploadPermisResponse> uploadFichier(
             @PathVariable String id,
@@ -99,7 +99,7 @@ public class PermisController {
     }
 
     @GetMapping("/{id}/download")
-    @PreAuthorize("hasAuthority('VIEW_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Télécharger le fichier joint d'un permis")
     public ResponseEntity<Resource> downloadFichier(@PathVariable String id) {
         var permis = permisRepository.findById(id)
@@ -118,14 +118,14 @@ public class PermisController {
     }
 
     @PutMapping("/{id}/reanalyser")
-    @PreAuthorize("hasAuthority('ANALYSE_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Relancer l'analyse IA sur le fichier joint d'un permis")
     public ResponseEntity<UploadPermisResponse> reanalyser(@PathVariable String id) {
         return ResponseEntity.ok(permisService.reanalyserPermis(id));
     }
 
     @GetMapping("/{id}/analyse")
-    @PreAuthorize("hasAuthority('VIEW_PERMIS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Consulter le résultat de l'analyse IA d'un permis")
     public ResponseEntity<AnalyseIAResponse> getAnalyse(@PathVariable String id) {
         var permis = permisRepository.findById(id)

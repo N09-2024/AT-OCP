@@ -189,8 +189,24 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     @Transactional
     public AutorisationTravailResponse autoSave(String id, AutoSaveRequest request) {
         AutorisationTravail at = getEntityById(id);
-        verifierVerrouEtProprietaire(at);
-        verifierStatutModifiable(at);
+        Utilisateur currentUser = getCurrentUser();
+        // Verrou souple : prendre automatiquement si libre / même propriétaire
+        if (at.getEtatVerrou() == EtatVerrou.LIBRE || at.getProprietaireBrouillon() == null) {
+            at.setEtatVerrou(EtatVerrou.EN_COURS_EDITION);
+            at.setProprietaireBrouillon(currentUser);
+            at.setDatePriseVerrou(LocalDateTime.now());
+        } else if (at.getProprietaireBrouillon() != null
+                && !at.getProprietaireBrouillon().getId().equals(currentUser.getId())) {
+            // Autre éditeur : autoriser quand même la synchro des cases si brouillon
+            log.warn("autoSave AT {} par {} alors que verrou tenu par {}",
+                    id, currentUser.getEmail(), at.getProprietaireBrouillon().getEmail());
+        }
+        // Statut : autoriser édition tant que pas VALIDEE/CLOTUREE/ANNULEE
+        StatutAT st = at.getStatut();
+        if (st == StatutAT.VALIDEE || st == StatutAT.CLOTUREE || st == StatutAT.ANNULEE
+                || st == StatutAT.ARCHIVEE) {
+            throw new BusinessException("Une AT au statut " + st + " ne peut plus être modifiée.");
+        }
 
         at.setObjet(request.getObjet());
         at.setDescriptionTravaux(request.getDescriptionTravaux());
@@ -206,18 +222,8 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         // Lier zone exécutante (E) pour résoudre/notifier les CEEE
         resoudreEtAffecterZones(at, request);
 
-        if (request.getRisquesIds() != null) {
-            at.setRisques(risqueRepository.findAllById(request.getRisquesIds()));
-        }
-        if (request.getMesuresIds() != null) {
-            at.setMesures(mesureRepository.findAllById(request.getMesuresIds()));
-        }
-        if (request.getEpisIds() != null) {
-            at.setEpis(epiRepository.findAllById(request.getEpisIds()));
-        }
-        if (request.getMoyensAccesIds() != null) {
-            at.setMoyensAcces(moyenAccesRepository.findAllById(request.getMoyensAccesIds()));
-        }
+        // Cases formulaire → colonnes JSON (source de vérité)
+        persistFormCheckboxes(at, request);
 
         AutorisationTravail savedAt = atRepository.save(at);
 
@@ -756,8 +762,188 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
     // --- METHODES PRIVEES ---
 
+
+    /**
+     * Affecte zoneProprietaire (service du CEEP courant) et zoneExecutante (service intervenant).
+     */
+    private void resoudreEtAffecterZones(AutorisationTravail at, AutoSaveRequest request) {
+        try {
+            Utilisateur current = getCurrentUser();
+            if (at.getZoneProprietaire() == null && current.getService() != null
+                    && current.getService().getZone() != null) {
+                at.setZoneProprietaire(current.getService().getZone());
+            }
+            if (request.getZoneProprietaireId() != null && !request.getZoneProprietaireId().isBlank()) {
+                zoneRepository.findById(request.getZoneProprietaireId()).ifPresent(at::setZoneProprietaire);
+            }
+            com.ocp.at.entity.Service svc = null;
+            if (request.getServiceIntervenantId() != null && !request.getServiceIntervenantId().isBlank()) {
+                svc = serviceRepository.findById(request.getServiceIntervenantId()).orElse(null);
+            }
+            if (svc == null && request.getServicesIntervenants() != null
+                    && !request.getServicesIntervenants().isBlank()) {
+                String nom = request.getServicesIntervenants().trim();
+                svc = serviceRepository.findAll().stream()
+                        .filter(s -> nom.equalsIgnoreCase(s.getNomService())
+                                || nom.equalsIgnoreCase(s.getCodeService()))
+                        .findFirst()
+                        .orElse(null);
+            }
+            if (svc != null) {
+                if (svc.getZone() != null) {
+                    at.setZoneExecutante(svc.getZone());
+                }
+                if (at.getServicesIntervenants() == null || at.getServicesIntervenants().isBlank()) {
+                    at.setServicesIntervenants(svc.getNomService());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("resoudreEtAffecterZones: {}", e.getMessage());
+        }
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public void verifierDroitExportPdf(String id) {
+        AutorisationTravail at = getEntityById(id);
+        List<String> motifs = calculerMotifsRefusExportPdf(at);
+        if (!motifs.isEmpty()) {
+            throw new BusinessException("Export PDF refusé : " + String.join(" | ", motifs));
+        }
+    }
+
+    public List<String> calculerMotifsRefusExportPdf(AutorisationTravail at) {
+        List<String> motifs = new java.util.ArrayList<>();
+
+        StatutAT st = at.getStatut();
+        if (st == StatutAT.BROUILLON || st == StatutAT.REJETEE || st == StatutAT.ANNULEE) {
+            motifs.add("L'AT doit être validée avant l'export PDF (statut actuel : " + (st != null ? st.name() : "N/A") + ").");
+        }
+
+        List<Visa> visas = visaRepository.findByAutorisationTravailId(at.getId());
+
+        boolean hmOk = visas.stream().anyMatch(v -> 
+            isVisaPositif(v) && userHasRolePattern(v.getUtilisateur(), "HM")
+        );
+        if (!hmOk) {
+            motifs.add("Validation Haute Maîtrise (HM) manquante.");
+        }
+
+        boolean hcOk = visas.stream().anyMatch(v -> 
+            isVisaPositif(v) && userHasRolePattern(v.getUtilisateur(), "HC")
+        );
+        if (!hcOk) {
+            motifs.add("Validation Hors Cadre (HC) manquante.");
+        }
+
+        List<com.ocp.at.entity.Permis> permisList = permisRepository.findByAutorisationTravailId(at.getId());
+        for (com.ocp.at.entity.Permis p : permisList) {
+            if (Boolean.TRUE.equals(p.getEstObligatoire())) {
+                if (p.getStatutVerification() != com.ocp.at.entity.enums.StatutPermis.CONFORME) {
+                    String nomPermis = p.getTypePermis() != null ? p.getTypePermis().getNom() : "Permis";
+                    motifs.add("Permis obligatoire non conforme : " + nomPermis + " (" + p.getStatutVerification() + ")");
+                }
+            }
+        }
+
+        return motifs;
+    }
+
+    private boolean isVisaPositif(Visa v) {
+        if (v == null || v.getStatut() == null) return false;
+        StatutVisa s = v.getStatut();
+        return s == StatutVisa.VALIDE || s == StatutVisa.VALIDATION || s == StatutVisa.SIGNATURE;
+    }
+
+    private boolean userHasRolePattern(Utilisateur user, String pattern) {
+        if (user == null || user.getRoles() == null) return false;
+        return user.getRoles().stream().anyMatch(r -> {
+            if (r.getNom() == null) return false;
+            String nom = r.getNom().toUpperCase();
+            return nom.contains(pattern.toUpperCase());
+        });
+    }
+
+    private String toJsonIds(java.util.List<String> ids) {
+        if (ids == null) {
+            return "[]";
+        }
+        java.util.List<String> distinct = ids.stream()
+                .filter(x -> x != null && !x.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(distinct);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    private java.util.List<String> fromJsonIds(String json) {
+        if (json == null || json.isBlank()) {
+            return java.util.Collections.emptyList();
+        }
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(
+                    json, new com.fasterxml.jackson.core.type.TypeReference<java.util.List<String>>() {});
+        } catch (Exception e) {
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    private void persistFormCheckboxes(AutorisationTravail at, AutoSaveRequest request) {
+        if (request.getRisquesIds() != null) {
+            at.setFormRisquesIds(toJsonIds(request.getRisquesIds()));
+        }
+        if (request.getMesuresIds() != null) {
+            at.setFormMesuresIds(toJsonIds(request.getMesuresIds()));
+        }
+        if (request.getEpisIds() != null) {
+            at.setFormEpisIds(toJsonIds(request.getEpisIds()));
+        }
+        if (request.getMoyensAccesIds() != null) {
+            at.setFormMoyensIds(toJsonIds(request.getMoyensAccesIds()));
+        }
+        if (request.getPermisIds() != null) {
+            at.setFormPermisIds(toJsonIds(request.getPermisIds()));
+        }
+        log.info("Form checkboxes AT {} r={} m={} e={} mo={}",
+                at.getId(), at.getFormRisquesIds(), at.getFormMesuresIds(),
+                at.getFormEpisIds(), at.getFormMoyensIds());
+    }
+
     private AutorisationTravail getEntityById(String id) {
-        return atRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("AutorisationTravail non trouvée"));
+        AutorisationTravail at = atRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("AutorisationTravail non trouvée"));
+        // Charger les bags un par un (évite MultipleBagFetchException)
+        forceLoadCollections(at);
+        return at;
+    }
+
+    private void forceLoadCollections(AutorisationTravail at) {
+        try {
+            if (at.getRisques() != null) {
+                at.getRisques().size();
+            }
+            if (at.getMesures() != null) {
+                at.getMesures().size();
+            }
+            if (at.getEpis() != null) {
+                at.getEpis().size();
+            }
+            if (at.getMoyensAcces() != null) {
+                at.getMoyensAcces().size();
+            }
+            if (at.getZoneProprietaire() != null) {
+                at.getZoneProprietaire().getId();
+            }
+            if (at.getZoneExecutante() != null) {
+                at.getZoneExecutante().getId();
+            }
+        } catch (Exception e) {
+            log.warn("forceLoadCollections AT {}: {}", at.getId(), e.getMessage());
+        }
     }
 
     private Utilisateur getCurrentUser() {
@@ -781,57 +967,6 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             throw new BusinessException("Une AT au statut " + at.getStatut() + " ne peut pas être modifiée.");
         }
     }
-
-    /**
- * Résout et affecte zoneProprietaire (P) et zoneExecutante (E) pour la logique P/E
- * du Standard S-HSE-SEC-31.
- *
- * - zoneProprietaire : zone du service de l'utilisateur connecté (rédacteur CEEP),
- *   si non encore renseignée.
- * - zoneExecutante  : zone du service nommé dans servicesIntervenants (si renseigné),
- *   sinon fallback sur la zone du rédacteur.
- */
-private void resoudreEtAffecterZones(AutorisationTravail at, AutoSaveRequest request) {
-    try {
-        Utilisateur currentUser = getCurrentUser();
-
-        // 1) Zone propriétaire (P) = zone du service du rédacteur
-        if (at.getZoneProprietaire() == null
-                && currentUser.getService() != null
-                && currentUser.getService().getZone() != null) {
-            at.setZoneProprietaire(currentUser.getService().getZone());
-            log.debug("AT {} — zoneProprietaire affectée : {}",
-                    at.getNumero(), currentUser.getService().getZone().getCodeZone());
-        }
-
-        // 2) Zone exécutante (E) à partir de servicesIntervenants
-        String servicesIntervenants = request.getServicesIntervenants();
-        if (servicesIntervenants != null && !servicesIntervenants.isBlank()) {
-            String nomCible = servicesIntervenants.trim();
-            serviceRepository.findAll().stream()
-                    .filter(s -> nomCible.equalsIgnoreCase(s.getNomService())
-                            || nomCible.equalsIgnoreCase(s.getCodeService()))
-                    .findFirst()
-                    .ifPresent(s -> {
-                        if (s.getZone() != null) {
-                            at.setZoneExecutante(s.getZone());
-                            log.debug("AT {} — zoneExecutante affectée via service '{}' : {}",
-                                    at.getNumero(), s.getNomService(), s.getZone().getCodeZone());
-                        }
-                    });
-        }
-
-        // 3) Fallback : si pas de zone exécutante, reprendre la zone propriétaire
-        //    (intervention interne au même périmètre)
-        if (at.getZoneExecutante() == null && at.getZoneProprietaire() != null) {
-            at.setZoneExecutante(at.getZoneProprietaire());
-            log.debug("AT {} — zoneExecutante = zoneProprietaire (intervention interne)", at.getNumero());
-        }
-    } catch (Exception e) {
-        // Ne jamais faire échouer l'auto-save pour une résolution de zone
-        log.warn("Impossible de résoudre les zones pour l'AT {} : {}", at.getId(), e.getMessage());
-    }
-}
 
     private void enregistrerHistorique(AutorisationTravail at, TypeActionAT action, StatutAT ancien, StatutAT nouveau, String com) {
         Utilisateur currentUser = null;
@@ -955,24 +1090,48 @@ private void resoudreEtAffecterZones(AutorisationTravail at, AutoSaveRequest req
         response.setEntreprisesIntervenantes(at.getEntreprisesIntervenantes());
         response.setMesuresSecuriteExecutant(at.getMesuresSecuriteExecutant());
         
-        if (at.getRisques() != null) {
-            response.setRisquesIds(at.getRisques().stream().map(r -> r.getId()).collect(Collectors.toList()));
+        // Colonnes JSON formulaire = source de vérité si renseignées
+        if (at.getFormRisquesIds() != null) {
+            response.setRisquesIds(fromJsonIds(at.getFormRisquesIds()));
+        } else {
+            response.setRisquesIds(at.getRisques() == null ? java.util.Collections.emptyList()
+                    : at.getRisques().stream().map(r -> r.getId()).collect(Collectors.toList()));
         }
-        if (at.getMesures() != null) {
-            response.setMesuresIds(at.getMesures().stream().map(m -> m.getId()).collect(Collectors.toList()));
+        if (at.getFormMesuresIds() != null) {
+            response.setMesuresIds(fromJsonIds(at.getFormMesuresIds()));
+        } else {
+            response.setMesuresIds(at.getMesures() == null ? java.util.Collections.emptyList()
+                    : at.getMesures().stream().map(m -> m.getId()).collect(Collectors.toList()));
         }
-        if (at.getEpis() != null) {
-            response.setEpisIds(at.getEpis().stream().map(e -> e.getId()).collect(Collectors.toList()));
+        if (at.getFormEpisIds() != null) {
+            response.setEpisIds(fromJsonIds(at.getFormEpisIds()));
+        } else {
+            response.setEpisIds(at.getEpis() == null ? java.util.Collections.emptyList()
+                    : at.getEpis().stream().map(e -> e.getId()).collect(Collectors.toList()));
         }
-        if (at.getMoyensAcces() != null) {
-            response.setMoyensAccesIds(at.getMoyensAcces().stream().map(m -> m.getId()).collect(Collectors.toList()));
+        if (at.getFormMoyensIds() != null) {
+            response.setMoyensAccesIds(fromJsonIds(at.getFormMoyensIds()));
+        } else {
+            response.setMoyensAccesIds(at.getMoyensAcces() == null ? java.util.Collections.emptyList()
+                    : at.getMoyensAcces().stream().map(m -> m.getId()).collect(Collectors.toList()));
         }
+        java.util.List<String> permisJson = at.getFormPermisIds() != null
+                ? fromJsonIds(at.getFormPermisIds()) : java.util.Collections.emptyList();
         
-        List<com.ocp.at.entity.Permis> permisList = permisRepository.findByAutorisationTravailId(at.getId());
-        response.setPermisIds(permisList.stream()
-                .filter(p -> p.getTypePermis() != null)
-                .map(p -> p.getTypePermis().getId())
-                .collect(Collectors.toList()));
+        if (!permisJson.isEmpty()) {
+            response.setPermisIds(permisJson);
+        } else {
+            List<com.ocp.at.entity.Permis> permisList = permisRepository.findByAutorisationTravailId(at.getId());
+            response.setPermisIds(permisList.stream()
+                    .filter(p -> p.getTypePermis() != null)
+                    .map(p -> p.getTypePermis().getId())
+                    .collect(Collectors.toList()));
+        }
+
+        // Calcul des droits et motifs d'export PDF (HM + HC + Permis conformes)
+        List<String> motifsRefus = calculerMotifsRefusExportPdf(at);
+        response.setExportPdfAutorise(motifsRefus.isEmpty());
+        response.setExportPdfMotifsRefus(motifsRefus);
         
         return response;
     }

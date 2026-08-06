@@ -43,14 +43,14 @@ public class MoyenAccesController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Créer un(e) MoyenAcces")
     public MoyenAccesResponse create(@Valid @RequestBody MoyenAccesRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Modifier un(e) MoyenAcces")
     public MoyenAccesResponse update(@PathVariable String id, @Valid @RequestBody MoyenAccesRequest request) {
         return service.update(id, request);
@@ -58,7 +58,7 @@ public class MoyenAccesController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Supprimer un(e) MoyenAcces")
     public void delete(@PathVariable String id) {
         service.delete(id);

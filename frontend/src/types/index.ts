@@ -316,6 +316,8 @@ export interface AutorisationTravail {
   permis?: Permis[];
   visas?: Visa[];
   receptionTravaux?: ReceptionTravaux;
+  exportPdfAutorise?: boolean;
+  exportPdfMotifsRefus?: string[];
   dateCreation: string;
   dateModification?: string;
 }

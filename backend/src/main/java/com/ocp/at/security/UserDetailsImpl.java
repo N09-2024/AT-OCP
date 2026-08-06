@@ -25,11 +25,19 @@ public class UserDetailsImpl implements UserDetails {
 
     public static UserDetailsImpl build(Utilisateur utilisateur) {
         // Collect roles and permissions
-        List<GrantedAuthority> authorities = utilisateur.getRoles().stream()
-                .flatMap(role -> Stream.concat(
-                        Stream.of(new SimpleGrantedAuthority(role.getNom())),
-                        role.getPermissions().stream().map(p -> new SimpleGrantedAuthority(p.getNom()))
-                ))
+        List<GrantedAuthority> authorities = utilisateur.getRoles() == null
+                ? java.util.Collections.emptyList()
+                : utilisateur.getRoles().stream()
+                .flatMap(role -> {
+                    Stream<GrantedAuthority> roleAuth = Stream.of(new SimpleGrantedAuthority(role.getNom()));
+                    Stream<GrantedAuthority> permAuth = (role.getPermissions() == null
+                            ? Stream.<GrantedAuthority>empty()
+                            : role.getPermissions().stream()
+                                .filter(p -> p != null && p.getNom() != null)
+                                .map(p -> new SimpleGrantedAuthority(p.getNom())));
+                    return Stream.concat(roleAuth, permAuth);
+                })
+                .distinct()
                 .collect(Collectors.toList());
 
         return new UserDetailsImpl(

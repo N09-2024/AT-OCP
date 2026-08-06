@@ -86,7 +86,7 @@ export default function HCDashboardPage() {
               }}
             >
               <CardContent>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
                   <Box sx={{ color: c.color }}>{c.icon}</Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
                     {c.title}

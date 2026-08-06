@@ -11,6 +11,7 @@ import {
   Tab,
   Alert,
   Divider,
+  Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -262,17 +263,31 @@ export default function AutorisationDetailPage() {
             </Button>
           )}
 
-          {(at.statut === 'VALIDEE' || at.statut === 'CLOTUREE' || at.statut === 'TRAVAUX_RECEPTIONES') && (
+          {at.exportPdfAutorise ? (
             <Button
-              variant="outlined"
+              variant="contained"
               color="error"
               startIcon={pdfLoading ? <CircularProgress size={18} color="inherit" /> : <PictureAsPdfIcon />}
               onClick={handleExportPdf}
               disabled={pdfLoading}
               sx={{ fontWeight: 700 }}
             >
-              Télécharger le PDF
+              Télécharger le PDF Officiel
             </Button>
+          ) : (
+            <Tooltip title={at.exportPdfMotifsRefus && at.exportPdfMotifsRefus.length > 0 ? at.exportPdfMotifsRefus.join(' | ') : "Validation HM/HC et conformité permis requises"}>
+              <span>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  disabled
+                  startIcon={<PictureAsPdfIcon />}
+                  sx={{ fontWeight: 700 }}
+                >
+                  Télécharger le PDF (Incomplet)
+                </Button>
+              </span>
+            </Tooltip>
           )}
 
           {(at.statut === 'CLOTUREE' || at.statut === 'TRAVAUX_RECEPTIONES') && hasValidationRights && (
@@ -288,6 +303,19 @@ export default function AutorisationDetailPage() {
           )}
         </Stack>
       </Box>
+
+      {at.exportPdfAutorise === false && (at.exportPdfMotifsRefus || []).length > 0 && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+            Conditions requises pour télécharger le document PDF officiel (Standard S-HSE-SEC-31 & Formulaire F-HSE-SEC-31-04) :
+          </Typography>
+          <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+            {at.exportPdfMotifsRefus?.map((motif, i) => (
+              <li key={i}>{motif}</li>
+            ))}
+          </ul>
+        </Alert>
+      )}
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>

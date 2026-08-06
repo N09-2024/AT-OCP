@@ -64,4 +64,9 @@ public class AutorisationTravailResponse {
     private java.util.List<String> episIds;
     private java.util.List<String> moyensAccesIds;
     private java.util.List<String> permisIds;
+
+    // Export PDF conditionnel (HM + HC + Permis conformes)
+    private Boolean exportPdfAutorise;
+    private java.util.List<String> exportPdfMotifsRefus;
 }
+

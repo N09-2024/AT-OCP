@@ -64,4 +64,6 @@ public interface AutorisationTravailService {
     List<HistoriqueATResponse> getHistorique(String id);
 
     List<VisaResponse> getVisas(String id);
+
+    void verifierDroitExportPdf(String id);
 }

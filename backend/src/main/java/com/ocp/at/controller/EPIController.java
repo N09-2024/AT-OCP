@@ -43,14 +43,14 @@ public class EPIController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Créer un(e) EPI")
     public EPIResponse create(@Valid @RequestBody EPIRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Modifier un(e) EPI")
     public EPIResponse update(@PathVariable String id, @Valid @RequestBody EPIRequest request) {
         return service.update(id, request);
@@ -58,7 +58,7 @@ public class EPIController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('MANAGE_REFERENTIELS')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Supprimer un(e) EPI")
     public void delete(@PathVariable String id) {
         service.delete(id);

@@ -31,9 +31,9 @@ export default function ResponsableExterieurDashboardPage() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', borderTop: '4px solid #d97706' }}>
             <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
                 <AssignmentIcon sx={{ color: '#d97706' }} />
-                <Typography fontWeight={800}>Mes Bons de Travaux</Typography>
+                <Typography sx={{ fontWeight: 800 }}>Mes Bons de Travaux</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 Créer et suivre les BT
@@ -48,9 +48,9 @@ export default function ResponsableExterieurDashboardPage() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', borderTop: '4px solid #0284c7' }}>
             <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
                 <UploadFileIcon color="primary" />
-                <Typography fontWeight={800}>Permis à uploader</Typography>
+                <Typography sx={{ fontWeight: 800 }}>Permis à uploader</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 Joindre les permis liés aux BT
@@ -65,9 +65,9 @@ export default function ResponsableExterieurDashboardPage() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', borderTop: '4px solid #64748b' }}>
             <CardContent>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: 'center' }}>
                 <DescriptionIcon />
-                <Typography fontWeight={800}>AT liées à mes BT</Typography>
+                <Typography sx={{ fontWeight: 800 }}>AT liées à mes BT</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 Consultation seule

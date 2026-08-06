@@ -120,32 +120,46 @@ export default function AutorisationFormPage() {
         setAtStatut(at.statut || null);
         setAtId(at.id);
         // Préremplir le formulaire F-HSE avec toutes les données de l'AT (CEEE voit tout)
+        // Mapping API → champs formulaire F-HSE (ne pas écraser avec res.data brut)
         setFormInteractiveData({
+          numero: at.numero || '',
+          objet: at.objet || '',
           description: at.descriptionTravaux || at.objet || '',
+          descriptionTravaux: at.descriptionTravaux || '',
           dateIntervention: at.dateDebut || '',
+          dateDebut: at.dateDebut || '',
+          dateFin: at.dateFin || '',
           heureDebut: at.heureDebut || '',
           heureFin: at.heureFin || '',
           servicesIntervenants: at.servicesIntervenants || '',
+          serviceIntervenantId: at.serviceIntervenantId || null,
           entreprisesIntervenantes: at.entreprisesIntervenantes || '',
           sectionF: at.mesuresSecuriteExecutant || '',
-          risquesIds: at.risquesIds || [],
-          mesuresIds: at.mesuresIds || [],
-          episIds: at.episIds || [],
-          moyensAccesIds: at.moyensAccesIds || [],
-          permisIds: at.permisIds || [],
+          mesuresSecuriteExecutant: at.mesuresSecuriteExecutant || '',
+          risquesIds: at.risquesIds || (at.risques || []).map((r: any) => r.id),
+          mesuresIds: at.mesuresIds || (at.mesures || []).map((m: any) => m.id),
+          episIds: at.episIds || (at.epis || []).map((e: any) => e.id),
+          moyensAccesIds: at.moyensAccesIds || (at.moyensAcces || []).map((m: any) => m.id),
+          permisIds: at.permisIds || (at.permis || []).map((p: any) => p.typePermis?.id || p.id),
+          zoneProprietaire: at.zoneProprietaire || null,
+          typeDocumentSource: at.typeDocumentSource || '',
+          documentSourceId: at.documentSourceId || '',
+          documentSourceNumero: at.documentSourceNumero || '',
           g1NomCeep: at.g1NomCeep || '',
           g1NomCeee: at.g1NomCeee || '',
+          _loaded: true,
         });
         setActiveStep(2);
-        setFormInteractiveData(res.data);
       })
       .catch((err) => {
-        console.error(err);
-        alert("Impossible de charger le brouillon d'AT.");
-        navigate('/autorisations');
+        console.error("Erreur chargement brouillon", err);
+        setAtId(null);
+        setFormInteractiveData({});
+        setStatusMsg("Le brouillon d'AT n'existe plus ou a été supprimé. Vous pouvez créer une nouvelle Autorisation de Travail.");
+        setActiveStep(0);
       })
       .finally(() => setLoading(false));
-  }, [draftId, navigate]);
+  }, [draftId]);
 
   // GPS Geolocation Handler
   const handleGetGps = () => {
@@ -207,25 +221,48 @@ export default function AutorisationFormPage() {
         descriptionTravaux: data.description || '',
         dateDebut: data.dateIntervention || null,
         dateFin: data.dateIntervention || null,
-        heureDebut: data.heureDebut || '08:00',
-        heureFin: data.heureFin || '17:00',
+        heureDebut: (data.heureDebut || '08:00').toString().substring(0, 8),
+        heureFin: (data.heureFin || '17:00').toString().substring(0, 8),
         servicesIntervenants: data.servicesIntervenants || '',
         serviceIntervenantId: data.serviceIntervenantId || null,
         entreprisesIntervenantes: data.entreprisesIntervenantes || '',
         mesuresSecuriteExecutant: data.sectionF || '',
-        risquesIds: data.risquesIds || [],
-        mesuresIds: data.mesuresIds || [],
-        episIds: data.episIds || [],
-        moyensAccesIds: data.moyensAccesIds || [],
-        permisIds: data.permisIds || [],
+        risquesIds: (data.risquesIds || []).map(String),
+        mesuresIds: (data.mesuresIds || []).map(String),
+        episIds: (data.episIds || []).map(String),
+        moyensAccesIds: (data.moyensAccesIds || []).map(String),
+        permisIds: (data.permisIds || []).map(String),
       };
 
       await apiClient.put(`/autorisations-travail/${currentId}/autosave`, payload);
+      // Recharger pour confirmer risquesIds / mesuresIds / etc. persistés
+      try {
+        const refreshed = await apiClient.get(`/autorisations-travail/${currentId}`);
+        const at = refreshed.data;
+        setFormInteractiveData((prev: any) => ({
+          ...prev,
+          ...data,
+          _loaded: true,
+          risquesIds: (at.risquesIds || []).map(String),
+          mesuresIds: (at.mesuresIds || []).map(String),
+          episIds: (at.episIds || []).map(String),
+          moyensAccesIds: (at.moyensAccesIds || []).map(String),
+          permisIds: (at.permisIds || []).map(String),
+          description: at.descriptionTravaux || data.description || '',
+          servicesIntervenants: at.servicesIntervenants || data.servicesIntervenants || '',
+          sectionF: at.mesuresSecuriteExecutant || data.sectionF || '',
+        }));
+      } catch {
+        /* ignore refresh errors */
+      }
       setStatusMsg('Brouillon enregistré ✓');
       setTimeout(() => setStatusMsg(null), 3000);
     } catch (err: any) {
-      console.error(err);
-      alert(err.response?.data?.message || 'Erreur lors de la sauvegarde du brouillon.');
+      console.error('autosave error', err);
+      const msg = err.response?.data?.message || err.message || 'Erreur sauvegarde';
+      // Ne pas spammer d'alertes sur autosave cases — message discret
+      setStatusMsg('⚠ ' + msg);
+      setTimeout(() => setStatusMsg(null), 4000);
     } finally {
       setLoading(false);
     }
@@ -278,17 +315,17 @@ export default function AutorisationFormPage() {
         descriptionTravaux: data.description || '',
         dateDebut: data.dateIntervention || null,
         dateFin: data.dateIntervention || null,
-        heureDebut: data.heureDebut || '08:00',
-        heureFin: data.heureFin || '17:00',
+        heureDebut: (data.heureDebut || '08:00').toString().substring(0, 8),
+        heureFin: (data.heureFin || '17:00').toString().substring(0, 8),
         servicesIntervenants: data.servicesIntervenants || '',
         serviceIntervenantId: data.serviceIntervenantId || null,
         entreprisesIntervenantes: data.entreprisesIntervenantes || '',
         mesuresSecuriteExecutant: data.sectionF || '',
-        risquesIds: data.risquesIds || [],
-        mesuresIds: data.mesuresIds || [],
-        episIds: data.episIds || [],
-        moyensAccesIds: data.moyensAccesIds || [],
-        permisIds: data.permisIds || [],
+        risquesIds: (data.risquesIds || []).map(String),
+        mesuresIds: (data.mesuresIds || []).map(String),
+        episIds: (data.episIds || []).map(String),
+        moyensAccesIds: (data.moyensAccesIds || []).map(String),
+        permisIds: (data.permisIds || []).map(String),
       };
       await apiClient.put(`/autorisations-travail/${currentId}/autosave`, payload);
 
@@ -699,10 +736,12 @@ export default function AutorisationFormPage() {
             </Alert>
           )}
           <FormulaireOCPInteractive
+            key={atId || draftId || "new"}
             initialData={formInteractiveData}
             readOnly={false}
             signMode={signMode}
             onSave={modeViser ? undefined : handleSaveDraft}
+            onAutoSave={modeViser ? undefined : handleSaveDraft}
             onSubmitAT={modeViser ? undefined : handleSubmitAT}
             onVisaCeee={modeViser ? handleVisaCeee : undefined}
             loading={loading}
