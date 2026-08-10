@@ -27,7 +27,6 @@ import {
   FormControlLabel,
 } from '@mui/material';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import DescriptionIcon from '@mui/icons-material/Description';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -48,8 +47,8 @@ import { iaApi } from '../../services/iaApi';
 import { autorisationTravailApi } from '../../services/autorisationTravailApi';
 import { useAuthStore } from '../../store/authStore';
 
-import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
+// ⚠️ Export Word supprimé : seul le PDF officiel (gating HC/HM serveur) est autorisé.
+// Les imports 'jspdf' et 'docx' ne sont plus utilisés dans ce composant.
 
 export interface FormulaireOCPInteractiveProps {
   initialData?: any;
@@ -65,7 +64,7 @@ export interface FormulaireOCPInteractiveProps {
 }
 
 export default function FormulaireOCPInteractive({
-  initialData = {},
+  initialData: rawInitialData = {},
   readOnly = false,
   signMode = 'all',
   onSave,
@@ -74,9 +73,13 @@ export default function FormulaireOCPInteractive({
   onVisaCeee,
   loading = false,
 }: FormulaireOCPInteractiveProps) {
+  // Guard: if parent passes null explicitly (AT not yet loaded), treat as empty object
+  const initialData = rawInitialData ?? {};
   const currentUser = useAuthStore((s) => s.user);
   const containerRef = useRef<HTMLDivElement>(null);
-  const fieldsLocked = readOnly || signMode === 'ceee' || signMode === 'none';
+  const atStatut = initialData?.statut || initialData?.statutWorkflow || '';
+  const isSubmittedOrTransmitted = Boolean(atStatut && atStatut !== 'BROUILLON' && atStatut !== 'DEMANDE_CREEE' && atStatut !== 'CLASSIFICATION_EFFECTUEE');
+  const fieldsLocked = readOnly || signMode === 'ceee' || signMode === 'none' || isSubmittedOrTransmitted;
   const canSignCeep = !readOnly && (signMode === 'all' || signMode === 'ceep');
   const canSignCeee = !readOnly && (signMode === 'all' || signMode === 'ceee');
 
@@ -97,10 +100,15 @@ export default function FormulaireOCPInteractive({
 
   // Signature Modal State
   const [sigDialogOpen, setSigDialogOpen] = useState(false);
+  const [activeSigField, setActiveSigField] = useState<string | null>(null);
+
+  // --- IA implicite (plus de bouton "Assistant IA") ---
   const [iaLoading, setIaLoading] = useState(false);
   const [iaRapport, setIaRapport] = useState<string | null>(null);
   const [iaAlertes, setIaAlertes] = useState<string[]>([]);
-  const [activeSigField, setActiveSigField] = useState<string | null>(null);
+  const [iaSuggestions, setIaSuggestions] = useState<{
+    risques: string[]; mesures: string[]; epis: string[]; permis: string[];
+  }>({ risques: [], mesures: [], epis: [], permis: [] });
 
   // Form State
   const todayStr = new Date().toISOString().split('T')[0];
@@ -233,42 +241,57 @@ export default function FormulaireOCPInteractive({
     });
   };
 
-  // Hydrate when parent charges AT async
+  const hydratedKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!initialData || (!initialData._loaded && !initialData.numero && !initialData.description && !initialData.descriptionTravaux)) {
-      return;
-    }
-    setFormData((prev: any) => ({
-      ...prev,
-      numero: initialData.numero || prev.numero || '',
-      site: initialData.zoneProprietaire?.nomZone || initialData.site || prev.site || '',
-      entite: initialData.servicesIntervenants || prev.entite || '',
-      documentSourceType: initialData.typeDocumentSource || prev.documentSourceType || 'DI',
-      documentSourceId: initialData.documentSourceId || prev.documentSourceId || '',
-      documentSourceNumero: initialData.documentSourceNumero || prev.documentSourceNumero || '',
-      di: initialData.typeDocumentSource === 'DI' ? initialData.documentSourceNumero || prev.di : prev.di,
-      ot: initialData.typeDocumentSource === 'OT' ? initialData.documentSourceNumero || prev.ot : prev.ot,
-      bt: initialData.typeDocumentSource === 'BT' ? initialData.documentSourceNumero || prev.bt : prev.bt,
-      lieu: initialData.zoneProprietaire?.nomZone || prev.lieu || '',
-      servicesIntervenants: initialData.servicesIntervenants || prev.servicesIntervenants || '',
-      serviceIntervenantId: initialData.serviceIntervenantId || prev.serviceIntervenantId || null,
-      entreprisesIntervenantes: initialData.entreprisesIntervenantes || prev.entreprisesIntervenantes || '',
-      description: initialData.description || initialData.descriptionTravaux || initialData.objet || prev.description || '',
-      dateIntervention: initialData.dateIntervention || initialData.dateDebut || prev.dateIntervention,
-      heureDebut: initialData.heureDebut || prev.heureDebut || '08:00',
-      heureFin: initialData.heureFin || prev.heureFin || '17:00',
-      risquesIds: (initialData.risquesIds || (initialData.risques || []).map((r: any) => r.id) || prev.risquesIds || []).map((x: any) => String(x)),
-      mesuresIds: (initialData.mesuresIds || (initialData.mesures || []).map((m: any) => m.id) || prev.mesuresIds || []).map((x: any) => String(x)),
-      episIds: (initialData.episIds || (initialData.epis || []).map((e: any) => e.id) || prev.episIds || []).map((x: any) => String(x)),
-      moyensAccesIds: (initialData.moyensAccesIds || (initialData.moyensAcces || []).map((m: any) => m.id) || prev.moyensAccesIds || []).map((x: any) => String(x)),
-      permisIds: (initialData.permisIds || (initialData.permis || []).map((p: any) => p.typePermis?.id || p.id) || prev.permisIds || []).map((x: any) => String(x)),
-      sectionF: initialData.sectionF || initialData.mesuresSecuriteExecutant || prev.sectionF || '',
-      g1NomCeep: initialData.g1NomCeep || prev.g1NomCeep || '',
-      g1NomCeee: initialData.g1NomCeee || prev.g1NomCeee || '',
-      g1VisaCeep: initialData.g1VisaCeep || prev.g1VisaCeep || null,
-      g1VisaCeee: initialData.g1VisaCeee || prev.g1VisaCeee || null,
-    }));
-  }, [initialData]);
+    const idKey = initialData?.id
+      ? String(initialData.id)
+      : (initialData?._loaded ? '__brouillon_local__' : null);
+
+    if (!idKey) return;
+    if (hydratedKeyRef.current === idKey) return; // déjà hydraté pour cette AT
+    hydratedKeyRef.current = idKey;
+
+    setFormData((prev: any) => {
+      const getArray = (initArr: any, objArr: any, prevArr: any) => {
+        if (Array.isArray(initArr) && initArr.length > 0) return initArr.map(String);
+        if (Array.isArray(objArr) && objArr.length > 0) return objArr.map((x: any) => String(x.id || x));
+        if (Array.isArray(prevArr) && prevArr.length > 0) return prevArr.map(String);
+        return [];
+      };
+
+      return {
+        ...prev,
+        numero: initialData.numero || prev.numero || '',
+        site: initialData.zoneProprietaire?.nomZone || initialData.site || prev.site || '',
+        entite: initialData.servicesIntervenants || prev.entite || '',
+        documentSourceType: initialData.typeDocumentSource || prev.documentSourceType || 'DI',
+        documentSourceId: initialData.documentSourceId || prev.documentSourceId || '',
+        documentSourceNumero: initialData.documentSourceNumero || prev.documentSourceNumero || '',
+        di: initialData.typeDocumentSource === 'DI' ? (initialData.documentSourceNumero ?? prev.di) : prev.di,
+        ot: initialData.typeDocumentSource === 'OT' ? (initialData.documentSourceNumero ?? prev.ot) : prev.ot,
+        bt: initialData.typeDocumentSource === 'BT' ? (initialData.documentSourceNumero ?? prev.bt) : prev.bt,
+        lieu: initialData.zoneProprietaire?.nomZone || prev.lieu || '',
+        servicesIntervenants: initialData.servicesIntervenants || prev.servicesIntervenants || '',
+        serviceIntervenantId: initialData.serviceIntervenantId || prev.serviceIntervenantId || null,
+        entreprisesIntervenantes: initialData.entreprisesIntervenantes || prev.entreprisesIntervenantes || '',
+        description: initialData.description || initialData.descriptionTravaux || initialData.objet || prev.description || '',
+        dateIntervention: initialData.dateIntervention || initialData.dateDebut || prev.dateIntervention,
+        heureDebut: initialData.heureDebut || prev.heureDebut || '08:00',
+        heureFin: initialData.heureFin || prev.heureFin || '17:00',
+        risquesIds: getArray(initialData.risquesIds, initialData.risques, prev.risquesIds),
+        mesuresIds: getArray(initialData.mesuresIds, initialData.mesures, prev.mesuresIds),
+        episIds: getArray(initialData.episIds, initialData.epis, prev.episIds),
+        moyensAccesIds: getArray(initialData.moyensAccesIds, initialData.moyensAcces, prev.moyensAccesIds),
+        permisIds: getArray(initialData.permisIds, initialData.permis, prev.permisIds),
+        sectionF: initialData.sectionF || initialData.mesuresSecuriteExecutant || prev.sectionF || '',
+        g1NomCeep: initialData.g1NomCeep || prev.g1NomCeep || '',
+        g1NomCeee: initialData.g1NomCeee || prev.g1NomCeee || '',
+        g1VisaCeep: initialData.g1VisaCeep || prev.g1VisaCeep || null,
+        g1VisaCeee: initialData.g1VisaCeee || prev.g1VisaCeee || null,
+      };
+    });
+  }, [initialData?.id, initialData?._loaded]);
 
   const [sigBlobs, setSigBlobs] = useState<Record<string, Blob>>({});
 
@@ -324,6 +347,14 @@ export default function FormulaireOCPInteractive({
     if (readOnly || signMode === 'ceee' || signMode === 'none') return;
     const found = servicesList.find((s) => s.id === serviceIdOrName || s.nomService === serviceIdOrName);
     const nomService = found?.nomService || serviceIdOrName;
+    const userNomService = currentUser?.service?.nomService;
+    const userServiceId = currentUser?.service?.id;
+
+    if ((found?.id && userServiceId && found.id === userServiceId) || (nomService && userNomService && nomService.toLowerCase().trim() === userNomService.toLowerCase().trim())) {
+      alert(`⚠️ Une Autorisation de Travail ne peut pas être établie au sein d'un même service. Le service demandeur/propriétaire (${userNomService || 'votre service'}) et le service exécutant doivent être différents.`);
+      return;
+    }
+
     setFormData((p) => ({ ...p, servicesIntervenants: nomService, serviceIntervenantId: found?.id || null }));
     if (!found?.id) {
       setFormData((p) => ({ ...p, g1NomCeee: '' }));
@@ -369,49 +400,84 @@ export default function FormulaireOCPInteractive({
     });
   };
 
-  /** IA Assistance */
-  const handleAnalyserIA = async () => {
-    if (fieldsLocked) return;
-    const desc = formData.description || '';
-    if (!desc.trim()) {
-      alert("Saisissez d'abord la description de l'intervention.");
-      return;
-    }
-    setIaLoading(true);
-    setIaRapport(null);
-    setIaAlertes([]);
+  // ------------------------------------------------------------------
+  // IA IMPLICITE — plus de bouton "Assistant IA". L'analyse se déclenche
+  // automatiquement, en arrière-plan, dès que la description est assez
+  // longue et n'a pas déjà été analysée. Découplée de l'autosave (800ms)
+  // par un débounce plus long (2s) pour ne pas multiplier les appels au
+  // microservice IA à chaque frappe.
+  // ------------------------------------------------------------------
+  const iaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAnalyzedDescRef = useRef<string>('');
+
+  useEffect(() => {
+    if (readOnly || fieldsLocked) return;
+    const desc = (formData.description || '').trim();
+    if (desc.length < 15) return; // pas assez de contexte pour être utile
+    if (desc === lastAnalyzedDescRef.current) return;
+
+    if (iaDebounceRef.current) clearTimeout(iaDebounceRef.current);
+    iaDebounceRef.current = setTimeout(async () => {
+      lastAnalyzedDescRef.current = desc;
+      setIaLoading(true);
+      try {
+        const res = await iaApi.analyserIntervention(desc);
+        const data = (res as any).data ?? res; // tolère les deux formats de retour du service
+        setIaRapport(data.rapport || null);
+        setIaAlertes(data.alertes || []);
+        setIaSuggestions({
+          risques: data.risques || [],
+          mesures: data.mesures || [],
+          epis: data.epis || [],
+          permis: data.permis || [],
+        });
+      } catch {
+        // IA best-effort : un échec ne doit jamais bloquer la saisie du formulaire.
+      } finally {
+        setIaLoading(false);
+      }
+    }, 2000);
+
+    return () => {
+      if (iaDebounceRef.current) clearTimeout(iaDebounceRef.current);
+    };
+  }, [formData.description, readOnly, fieldsLocked]);
+
+  // Applique une suggestion IA à un référentiel de cases à cocher (l'utilisateur
+  // choisit lui-même ce qu'il accepte — l'IA ne coche jamais à sa place).
+  const appliquerSuggestion = (
+    field: 'risquesIds' | 'mesuresIds' | 'episIds' | 'permisIds',
+    refList: any[],
+    label: string
+  ) => {
+    const low = label.toLowerCase();
+    const found = refList.find((x) =>
+      (x.nom || x.nomRisque || x.nomMesure || x.nomEPI || x.libelle || x.nomType || '')
+        .toLowerCase()
+        .includes(low.split(' ')[0])
+    );
+    if (found?.id) toggleCheckbox(field, found.id);
+  };
+
+  // Contrôle de complétude implicite, exécuté juste avant transmission
+  // (remplace l'ancien clic manuel "Assistant IA" / bouton de contrôle).
+  const controlerAvantSoumission = async (): Promise<boolean> => {
     try {
-      const res = await iaApi.analyserIntervention(desc);
-      const matchIds = (list: any[], labels: string[]) => {
-        const ids: string[] = [];
-        for (const label of labels || []) {
-          const low = label.toLowerCase();
-          const found = list.find(
-            (x) =>
-              (x.nom || x.nomRisque || x.nomMesure || x.nomEPI || x.libelle || x.nomType || '')
-                .toLowerCase()
-                .includes(low.split(' ')[0]) ||
-              low.includes(
-                (x.nom || x.nomRisque || x.nomMesure || x.nomEPI || x.libelle || x.nomType || '').toLowerCase().slice(0, 6)
-              )
-          );
-          if (found?.id && !ids.includes(found.id)) ids.push(found.id);
-        }
-        return ids;
-      };
-      setFormData((prev: any) => ({
-        ...prev,
-        risquesIds: Array.from(new Set([...(prev.risquesIds || []), ...matchIds(refRisques, res.risques)])),
-        mesuresIds: Array.from(new Set([...(prev.mesuresIds || []), ...matchIds(refMesures, res.mesures)])),
-        episIds: Array.from(new Set([...(prev.episIds || []), ...matchIds(refEpis, res.epis)])),
-        permisIds: Array.from(new Set([...(prev.permisIds || []), ...matchIds(refPermis, res.permis)])),
-      }));
-      setIaRapport(res.rapport || 'Suggestions appliquées — vérifiez les cases A/B/D/E.');
-      setIaAlertes(res.alertes || []);
-    } catch (e: any) {
-      alert(e.response?.data?.message || "Erreur analyse IA");
-    } finally {
-      setIaLoading(false);
+      const res = await iaApi.controlerDossier({
+        description: formData.description,
+        visiteFaite: true,
+        nbRisques: formData.risquesIds.length,
+        nbMesures: formData.mesuresIds.length,
+        nbEpis: formData.episIds.length,
+        nbPermis: formData.permisIds.length,
+        sectionFRenseignee: !!formData.sectionF?.trim(),
+      });
+      const data = (res as any).data ?? res;
+      setIaRapport(data.rapport || null);
+      setIaAlertes(data.alertes || []);
+      return data.complet !== false;
+    } catch {
+      return true; // IA indisponible : on ne bloque jamais le workflow métier
     }
   };
 
@@ -432,7 +498,9 @@ export default function FormulaireOCPInteractive({
     setSigDialogOpen(false);
   };
 
-  // Export PDF Server
+  // Export PDF Serveur — seul export disponible. Le backend refuse (400)
+  // tant que les visas HM + HC ne sont pas positifs (voir
+  // AutorisationTravailServiceImpl.verifierDroitExportPdf côté Spring).
   const exportPDFServer = async () => {
     const atId = initialData?.id || formData.numero;
     if (!atId) {
@@ -451,44 +519,15 @@ export default function FormulaireOCPInteractive({
     }
   };
 
-  // Export Word (.docx)
-  const exportWord = () => {
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: [
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [
-                new TextRun({ text: "AUTORISATION DE TRAVAIL OCP", bold: true, size: 32, color: "00875A" }),
-              ],
-            }),
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [
-                new TextRun({ text: "Standard S-HSE-SEC-31 | Formulaire F-HSE-SEC-31-04", italics: true, size: 20 }),
-              ],
-            }),
-            new Paragraph({ text: "" }),
-            new Paragraph({ children: [new TextRun({ text: `Numéro AT: ${formData.numero || 'Brouillon'}`, bold: true })] }),
-            new Paragraph({ children: [new TextRun({ text: `Site: ${formData.site || 'N/A'}` })] }),
-            new Paragraph({ children: [new TextRun({ text: `Entité: ${formData.entite || 'N/A'}` })] }),
-            new Paragraph({ children: [new TextRun({ text: `Description: ${formData.description || 'N/A'}` })] }),
-            new Paragraph({ children: [new TextRun({ text: `Date intervention: ${formData.dateIntervention} (${formData.heureDebut} - ${formData.heureFin})` })] }),
-          ],
-        },
-      ],
-    });
-
-    Packer.toBlob(doc).then((blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${formData.numero || 'AT'}.docx`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
+  const handleSignerEtTransmettre = async () => {
+    const complet = await controlerAvantSoumission();
+    if (!complet) {
+      const confirmer = window.confirm(
+        "L'IA signale des éléments potentiellement manquants (voir le bandeau ci-dessus). Transmettre quand même ?"
+      );
+      if (!confirmer) return;
+    }
+    onSubmitAT?.(formData, sigBlobs['g1VisaCeep']);
   };
 
   return (
@@ -518,9 +557,6 @@ export default function FormulaireOCPInteractive({
           <Button variant="contained" color="error" startIcon={<PictureAsPdfIcon />} onClick={exportPDFServer} size="small" sx={{ fontWeight: 700, borderRadius: 2 }}>
             PDF Officiel
           </Button>
-          <Button variant="outlined" sx={{ color: '#94a3b8', borderColor: '#334155', fontWeight: 600, '&:hover': { borderColor: '#64748b', bgcolor: '#1e293b' } }} startIcon={<DescriptionIcon />} onClick={exportWord} size="small">
-            Word (.docx)
-          </Button>
 
           {/* AUTOSAVE CHIP */}
           {saveStatus === 'saving' && (
@@ -531,6 +567,16 @@ export default function FormulaireOCPInteractive({
           )}
           {saveStatus === 'error' && (
             <Chip label="Échec enregistrement" color="error" size="small" sx={{ fontWeight: 700 }} />
+          )}
+
+          {/* Indicateur IA discret — remplace le bouton "Assistant IA" */}
+          {iaLoading && (
+            <Chip
+              label="Analyse IA…"
+              size="small"
+              icon={<CircularProgress size={12} color="inherit" />}
+              sx={{ fontWeight: 700, bgcolor: 'rgba(124,58,237,0.2)', color: '#c4b5fd' }}
+            />
           )}
         </Box>
 
@@ -545,24 +591,12 @@ export default function FormulaireOCPInteractive({
                 Brouillon
               </Button>
             )}
-            {signMode !== 'ceee' && !fieldsLocked && (
-              <Button
-                variant="contained"
-                sx={{ background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', color: '#fff', fontWeight: 700 }}
-                startIcon={iaLoading ? <CircularProgress size={14} color="inherit" /> : <AutoAwesomeIcon />}
-                onClick={handleAnalyserIA}
-                disabled={loading || iaLoading}
-                size="small"
-              >
-                Assistant IA
-              </Button>
-            )}
             {onSubmitAT && signMode !== 'ceee' && (
               <Button
                 variant="contained"
                 sx={{ bgcolor: '#00875A', '&:hover': { bgcolor: '#006c48' }, fontWeight: 700, borderRadius: 2 }}
                 startIcon={<CheckCircleIcon />}
-                onClick={() => onSubmitAT(formData, sigBlobs['g1VisaCeep'])}
+                onClick={handleSignerEtTransmettre}
                 disabled={loading}
                 size="small"
               >
@@ -592,10 +626,11 @@ export default function FormulaireOCPInteractive({
         )}
       </Paper>
 
-      {/* IA SUGGESTION BANNER */}
+      {/* IA SUGGESTION BANNER — implicite, avec suggestions cliquables */}
       {(iaRapport || iaAlertes.length > 0) && (
         <Alert
-          severity={iaAlertes.length ? 'warning' : 'success'}
+          icon={<AutoAwesomeIcon />}
+          severity={iaAlertes.length ? 'warning' : 'info'}
           sx={{ mb: 3, borderRadius: 3, boxShadow: 2 }}
           onClose={() => {
             setIaRapport(null);
@@ -606,11 +641,44 @@ export default function FormulaireOCPInteractive({
             {iaRapport}
           </Typography>
           {iaAlertes.length > 0 && (
-            <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+            <ul style={{ margin: '4px 0 8px 16px', padding: 0 }}>
               {iaAlertes.map((a, i) => (
                 <li key={i}>{a}</li>
               ))}
             </ul>
+          )}
+          {!fieldsLocked && (iaSuggestions.risques.length + iaSuggestions.mesures.length + iaSuggestions.epis.length + iaSuggestions.permis.length > 0) && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                Suggestions (cliquez pour cocher) :
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                {iaSuggestions.risques
+                  .filter((label) => !refRisques.some((r) => (r.nom || r.nomRisque || '').toLowerCase() === label.toLowerCase() && isChecked('risquesIds', r.id)))
+                  .map((label) => (
+                    <Chip key={`r-${label}`} label={label} size="small" variant="outlined" color="error"
+                      onClick={() => appliquerSuggestion('risquesIds', refRisques, label)} />
+                  ))}
+                {iaSuggestions.mesures
+                  .filter((label) => !refMesures.some((m) => (m.nom || m.nomMesure || '').toLowerCase() === label.toLowerCase() && isChecked('mesuresIds', m.id)))
+                  .map((label) => (
+                    <Chip key={`m-${label}`} label={label} size="small" variant="outlined" color="success"
+                      onClick={() => appliquerSuggestion('mesuresIds', refMesures, label)} />
+                  ))}
+                {iaSuggestions.epis
+                  .filter((label) => !refEpis.some((e) => (e.nom || e.nomEPI || '').toLowerCase() === label.toLowerCase() && isChecked('episIds', e.id)))
+                  .map((label) => (
+                    <Chip key={`e-${label}`} label={label} size="small" variant="outlined" color="secondary"
+                      onClick={() => appliquerSuggestion('episIds', refEpis, label)} />
+                  ))}
+                {iaSuggestions.permis
+                  .filter((label) => !refPermis.some((p) => (p.nomType || p.nom || '').toLowerCase() === label.toLowerCase() && isChecked('permisIds', p.id)))
+                  .map((label) => (
+                    <Chip key={`p-${label}`} label={label} size="small" variant="outlined" color="warning"
+                      onClick={() => appliquerSuggestion('permisIds', refPermis, label)} />
+                  ))}
+              </Box>
+            </Box>
           )}
         </Alert>
       )}
@@ -669,75 +737,70 @@ export default function FormulaireOCPInteractive({
         </Box>
       </Paper>
 
-      {/* SECTION 0: IDENTIFICATION & DOCUMENT SOURCE */}
+      {/* SECTION A: NATURE DE L'AT & SERVICES */}
       <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
         <CardHeader
           avatar={<AssignmentIcon sx={{ color: '#00875A' }} />}
-          title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b' }}>Identification & Document Source</Typography>}
-          subheader="Rattachement administratif et périmètre de l'intervention"
+          title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b' }}>Section A &bull; Nature de l'AT & Affectation des Services</Typography>}
+          subheader="Identification du type d'AT et définition du service demandeur vs service exécutant"
           sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', py: 1.5 }}
         />
         <CardContent sx={{ p: 3 }}>
           <Grid container spacing={2.5}>
-            {/* Document Source Type Selector */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', mb: 0.5, display: 'block' }}>
-                Type Document Source
+            {/* Nature / Type de l'AT (DI, OT, BT) */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', mb: 1, display: 'block' }}>
+                Nature de l'Autorisation de Travail :
               </Typography>
-              <Stack direction="row" spacing={1}>
-                {(['DI', 'OT', 'BT'] as const).map((type) => (
-                  <Chip
-                    key={type}
-                    label={type}
-                    clickable={!fieldsLocked}
-                    color={docSourceType === type ? 'primary' : 'default'}
-                    onClick={() => {
-                      if (fieldsLocked) return;
-                      setDocSourceType(type);
-                    }}
-                    sx={{
-                      fontWeight: 800,
-                      px: 1.5,
-                      bgcolor: docSourceType === type ? '#00875A' : '#f1f5f9',
-                      color: docSourceType === type ? '#ffffff' : '#475569',
-                    }}
-                  />
-                ))}
+              <Stack direction="row" spacing={1.5}>
+                {[
+                  { key: 'DI', label: "Demande d'Intervention (DI)" },
+                  { key: 'OT', label: "Ordre de Travail (OT)" },
+                  { key: 'BT', label: "Bon de Travail (BT)" },
+                ].map((item) => {
+                  const selected = docSourceType === item.key;
+                  return (
+                    <Paper
+                      key={item.key}
+                      elevation={0}
+                      onClick={() => {
+                        if (fieldsLocked) return;
+                        setDocSourceType(item.key as any);
+                        updateTextValue('documentSourceType', item.key);
+                      }}
+                      sx={{
+                        flex: 1,
+                        p: 1.5,
+                        textAlign: 'center',
+                        borderRadius: 2,
+                        cursor: fieldsLocked ? 'default' : 'pointer',
+                        border: selected ? '2px solid #00875A' : '1px solid #cbd5e1',
+                        bgcolor: selected ? '#f0fdf4' : '#ffffff',
+                        transition: 'all 0.15s ease-in-out',
+                        '&:hover': fieldsLocked ? {} : { borderColor: '#00875A', bgcolor: '#f0fdf4' },
+                      }}
+                    >
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: selected ? '#00875A' : '#475569' }}>
+                        {item.key}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: selected ? '#065f46' : '#64748b', fontSize: 11, display: 'block' }}>
+                        {item.label}
+                      </Typography>
+                    </Paper>
+                  );
+                })}
               </Stack>
             </Grid>
 
-            {/* Document Source Select */}
-            <Grid size={{ xs: 12, md: 8 }}>
-              <FormControl fullWidth size="small" disabled={fieldsLocked}>
-                <InputLabel>Sélectionner le document source ({docSourceType})</InputLabel>
-                <Select
-                  value={formData.documentSourceId}
-                  label={`Sélectionner le document source (${docSourceType})`}
-                  onChange={(e) => handleSelectDocSource(e.target.value)}
-                >
-                  <MenuItem value="">
-                    <em>Aucun document lié</em>
-                  </MenuItem>
-                  {docSourceList.map((d) => (
-                    <MenuItem key={d.id} value={d.id}>
-                      <strong>{d.numero || d.numDi || d.numOt || d.numBt}</strong> &mdash; {d.objet || d.description || 'Sans objet'}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid size={12}>
-              <Divider sx={{ my: 1 }} />
-            </Grid>
-
-            {/* Site / Zone */}
+            {/* Site / Zone Propriétaire */}
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', mb: 0.5, display: 'block' }}>
+                Site / Zone Propriétaire (P)
+              </Typography>
               <FormControl fullWidth size="small" disabled={readOnly}>
-                <InputLabel>Site / Zone Propriétaire</InputLabel>
                 <Select
                   value={formData.site}
-                  label="Site / Zone Propriétaire"
+                  displayEmpty
                   onChange={(e) => updateTextValue('site', e.target.value)}
                 >
                   <MenuItem value=""><em>Sélectionner zone...</em></MenuItem>
@@ -750,16 +813,18 @@ export default function FormulaireOCPInteractive({
               </FormControl>
             </Grid>
 
-            {/* Entité */}
+            {/* Service Demandeur (P) */}
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', mb: 0.5, display: 'block' }}>
+                Service Demandeur / Propriétaire (P)
+              </Typography>
               <FormControl fullWidth size="small" disabled={readOnly}>
-                <InputLabel>Entité / Service Demandeur</InputLabel>
                 <Select
                   value={formData.entite}
-                  label="Entité / Service Demandeur"
+                  displayEmpty
                   onChange={(e) => updateTextValue('entite', e.target.value)}
                 >
-                  <MenuItem value=""><em>Sélectionner entité...</em></MenuItem>
+                  <MenuItem value=""><em>Sélectionner service...</em></MenuItem>
                   {servicesList.map((s) => (
                     <MenuItem key={s.id} value={s.nomService}>
                       {s.nomService}
@@ -769,16 +834,22 @@ export default function FormulaireOCPInteractive({
               </FormControl>
             </Grid>
 
-            {/* Service Intervenant */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={12}>
+              <Divider sx={{ my: 0.5 }} />
+            </Grid>
+
+            {/* Service Intervenant (CEEE) */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', mb: 0.5, display: 'block' }}>
+                Service Intervenant / Exécutant (CEEE) *
+              </Typography>
               <FormControl fullWidth size="small" disabled={fieldsLocked}>
-                <InputLabel>Service Intervenant (CEEE)</InputLabel>
                 <Select
                   value={formData.serviceIntervenantId || formData.servicesIntervenants}
-                  label="Service Intervenant (CEEE)"
+                  displayEmpty
                   onChange={(e) => handleSelectServiceIntervenant(e.target.value)}
                 >
-                  <MenuItem value=""><em>Sélectionner service...</em></MenuItem>
+                  <MenuItem value=""><em>-- Sélectionner le service exécutant (différent de P) --</em></MenuItem>
                   {servicesList.map((s) => (
                     <MenuItem key={s.id} value={s.id}>
                       {s.nomService}
@@ -788,16 +859,18 @@ export default function FormulaireOCPInteractive({
               </FormControl>
             </Grid>
 
-            {/* Entreprises Intervenantes */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            {/* Entreprises Intervenantes Sous-traitantes */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', mb: 0.5, display: 'block' }}>
+                Entreprise Extérieure (Tiers / Sous-traitant)
+              </Typography>
               <FormControl fullWidth size="small" disabled={fieldsLocked}>
-                <InputLabel>Entreprises Intervenantes</InputLabel>
                 <Select
                   value={formData.entreprisesIntervenantes}
-                  label="Entreprises Intervenantes"
+                  displayEmpty
                   onChange={(e) => updateTextValue('entreprisesIntervenantes', e.target.value)}
                 >
-                  <MenuItem value=""><em>Aucune (Régie interne)</em></MenuItem>
+                  <MenuItem value=""><em>Aucune (Régie interne OCP)</em></MenuItem>
                   {entreprisesList.map((ee) => (
                     <MenuItem key={ee.id} value={ee.nomEntreprise}>
                       {ee.nomEntreprise}
@@ -867,6 +940,7 @@ export default function FormulaireOCPInteractive({
                 value={formData.description}
                 disabled={fieldsLocked}
                 onChange={(e) => updateTextValue('description', e.target.value)}
+                helperText={!fieldsLocked ? "L'IA analyse automatiquement cette description pour suggérer risques, mesures, EPI et permis." : undefined}
               />
             </Grid>
           </Grid>
@@ -1004,7 +1078,7 @@ export default function FormulaireOCPInteractive({
                       >
                         {active ? <CheckBoxIcon sx={{ color: '#0284c7' }} /> : <CheckBoxOutlineBlankIcon sx={{ color: '#94a3b8' }} />}
                         <Typography variant="body2" sx={{ fontWeight: active ? 700 : 500, color: active ? '#0369a1' : '#334155' }}>
-                          {ma.nom || ma.libelle}
+                          {ma.nomMoyen || ma.nom || ma.libelle || ma.descriptionMoyen}
                         </Typography>
                       </Paper>
                     </Grid>
@@ -1046,7 +1120,7 @@ export default function FormulaireOCPInteractive({
                       >
                         {active ? <CheckBoxIcon sx={{ color: '#6366f1' }} /> : <CheckBoxOutlineBlankIcon sx={{ color: '#94a3b8' }} />}
                         <Typography variant="body2" sx={{ fontWeight: active ? 700 : 500, color: active ? '#4338ca' : '#334155' }}>
-                          {e.nom || e.nomEPI || e.libelle}
+                          {e.nomEPI || e.nomepi || e.nomEpi || e.nom || e.libelle || e.descriptionEPI}
                         </Typography>
                       </Paper>
                     </Grid>
@@ -1373,8 +1447,8 @@ export default function FormulaireOCPInteractive({
 
       {/* SIGNATURE DIALOG MODAL */}
       <Dialog open={sigDialogOpen} onClose={() => setSigDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#0f172a', color: '#fff', py: 1.5 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+        <DialogTitle component="div" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#0f172a', color: '#fff', py: 1.5 }}>
+          <Typography component="span" variant="subtitle1" sx={{ fontWeight: 800 }}>
             Signature Numérique &mdash; {activeSigField}
           </Typography>
           <IconButton onClick={() => setSigDialogOpen(false)} sx={{ color: '#fff' }}>

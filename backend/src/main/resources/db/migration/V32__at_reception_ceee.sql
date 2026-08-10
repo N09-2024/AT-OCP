@@ -1,0 +1,1 @@
+ALTER TABLE autorisations_travail ADD COLUMN date_reception_ceee TIMESTAMP;

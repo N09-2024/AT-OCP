@@ -10,6 +10,9 @@ import HMDashboardPage from '../modules/dashboard/pages/HMDashboardPage';
 import HCDashboardPage from '../modules/dashboard/pages/HCDashboardPage';
 import AdminDashboardPage from '../modules/dashboard/pages/AdminDashboardPage';
 import ResponsableExterieurDashboardPage from '../modules/dashboard/pages/ResponsableExterieurDashboardPage';
+import DemandeurDashboardPage from '../modules/dashboard/pages/DemandeurDashboardPage';
+import ResponsableEntrepriseDashboardPage from '../modules/dashboard/pages/ResponsableEntrepriseDashboardPage';
+import ResponsableOcpDashboardPage from '../modules/dashboard/pages/ResponsableOcpDashboardPage';
 import AdminLayout from '../modules/administration/AdminLayout';
 import UsersListPage from '../modules/administration/pages/UsersListPage';
 import UserFormPage from '../modules/administration/pages/UserFormPage';
@@ -28,8 +31,10 @@ import NotificationsPage from '../modules/profile/pages/NotificationsPage';
 import AutorisationListPage from '../modules/autorisations/pages/AutorisationListPage';
 import AutorisationFormPage from '../modules/autorisations/pages/AutorisationFormPage';
 import AutorisationDetailPage from '../modules/autorisations/pages/AutorisationDetailPage';
+import SignatureCeeePage from '../modules/autorisations/pages/SignatureCeeePage';
 import ValidationOCPPage from '../modules/visas/pages/ValidationOCPPage';
 import ReceptionTravauxPage from '../modules/receptions/pages/ReceptionTravauxPage';
+import CeeeReceptionPage from '../modules/receptions/pages/CeeeReceptionPage';
 import ArchiveListPage from '../modules/archives/pages/ArchiveListPage';
 import DocumentsListPage from '../modules/documents/pages/DocumentsListPage';
 import VisitesListPage from '../modules/visites/pages/VisitesListPage';
@@ -174,10 +179,13 @@ export default function AppRoutes() {
         <Route path="dashboard">
           <Route index element={<DashboardRouter />} />
           <Route path="ce" element={<RoleGuard roles={['CE', 'CEEP', 'CEEE', 'ADMIN']}><CEDashboardPage /></RoleGuard>} />
+          <Route path="demandeur" element={<RoleGuard roles={['CE', 'CEEP', 'CEEE', 'DEMANDEUR', 'ADMIN']}><DemandeurDashboardPage /></RoleGuard>} />
           <Route path="hm" element={<RoleGuard roles={['HM', 'HMEP', 'HMEE', 'ADMIN']}><HMDashboardPage /></RoleGuard>} />
           <Route path="hc" element={<RoleGuard roles={['HC', 'HCEP', 'HCEE', 'ADMIN']}><HCDashboardPage /></RoleGuard>} />
+          <Route path="ocp" element={<RoleGuard roles={['HC', 'HCEP', 'HCEE', 'RESPONSABLE_OCP', 'ADMIN']}><ResponsableOcpDashboardPage /></RoleGuard>} />
           <Route path="admin" element={<RoleGuard roles={['ADMIN']}><AdminDashboardPage /></RoleGuard>} />
           <Route path="externe" element={<RoleGuard roles={['RESPONSABLE_EXTERIEUR', 'RESPONSABLE_ENTREPRISE', 'ADMIN']}><ResponsableExterieurDashboardPage /></RoleGuard>} />
+          <Route path="entreprise" element={<RoleGuard roles={['RESPONSABLE_EXTERIEUR', 'RESPONSABLE_ENTREPRISE', 'ADMIN']}><ResponsableEntrepriseDashboardPage /></RoleGuard>} />
           <Route path="global" element={<DashboardPage />} />
         </Route>
         <Route path="documents" element={<DocumentsListPage />} />
@@ -188,6 +196,8 @@ export default function AppRoutes() {
           <Route index element={<AutorisationListPage />} />
           <Route path="nouvelle" element={<AutorisationFormPage />} />
           <Route path=":id/editer" element={<AutorisationFormPage />} />
+          <Route path=":id/signature-ceee" element={<SignatureCeeePage />} />
+          <Route path=":id/ceee" element={<SignatureCeeePage />} />
           <Route path=":id" element={<AutorisationDetailPage />} />
         </Route>
 
@@ -197,7 +207,11 @@ export default function AppRoutes() {
         </Route>
 
         {/* Réceptions des travaux */}
-        <Route path="receptions" element={<ReceptionTravauxPage />} />
+        <Route path="receptions">
+          <Route index element={<ReceptionTravauxPage />} />
+          {/* Page dédiée CEEE : réception + visa des AT transmises par le CEEP */}
+          <Route path="ceee" element={<RoleGuard roles={['CE', 'CEEE', 'ADMIN']}><CeeeReceptionPage /></RoleGuard>} />
+        </Route>
 
         {/* Archives & PDF */}
         <Route path="archives" element={<ArchiveListPage />} />
@@ -205,6 +219,8 @@ export default function AppRoutes() {
         {/* Permis */}
         <Route path="permis">
           <Route index element={<PermisListPage />} />
+          <Route path="importer" element={<PermisListPage />} />
+          <Route path="photographier" element={<PermisListPage />} />
           <Route path=":id" element={<PermisDetailsPage />} />
         </Route>
 

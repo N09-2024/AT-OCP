@@ -40,3 +40,11 @@ Thumbs.db
 # Test output
 *.test
 *.spec
+
+# Python (ai-service)
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+ai-service/.env

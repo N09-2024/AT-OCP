@@ -20,6 +20,8 @@ public interface AutorisationTravailService {
     Page<AutorisationTravailResponse> findAll(Pageable pageable);
 
     AutorisationTravailResponse findById(String id);
+    
+    AutorisationTravailResponse accuserReceptionCeee(String id);
 
     AutorisationTravailResponse autoSave(String id, AutoSaveRequest request);
 

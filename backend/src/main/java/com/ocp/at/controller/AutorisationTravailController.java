@@ -63,6 +63,13 @@ public class AutorisationTravailController {
         return ResponseEntity.status(HttpStatus.CREATED).body(atService.createDirect());
     }
 
+    @PutMapping("/autorisations-travail/{id}/accuser-reception-ceee")
+@Operation(summary = "Le CEEE accuse réception de l'AT (condition préalable à sa signature)")
+@PreAuthorize("hasAuthority('SIGN_VISA')")
+public ResponseEntity<AutorisationTravailResponse> accuserReceptionCeee(@PathVariable String id) {
+    return ResponseEntity.ok(atService.accuserReceptionCeee(id));
+}
+
     // --- CONSULTATION (tous les rôles avec READ_AT) ---
 
     @GetMapping("/autorisations-travail")

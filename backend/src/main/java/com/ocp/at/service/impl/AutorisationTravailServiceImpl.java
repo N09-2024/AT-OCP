@@ -15,6 +15,7 @@ import com.ocp.at.mapper.HistoriqueATMapper;
 import com.ocp.at.mapper.VisaMapper;
 import com.ocp.at.repository.*;
 import com.ocp.at.security.SecurityUtils;
+import com.ocp.at.security.RoleUtils;
 import com.ocp.at.service.AutorisationTravailService;
 import com.ocp.at.service.NotificationService;
 import com.ocp.at.security.ATContextService;
@@ -173,7 +174,55 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     @Override
     @Transactional(readOnly = true)
     public Page<AutorisationTravailResponse> findAll(Pageable pageable) {
-        return atRepository.findAll(pageable).map(this::mapToResponse);
+        Utilisateur currentUser = getCurrentUser();
+
+        // ADMIN et HM : vue globale complète
+        if (RoleUtils.userHasRolePattern(currentUser, "ADMIN")
+                || RoleUtils.userHasRolePattern(currentUser, "HM")) {
+            return atRepository.findAll(pageable).map(this::mapToResponse);
+        }
+
+        // CEEP : uniquement ses propres AT (brouillons + soumises + en cours)
+        if (RoleUtils.isCeep(currentUser) && !RoleUtils.isCeee(currentUser)) {
+            return atRepository.findByCeep(currentUser.getId(), pageable).map(this::mapToResponse);
+        }
+
+        // CEEE : uniquement les AT dont le service exécutant est le sien, hors brouillons
+        if (RoleUtils.isCeee(currentUser) && !RoleUtils.isCeep(currentUser)) {
+            if (currentUser.getService() != null) {
+                String zoneId = currentUser.getService().getZone() != null ? currentUser.getService().getZone().getId() : "";
+                String serviceNom = currentUser.getService().getNomService();
+                return atRepository.findByCeeeByZoneAndService(zoneId, serviceNom, pageable)
+                        .map(this::mapToResponse);
+            }
+            return Page.empty(pageable);
+        }
+
+        // CE générique (rôle CE sans précision P/E) : ses propres AT + AT de son service exécutant
+        if (RoleUtils.userHasRolePattern(currentUser, "CE")) {
+            if (currentUser.getService() != null) {
+                String zoneId = currentUser.getService().getZone() != null ? currentUser.getService().getZone().getId() : "";
+                String serviceNom = currentUser.getService().getNomService();
+                return atRepository.findByCeeeByZoneAndService(zoneId, serviceNom, pageable)
+                        .map(this::mapToResponse);
+            }
+            return atRepository.findByCeep(currentUser.getId(), pageable).map(this::mapToResponse);
+        }
+
+        // HC (HCEP/HCEE) : AT liées à leur service (propriétaire ou exécutant)
+        if (RoleUtils.userHasRolePattern(currentUser, "HC")) {
+            if (currentUser.getService() != null) {
+                String zoneId = currentUser.getService().getZone() != null ? currentUser.getService().getZone().getId() : "";
+                String serviceNom = currentUser.getService().getNomService();
+                return atRepository.findByHcByZoneAndService(zoneId, serviceNom, pageable)
+                        .map(this::mapToResponse);
+            }
+            return Page.empty(pageable);
+        }
+
+        // Défaut sécurisé : vue vide pour les rôles non catégorisés
+        log.warn("findAll() appelé pour un utilisateur sans rôle reconnu : {}", currentUser.getEmail());
+        return Page.empty(pageable);
     }
 
     @Override
@@ -201,11 +250,26 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             log.warn("autoSave AT {} par {} alors que verrou tenu par {}",
                     id, currentUser.getEmail(), at.getProprietaireBrouillon().getEmail());
         }
-        // Statut : autoriser édition tant que pas VALIDEE/CLOTUREE/ANNULEE
+        // Statut : autoriser édition uniquement en phase initiale (BROUILLON / DEMANDE_CREEE)
         StatutAT st = at.getStatut();
-        if (st == StatutAT.VALIDEE || st == StatutAT.CLOTUREE || st == StatutAT.ANNULEE
-                || st == StatutAT.ARCHIVEE) {
-            throw new BusinessException("Une AT au statut " + st + " ne peut plus être modifiée.");
+        StatutAT stWf = at.getStatutWorkflow();
+        if (st == StatutAT.SOUMISE || st == StatutAT.VALIDEE || st == StatutAT.CLOTUREE || st == StatutAT.ANNULEE
+                || st == StatutAT.ARCHIVEE || stWf == StatutAT.AT_REDIGEE || stWf == StatutAT.VISITE_REALISEE) {
+            if (!RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
+                throw new BusinessException("Cette Autorisation de Travail a déjà été transmise et ne peut plus être modifiée.");
+            }
+        }
+
+        // Seul le CEEP propriétaire du brouillon (ou un ADMIN) peut modifier le contenu de l'AT.
+        // Le CEEE ne modifie jamais le formulaire : il ne fait qu'accuser réception puis signer.
+        if (!RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
+            boolean estCeep = RoleUtils.userHasRolePattern(currentUser, "CEEP");
+            boolean estProprietaire = at.getProprietaireBrouillon() == null
+                    || at.getProprietaireBrouillon().getId().equals(currentUser.getId());
+            if (!estCeep || !estProprietaire) {
+                throw new com.ocp.at.exception.ForbiddenException(
+                        "Seul le CEEP rédacteur de cette AT (ou un administrateur) peut la modifier.");
+            }
         }
 
         at.setObjet(request.getObjet());
@@ -221,6 +285,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
         // Lier zone exécutante (E) pour résoudre/notifier les CEEE
         resoudreEtAffecterZones(at, request);
+        verifierServicesDifferents(at, request);
 
         // Cases formulaire → colonnes JSON (source de vérité)
         persistFormCheckboxes(at, request);
@@ -257,6 +322,21 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         enregistrerHistorique(savedAt, TypeActionAT.AUTO_SAVE, savedAt.getStatut(), savedAt.getStatut(), "Sauvegarde automatique");
 
         return mapToResponse(savedAt);
+    }
+    
+    @Override
+    @Transactional
+    public AutorisationTravailResponse accuserReceptionCeee(String id) {
+        AutorisationTravail at = getEntityById(id);
+        Utilisateur currentUser = getCurrentUser();
+        if (!RoleUtils.userHasRolePattern(currentUser, "CEEE")) {
+            throw new com.ocp.at.exception.ForbiddenException("Seul le CEEE du service intervenant peut accuser réception de cette AT.");
+        }
+        at.setDateReceptionCeee(LocalDateTime.now());
+        AutorisationTravail saved = atRepository.save(at);
+        enregistrerHistorique(saved, TypeActionAT.AUTO_SAVE, saved.getStatut(), saved.getStatut(),
+                "AT reçue et accusée par le CEEE " + currentUser.getEmail());
+        return mapToResponse(saved);
     }
 
     // --- GESTION DU VERROU ---
@@ -344,6 +424,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         }
 
         StatutAT ancienStatut = statutEffectif(at);
+        verifierServicesDifferents(at, null);
 
         // Dates : avertissement souple — si absentes, on ne bloque plus systématiquement
         // (le formulaire papier peut être complété terrain §8.3)
@@ -426,10 +507,16 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                 }
                 notificationService.createNotification(
                         ceee,
-                        "AT à viser (CEEE)",
-                        "L'AT " + savedAt.getNumero() + " est soumise. Signez la case Visa CEEE sur le formulaire F-HSE-SEC-31-04.",
+                        "Nouvelle intervention à signer — AT " + savedAt.getNumero(),
+                        String.format(
+                            "Une intervention est planifiée sur votre service.\nObjet : %s\nZone : %s\nDate : %s (%s → %s)\nEntreprise(s) intervenante(s) : %s\nVous devez accuser réception puis signer la case Visa CEEE.",
+                            savedAt.getObjet(),
+                            savedAt.getZoneProprietaire() != null ? savedAt.getZoneProprietaire().getNomZone() : "N/A",
+                            savedAt.getDateDebut(), savedAt.getHeureDebut(), savedAt.getHeureFin(),
+                            savedAt.getEntreprisesIntervenantes()
+                        ),
                         "ACTION",
-                        lienViser
+                        "/at/" + savedAt.getId() + "/signature-ceee"
                 );
             }
             log.info("Notifs CEEE: {} destinataire(s) pour AT {}", ceees.size(), savedAt.getNumero());
@@ -802,6 +889,23 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         }
     }
 
+    private void verifierServicesDifferents(AutorisationTravail at, AutoSaveRequest request) {
+        Utilisateur current = getCurrentUser();
+        String userServiceId = current != null && current.getService() != null ? current.getService().getId() : null;
+        String userServiceName = current != null && current.getService() != null ? current.getService().getNomService() : null;
+
+        String executantServiceId = request != null ? request.getServiceIntervenantId() : null;
+        String executantServiceName = request != null && request.getServicesIntervenants() != null ? request.getServicesIntervenants() : at.getServicesIntervenants();
+
+        if (userServiceId != null && executantServiceId != null && userServiceId.equals(executantServiceId)) {
+            throw new BusinessException("Une Autorisation de Travail ne peut pas être établie au sein d'un même service. Le service demandeur/propriétaire et le service exécutant doivent être différents.");
+        }
+        if (userServiceName != null && executantServiceName != null && !executantServiceName.isBlank()
+                && userServiceName.trim().equalsIgnoreCase(executantServiceName.trim())) {
+            throw new BusinessException("Une Autorisation de Travail ne peut pas être établie au sein d'un même service. Le service demandeur (" + userServiceName + ") et le service exécutant (" + executantServiceName + ") doivent être différents.");
+        }
+    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -824,14 +928,14 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         List<Visa> visas = visaRepository.findByAutorisationTravailId(at.getId());
 
         boolean hmOk = visas.stream().anyMatch(v -> 
-            isVisaPositif(v) && userHasRolePattern(v.getUtilisateur(), "HM")
+            isVisaPositif(v) && RoleUtils.userHasRolePattern(v.getUtilisateur(), "HM")
         );
         if (!hmOk) {
             motifs.add("Validation Haute Maîtrise (HM) manquante.");
         }
 
         boolean hcOk = visas.stream().anyMatch(v -> 
-            isVisaPositif(v) && userHasRolePattern(v.getUtilisateur(), "HC")
+            isVisaPositif(v) && RoleUtils.userHasRolePattern(v.getUtilisateur(), "HC")
         );
         if (!hcOk) {
             motifs.add("Validation Hors Cadre (HC) manquante.");
@@ -856,14 +960,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         return s == StatutVisa.VALIDE || s == StatutVisa.VALIDATION || s == StatutVisa.SIGNATURE;
     }
 
-    private boolean userHasRolePattern(Utilisateur user, String pattern) {
-        if (user == null || user.getRoles() == null) return false;
-        return user.getRoles().stream().anyMatch(r -> {
-            if (r.getNom() == null) return false;
-            String nom = r.getNom().toUpperCase();
-            return nom.contains(pattern.toUpperCase());
-        });
-    }
+    
 
     private String toJsonIds(java.util.List<String> ids) {
         if (ids == null) {

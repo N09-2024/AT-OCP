@@ -6,7 +6,6 @@ import com.ocp.at.entity.FichierJoint;
 import com.ocp.at.entity.Permis;
 import com.ocp.at.service.OCRService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -20,7 +19,6 @@ import java.util.Locale;
  * Remplaçable par LangChainProvider / CrewAIProvider branchés sur FastAPI.
  */
 @Component("mockAIProvider")
-@Primary
 public class MockAIProvider implements IAProvider {
 
     private final OCRService ocrService;

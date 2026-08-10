@@ -2,6 +2,8 @@ package com.ocp.at.entity;
 
 import com.ocp.at.entity.enums.EtatVerrou;
 import com.ocp.at.entity.enums.StatutAT;
+import com.ocp.at.entity.enums.TypeDocumentSource;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
@@ -42,6 +44,8 @@ public class AutorisationTravail {
 
     private LocalTime heureFin;
 
+    private LocalDateTime dateReceptionCeee;
+
     @Column(nullable = false, unique = true, length = 30)
     private String numero; // AT-2026-000001 (futur)
 
@@ -72,6 +76,7 @@ public class AutorisationTravail {
     @Column(name = "statut_workflow")
     private StatutAT statutWorkflow;
 
+
     @Enumerated(EnumType.STRING)
     private EtatVerrou etatVerrou;
 
@@ -88,16 +93,26 @@ public class AutorisationTravail {
      * La règle "un seul document par AT" est garantie par la contrainte UNIQUE sur chaque colonne.
      * La VisitePrealable et l'AnalyseRisque sont accessibles via le document source.
      */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "di_id", unique = true)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_document_source")
+    private TypeDocumentSource typeDocumentSource;
+
+    @Column(name = "numero_document_source", length = 50)
+    private String numeroDocumentSource;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "di_id")
+    @ToString.Exclude
     private DemandeIntervention demandeIntervention;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ot_id", unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ot_id")
+    @ToString.Exclude
     private OrdreTravail ordreTravail;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bt_id", unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bt_id")
+    @ToString.Exclude
     private BonTravail bonTravail;
 
     @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY)

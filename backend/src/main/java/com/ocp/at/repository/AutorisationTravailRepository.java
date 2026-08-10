@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import com.ocp.at.entity.enums.TypeDocumentSource;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,11 +21,12 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
 @Query(value = "SELECT nextval('seq_at_' || cast(extract(year from current_date) as text))", nativeQuery = true)
     Long getNextSequence();
 
-    boolean existsByDemandeInterventionId(String diId);
+    boolean existsByTypeDocumentSourceAndNumeroDocumentSource(
+        TypeDocumentSource typeDocumentSource, String numeroDocumentSource);
 
-    boolean existsByOrdreTravailId(String otId);
-
-    boolean existsByBonTravailId(String btId);
+    boolean existsByDemandeInterventionId(String demandeInterventionId);
+    boolean existsByOrdreTravailId(String ordreTravailId);
+    boolean existsByBonTravailId(String bonTravailId);
 
     // ============================================
     // OPTIMISATIONS N+1 - EntityGraph
@@ -55,18 +57,15 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
      * Récupère une AT complète avec toutes les relations
      */
     @EntityGraph(attributePaths = {
-            "visas", "visas.utilisateur",
-            "permis", 
-            "historiques",
-            "proprietaireBrouillon", "proprietaireBrouillon.roles",
-            "demandeIntervention",
-            "ordreTravail",
-            "bonTravail"
+        "visas", "visas.utilisateur",
+        "permis", 
+        "historiques",
+        "proprietaireBrouillon", "proprietaireBrouillon.roles"
     })
     @Query("SELECT at FROM AutorisationTravail at WHERE at.id = :id")
     Optional<AutorisationTravail> findByIdWithAllRelations(@Param("id") String id);
-
-    // ============================================
+    
+        // ============================================
     // REQUÊTES FRÉQUENTES OPTIMISÉES
     // ============================================
 
@@ -144,8 +143,47 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
     long countByProprietaireBrouillonIdAndStatut(String userId, StatutAT statut);
 
     /**
-     * Statistiques par statut (pour dashboard utilisateur)
+     * Compte les AT par statut pour un utilisateur
      */
     @Query("SELECT at.statut, COUNT(at) FROM AutorisationTravail at WHERE at.proprietaireBrouillon.id = :userId GROUP BY at.statut")
     List<Object[]> countByStatutGroupedForUser(@Param("userId") String userId);
+
+    // ============================================
+    // REQUÊTES FILTRÉES PAR RÔLE (role-aware)
+    // ============================================
+
+    /**
+     * AT visibles par le CEEP : uniquement ses propres brouillons et AT créées.
+     * Un CEEP ne voit PAS les AT d'autres CEEP.
+     */
+    @Query("SELECT at FROM AutorisationTravail at WHERE at.proprietaireBrouillon.id = :userId")
+    Page<AutorisationTravail> findByCeep(@Param("userId") String userId, Pageable pageable);
+
+    /**
+     * AT visibles par le CEEE : AT dont la zone exécutante correspond à la zone de son service,
+     * ou le nom du service correspond à servicesIntervenants, et dont le statut est hors BROUILLON.
+     */
+    @Query("SELECT at FROM AutorisationTravail at WHERE " +
+           "((at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
+           " OR (at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
+           "AND at.statut NOT IN ('BROUILLON')")
+    Page<AutorisationTravail> findByCeeeByZoneAndService(@Param("zoneId") String zoneId, @Param("serviceNom") String serviceNom, Pageable pageable);
+
+    /**
+     * AT visibles par HCEP/HCEE : AT liées à leur zone (propriétaire ou exécutante).
+     */
+    @Query("SELECT DISTINCT at FROM AutorisationTravail at WHERE " +
+           "(at.zoneProprietaire IS NOT NULL AND at.zoneProprietaire.id = :zoneId) " +
+           "OR (at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
+           "OR (at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))")
+    Page<AutorisationTravail> findByHcByZoneAndService(@Param("zoneId") String zoneId, @Param("serviceNom") String serviceNom, Pageable pageable);
+
+    /**
+     * AT à viser par le CEEE (statut SOUMISE) liées à son service exécutant.
+     */
+    @Query("SELECT at FROM AutorisationTravail at WHERE " +
+           "((at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
+           " OR (at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
+           "AND at.statut = 'SOUMISE'")
+    List<AutorisationTravail> findATaViserByCeee(@Param("zoneId") String zoneId, @Param("serviceNom") String serviceNom);
 }

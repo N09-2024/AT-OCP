@@ -279,15 +279,25 @@ export default function AutorisationListPage() {
                         </Tooltip>
 
                         {row.statut === 'SOUMISE' && (
-                          <Tooltip title="Viser sur le formulaire F-HSE (CEEE) ou valider (HCEE)">
+                          <Tooltip title="Viser cette AT (depuis votre interface dédiée)">
                             <IconButton
                               size="small"
                               onClick={() => {
                                 const roles = user?.roles?.map((r: any) => r.nom) || [];
-                                if (roles.includes('CEEE') && !roles.includes('HCEE')) {
-                                  navigate(`/autorisations/${row.id}/editer?mode=viser`);
-                                } else {
+                                const isCeee = roles.some((r: string) => r === 'CEEE' || r === 'CE');
+                                const isCeep = roles.some((r: string) => r === 'CEEP');
+                                const isHcee = roles.some((r: string) => ['HCEE', 'HCEP', 'HC', 'RESPONSABLE_OCP'].includes(r));
+                                const isHmee = roles.some((r: string) => ['HMEE', 'HMEP', 'HM'].includes(r));
+
+                                if (isHcee || isHmee) {
+                                  // HC et HM → page de validation officielle
                                   navigate(`/visas/validation/${row.id}`);
+                                } else if (isCeee && !isCeep) {
+                                  // CEEE strict → SA propre page de signature (interface dédiée)
+                                  navigate(`/autorisations/${row.id}/signature-ceee`);
+                                } else {
+                                  // CEEP ou rôle générique CE → consulter l'AT
+                                  navigate(`/autorisations/${row.id}`);
                                 }
                               }}
                               sx={{ color: '#059669' }}

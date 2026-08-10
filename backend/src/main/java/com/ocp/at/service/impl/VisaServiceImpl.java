@@ -34,6 +34,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.ocp.at.security.RoleUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -101,6 +102,15 @@ public class VisaServiceImpl implements VisaService {
         if (signature == null || signature.isEmpty()) {
             throw new BusinessException("La signature est obligatoire");
         }
+
+
+        AutorisationTravail at = visa.getAutorisationTravail();
+        // La vérification de réception CEEE ne s'applique qu'aux signataires ayant le rôle CEEE
+        if (RoleUtils.userHasRolePattern(currentUser, "CEEE")
+                && at.getDateReceptionCeee() == null) {
+            throw new BusinessException("Le CEEE doit d'abord accuser réception de l'AT avant de pouvoir la signer.");
+        }
+
 
         String contentType = signature.getContentType();
         String originalName = signature.getOriginalFilename();

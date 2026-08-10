@@ -199,7 +199,9 @@ export default function AutorisationFormPage() {
   };
 
   // Save Draft Handler
-  const handleSaveDraft = async (data: any) => {
+  const handleSaveDraft = async (rawData: any) => {
+    // Guard: merge null/undefined data with empty object to avoid null-access crashes
+    const data = rawData ?? {};
     setFormInteractiveData(data);
     setLoading(true);
     setStatusMsg('Enregistrement du brouillon...');
@@ -234,39 +236,38 @@ export default function AutorisationFormPage() {
         permisIds: (data.permisIds || []).map(String),
       };
 
-      await apiClient.put(`/autorisations-travail/${currentId}/autosave`, payload);
-      // Recharger pour confirmer risquesIds / mesuresIds / etc. persistés
-      try {
-        const refreshed = await apiClient.get(`/autorisations-travail/${currentId}`);
-        const at = refreshed.data;
-        setFormInteractiveData((prev: any) => ({
-          ...prev,
-          ...data,
-          _loaded: true,
-          risquesIds: (at.risquesIds || []).map(String),
-          mesuresIds: (at.mesuresIds || []).map(String),
-          episIds: (at.episIds || []).map(String),
-          moyensAccesIds: (at.moyensAccesIds || []).map(String),
-          permisIds: (at.permisIds || []).map(String),
-          description: at.descriptionTravaux || data.description || '',
-          servicesIntervenants: at.servicesIntervenants || data.servicesIntervenants || '',
-          sectionF: at.mesuresSecuriteExecutant || data.sectionF || '',
-        }));
-      } catch {
-        /* ignore refresh errors */
-      }
+      // ⚠️ On NE refait PLUS de GET après le PUT : la réponse du PUT est déjà
+      // la source de vérité persistée (mapToResponse côté backend inclut les
+      // listes reconstruites depuis les colonnes JSON). Le second GET créait
+      // une fenêtre de course qui pouvait écraser une case cochée entre-temps.
+      const { data: saved } = await apiClient.put(`/autorisations-travail/${currentId}/autosave`, payload);
+
+      setFormInteractiveData((prev: any) => ({
+        ...prev,
+        ...data,
+        _loaded: true,
+        id: saved.id,
+        numero: saved.numero || prev?.numero,
+        risquesIds: ((saved.risquesIds && saved.risquesIds.length > 0) ? saved.risquesIds : (data.risquesIds || prev?.risquesIds || [])).map(String),
+        mesuresIds: ((saved.mesuresIds && saved.mesuresIds.length > 0) ? saved.mesuresIds : (data.mesuresIds || prev?.mesuresIds || [])).map(String),
+        episIds: ((saved.episIds && saved.episIds.length > 0) ? saved.episIds : (data.episIds || prev?.episIds || [])).map(String),
+        moyensAccesIds: ((saved.moyensAccesIds && saved.moyensAccesIds.length > 0) ? saved.moyensAccesIds : (data.moyensAccesIds || prev?.moyensAccesIds || [])).map(String),
+        permisIds: ((saved.permisIds && saved.permisIds.length > 0) ? saved.permisIds : (data.permisIds || prev?.permisIds || [])).map(String),
+        description: saved.descriptionTravaux || data.description || '',
+        servicesIntervenants: saved.servicesIntervenants || data.servicesIntervenants || '',
+        sectionF: saved.mesuresSecuriteExecutant || data.sectionF || '',
+      }));
+
       setStatusMsg('Brouillon enregistré ✓');
       setTimeout(() => setStatusMsg(null), 3000);
     } catch (err: any) {
-      console.error('autosave error', err);
-      const msg = err.response?.data?.message || err.message || 'Erreur sauvegarde';
-      // Ne pas spammer d'alertes sur autosave cases — message discret
-      setStatusMsg('⚠ ' + msg);
-      setTimeout(() => setStatusMsg(null), 4000);
+      setStatusMsg(null);
+      throw err;
     } finally {
       setLoading(false);
     }
   };
+
 
   // Submit Handler (Signature & Workflow Transition)
   const handleSubmitAT = async (data: any, signatureBlob?: Blob) => {
@@ -284,8 +285,8 @@ export default function AutorisationFormPage() {
       if (!ctrl.complet && ctrl.alertes?.length) {
         const ok = window.confirm(
           'Contrôle IA — alertes :\n\n' +
-            ctrl.alertes.join('\n') +
-            '\n\nSoumettre quand même ?'
+          ctrl.alertes.join('\n') +
+          '\n\nSoumettre quand même ?'
         );
         if (!ok) return;
       }
@@ -540,18 +541,18 @@ export default function AutorisationFormPage() {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <AssignmentIcon color="success" />
                   <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                    Étape 1 — Demande d'intervention (§8.1)
+                    Étape 1 — Déclaration & Nature de l'AT (§8.1)
                   </Typography>
                 </Box>
                 <Alert severity="success" sx={{ mb: 2 }}>
-                  Associez un document d'accompagnement obligatoire : DI, OT, ou BT (§8.1).
+                  Le CEEP crée directement l'AT. Sélectionnez la nature de l'AT : Demande d'Intervention (DI), Ordre de Travail (OT) ou Bon de Travail (BT).
                 </Alert>
 
                 <FormControl fullWidth margin="normal">
-                  <InputLabel>Type de document source</InputLabel>
+                  <InputLabel>Nature / Type de l'AT</InputLabel>
                   <Select
                     value={docType}
-                    label="Type de document source"
+                    label="Nature / Type de l'AT"
                     onChange={(e) => setDocType(e.target.value as any)}
                   >
                     {DOCUMENT_TYPES.map((dt) => (

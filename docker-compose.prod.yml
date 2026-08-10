@@ -82,6 +82,23 @@ services:
     networks:
       - at-ocp-network
 
+  ai-service:
+    image: ${DOCKER_USERNAME}/at-ocp-ai-service:latest
+    container_name: at-ocp-ai-service-prod
+    restart: always
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - at-ocp-network
+
 volumes:
   postgres_data:
     driver: local
