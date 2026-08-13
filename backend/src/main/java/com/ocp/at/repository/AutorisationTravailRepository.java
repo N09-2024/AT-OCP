@@ -179,11 +179,30 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
     Page<AutorisationTravail> findByHcByZoneAndService(@Param("zoneId") String zoneId, @Param("serviceNom") String serviceNom, Pageable pageable);
 
     /**
-     * AT à viser par le CEEE (statut SOUMISE) liées à son service exécutant.
+     * AT visibles par un Chef d'Équipe (CE) :
+     * 1. AT qu'il a créées (proprietaireBrouillon = userId) — y compris ses brouillons (CEEP)
+     * 2. AT où son service est exécutant et le statut est hors BROUILLON (CEEE)
      */
-    @Query("SELECT at FROM AutorisationTravail at WHERE " +
+    @Query("SELECT DISTINCT at FROM AutorisationTravail at WHERE " +
+           "(at.proprietaireBrouillon IS NOT NULL AND at.proprietaireBrouillon.id = :userId) " +
+           "OR (" +
+           "  ((at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
+           "   OR (at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
+           "  AND at.statut NOT IN ('BROUILLON')" +
+           ")")
+    Page<AutorisationTravail> findForChefEquipe(
+        @Param("userId") String userId,
+        @Param("zoneId") String zoneId,
+        @Param("serviceNom") String serviceNom,
+        Pageable pageable
+    );
+
+    /**
+     * AT à viser par le CEEE (statut SOUMISE, DEMANDE_CREEE, EN_VISITE_REDACTION, AT_REDIGEE) liées à son service exécutant.
+     */
+    @Query("SELECT DISTINCT at FROM AutorisationTravail at WHERE " +
            "((at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
            " OR (at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
-           "AND at.statut = 'SOUMISE'")
+           "AND at.statut IN ('SOUMISE', 'DEMANDE_CREEE', 'EN_VISITE_REDACTION', 'AT_REDIGEE')")
     List<AutorisationTravail> findATaViserByCeee(@Param("zoneId") String zoneId, @Param("serviceNom") String serviceNom);
 }

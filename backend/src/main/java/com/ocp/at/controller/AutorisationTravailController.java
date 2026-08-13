@@ -64,11 +64,11 @@ public class AutorisationTravailController {
     }
 
     @PutMapping("/autorisations-travail/{id}/accuser-reception-ceee")
-@Operation(summary = "Le CEEE accuse réception de l'AT (condition préalable à sa signature)")
-@PreAuthorize("hasAuthority('SIGN_VISA')")
-public ResponseEntity<AutorisationTravailResponse> accuserReceptionCeee(@PathVariable String id) {
-    return ResponseEntity.ok(atService.accuserReceptionCeee(id));
-}
+    @Operation(summary = "Le CEEE accuse réception de l'AT (condition préalable à sa signature)")
+    @PreAuthorize("isAuthenticated()")  // Tout CE lié à l'AT peut accuser réception (vérification métier dans le service)
+    public ResponseEntity<AutorisationTravailResponse> accuserReceptionCeee(@PathVariable String id) {
+        return ResponseEntity.ok(atService.accuserReceptionCeee(id));
+    }
 
     // --- CONSULTATION (tous les rôles avec READ_AT) ---
 

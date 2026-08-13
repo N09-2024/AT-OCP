@@ -24,16 +24,13 @@ import java.util.stream.Collectors;
  * <p>Rôles applicatifs : CE, HM, HC, ADMIN, RESPONSABLE_EXTERIEUR.
  * Positions P/E calculées via {@code utilisateur.service.zone} vs zones de l'AT.</p>
  */
+import com.ocp.at.entity.enums.NiveauHierarchique;
+import com.ocp.at.entity.enums.PositionAT;
+
 @Component("atContext")
 @RequiredArgsConstructor
 @Slf4j
 public class ATContextService {
-
-    public enum PositionAT {
-        PROPRIETAIRE,
-        EXECUTANT,
-        AUCUNE
-    }
 
     /** Rôles applicatifs V28 */
     public static final String ROLE_CE = "CE";
@@ -50,25 +47,60 @@ public class ATContextService {
     // =========================================================================
 
     @Transactional(readOnly = true)
-    public PositionAT resoudrePosition(String atId) {
-        Utilisateur user = getCurrentUser();
-        if (user.getService() == null || user.getService().getZone() == null) {
-            log.warn("[ATContext] {} sans service/zone — position AUCUNE sur AT {}", user.getEmail(), atId);
+    public PositionAT resolvePosition(Utilisateur user, AutorisationTravail at) {
+        if (user == null || at == null || user.getService() == null || user.getService().getZone() == null) {
             return PositionAT.AUCUNE;
         }
-
-        AutorisationTravail at = getAt(atId);
         String userZoneId = user.getService().getZone().getId();
-
-        if (at.getZoneProprietaire() != null
-                && userZoneId.equals(at.getZoneProprietaire().getId())) {
+        if (at.getZoneProprietaire() != null && userZoneId.equals(at.getZoneProprietaire().getId())) {
             return PositionAT.PROPRIETAIRE;
         }
-        if (at.getZoneExecutante() != null
-                && userZoneId.equals(at.getZoneExecutante().getId())) {
+        if (at.getZoneExecutante() != null && userZoneId.equals(at.getZoneExecutante().getId())) {
             return PositionAT.EXECUTANT;
         }
         return PositionAT.AUCUNE;
+    }
+
+    public boolean peutAgir(Utilisateur user, AutorisationTravail at, String etape) {
+        if (user == null) return false;
+        NiveauHierarchique niv = user.getNiveau();
+        if (niv == NiveauHierarchique.ADMIN) return true;
+
+        PositionAT pos = resolvePosition(user, at);
+
+        switch (etape.toUpperCase(Locale.ROOT)) {
+            case "CREATION":
+                return niv == NiveauHierarchique.CHEF_EQUIPE && pos == PositionAT.PROPRIETAIRE;
+            case "VISITE_REDACTION":
+                return niv == NiveauHierarchique.CHEF_EQUIPE && (pos == PositionAT.PROPRIETAIRE || pos == PositionAT.EXECUTANT);
+            case "GARANT_VISITE":
+                return (niv == NiveauHierarchique.HORS_CADRE && pos == PositionAT.EXECUTANT)
+                    || (niv == NiveauHierarchique.HAUTE_MAITRISE && pos == PositionAT.PROPRIETAIRE);
+            case "DEMARRAGE":
+                return niv == NiveauHierarchique.CHEF_EQUIPE && pos == PositionAT.EXECUTANT;
+            case "GARANT_DEMARRAGE":
+                return (niv == NiveauHierarchique.HORS_CADRE && pos == PositionAT.EXECUTANT)
+                    || (niv == NiveauHierarchique.HAUTE_MAITRISE && pos == PositionAT.EXECUTANT);
+            case "RECONDUCTION":
+                return niv == NiveauHierarchique.CHEF_EQUIPE && (pos == PositionAT.PROPRIETAIRE || pos == PositionAT.EXECUTANT);
+            case "DECLARATION_FIN":
+                return niv == NiveauHierarchique.CHEF_EQUIPE && pos == PositionAT.EXECUTANT;
+            case "RECEPTION":
+                return niv == NiveauHierarchique.CHEF_EQUIPE && (pos == PositionAT.PROPRIETAIRE || pos == PositionAT.EXECUTANT);
+            case "ARCHIVAGE":
+                return niv == NiveauHierarchique.HAUTE_MAITRISE && pos == PositionAT.PROPRIETAIRE;
+            case "GARANT_ARCHIVAGE":
+                return niv == NiveauHierarchique.HORS_CADRE && pos == PositionAT.PROPRIETAIRE;
+            default:
+                return false;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public PositionAT resoudrePosition(String atId) {
+        Utilisateur user = getCurrentUser();
+        AutorisationTravail at = getAt(atId);
+        return resolvePosition(user, at);
     }
 
     @Transactional(readOnly = true)

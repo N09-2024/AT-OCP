@@ -105,10 +105,48 @@ public class VisaServiceImpl implements VisaService {
 
 
         AutorisationTravail at = visa.getAutorisationTravail();
-        // La vérification de réception CEEE ne s'applique qu'aux signataires ayant le rôle CEEE
-        if (RoleUtils.userHasRolePattern(currentUser, "CEEE")
-                && at.getDateReceptionCeee() == null) {
-            throw new BusinessException("Le CEEE doit d'abord accuser réception de l'AT avant de pouvoir la signer.");
+        List<Visa> existingVisas = visaRepository.findByAutorisationTravailId(at.getId());
+
+        boolean isSigningCeee = RoleUtils.userHasRolePattern(currentUser, "CEEE")
+                || (commentaire != null && commentaire.toUpperCase().contains("CEEE"));
+
+        boolean isSigningHc = RoleUtils.userHasRolePattern(currentUser, "HCEP")
+                || RoleUtils.userHasRolePattern(currentUser, "HCEE")
+                || RoleUtils.userHasRolePattern(currentUser, "HC")
+                || (commentaire != null && (commentaire.toUpperCase().contains("HCEP") || commentaire.toUpperCase().contains("HCEE")));
+
+        boolean isSigningHm = RoleUtils.userHasRolePattern(currentUser, "HMEP")
+                || RoleUtils.userHasRolePattern(currentUser, "HMEE")
+                || RoleUtils.userHasRolePattern(currentUser, "HM")
+                || (commentaire != null && (commentaire.toUpperCase().contains("HMEP") || commentaire.toUpperCase().contains("HMEE")));
+
+        boolean ceepSigned = isRoleSigned(existingVisas, "CEEP");
+        boolean ceeeSigned = isRoleSigned(existingVisas, "CEEE");
+        boolean hcepSigned = isRoleSigned(existingVisas, "HCEP");
+        boolean hceeSigned = isRoleSigned(existingVisas, "HCEE");
+
+        // 1. CEEE doit signer APRÈS CEEP
+        if (isSigningCeee && !RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
+            if (at.getDateReceptionCeee() == null) {
+                throw new BusinessException("Le CEEE doit d'abord accuser réception de l'AT avant de pouvoir la signer.");
+            }
+            if (!ceepSigned) {
+                throw new BusinessException("Le CEEP doit d'abord signer l'AT (Étape 1) avant la signature du CEEE (Étape 2).");
+            }
+        }
+
+        // 2. HC (HCEP / HCEE) doivent signer APRÈS CEEP et CEEE
+        if (isSigningHc && !RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
+            if (!ceepSigned || !ceeeSigned) {
+                throw new BusinessException("Le CEEP et le CEEE doivent d'abord signer l'AT avant la signature des Hors Cadre (HCEP / HCEE).");
+            }
+        }
+
+        // 3. HM (HMEP / HMEE) doivent signer APRÈS HCEP et HCEE
+        if (isSigningHm && !RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
+            if (!hcepSigned || !hceeSigned) {
+                throw new BusinessException("Le HCEP et le HCEE doivent d'abord signer l'AT avant la signature de la Haute Maîtrise (HMEP / HMEE).");
+            }
         }
 
 
@@ -189,5 +227,19 @@ public class VisaServiceImpl implements VisaService {
             hexString.append(hex);
         }
         return hexString.toString();
+    }
+
+    private boolean isRoleSigned(List<Visa> visas, String roleCode) {
+        if (visas == null || visas.isEmpty()) return false;
+        return visas.stream().anyMatch(v -> {
+            if (v.getStatut() == null || v.getStatut() == StatutVisa.REFUS || v.getStatut() == StatutVisa.REFUSE) {
+                return false;
+            }
+            String comment = v.getCommentaire() != null ? v.getCommentaire().toUpperCase() : "";
+            if (comment.contains(roleCode.toUpperCase())) return true;
+            Utilisateur u = v.getUtilisateur();
+            if (u != null && RoleUtils.userHasRolePattern(u, roleCode)) return true;
+            return false;
+        });
     }
 }

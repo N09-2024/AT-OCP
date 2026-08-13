@@ -187,30 +187,95 @@ export default function AutorisationDetailPage() {
               sx={{ fontWeight: 700, background: '#f59e0b', '&:hover': { background: '#d97706' } }}
             >
               Reprendre le brouillon
-            </Button>
-          )}
+           {/* Actions de signatures adaptées CEEP -> CEEE -> HC (HCEP, HCEE) -> HM (HMEP, HMEE) */}
+          {(() => {
+            const hasCeep = at.statut !== 'BROUILLON';
+            const hasCeee = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('CEEE') || (v as any).utilisateurNomComplet?.includes('CEEE')));
+            const hasHcep = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('HCEP') || (v as any).utilisateurNomComplet?.includes('HCEP')));
+            const hasHcee = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('HCEE') || (v as any).utilisateurNomComplet?.includes('HCEE')));
+            const hasHmep = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('HMEP') || (v as any).utilisateurNomComplet?.includes('HMEP')));
+            const hasHmee = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('HMEE') || (v as any).utilisateurNomComplet?.includes('HMEE')));
 
-          {at.statut === 'SOUMISE' && canViserSoumise && (
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<CheckCircleIcon />}
-              onClick={() => {
-                if (isCeee && !canGarantirSoumise) {
-                  navigate(`/autorisations/${at.id}/editer?mode=viser`);
-                } else {
-                  navigate(`/visas/validation/${at.id}`);
-                }
-              }}
-              sx={{ fontWeight: 700 }}
-            >
-              {isCeee && !canGarantirSoumise
-                ? "Étape 3 : Viser le formulaire (case CEEE)"
-                : isHm && !isHc
-                  ? 'Étape 3 : Garantir l\'AT (Haute Maîtrise)'
-                  : 'Étape 3 : Garantir / Valider (Hors Cadre HCEE)'}
-            </Button>
-          )}
+            const isHcepUser = roles.includes('HCEP') || roles.includes('ADMIN');
+            const isHceeUser = roles.includes('HCEE') || roles.includes('HC') || roles.includes('ADMIN');
+            const isHmepUser = roles.includes('HMEP') || roles.includes('HM') || roles.includes('ADMIN');
+            const isHmeeUser = roles.includes('HMEE') || roles.includes('HM') || roles.includes('ADMIN');
+
+            const ceepCeeeComplete = hasCeep && (hasCeee || at.statut === 'AT_REDIGEE' || at.statut === 'VALIDEE');
+            const hcepHceeComplete = hasHcep && hasHcee;
+
+            return (
+              <>
+                {!hasHcep && (isHcepUser || roles.includes('HC')) && (
+                  <Tooltip title={!ceepCeeeComplete ? "CEEP et CEEE doivent signer d'abord" : "Signer l'AT en tant que HCEP"}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<CheckCircleIcon />}
+                        disabled={!ceepCeeeComplete && !roles.includes('ADMIN')}
+                        onClick={() => navigate(`/visas/validation/${at.id}?role=HCEP`)}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        Signer AT (HCEP — Hors Cadre Propriétaire)
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
+
+                {!hasHcee && (isHceeUser || roles.includes('HC')) && (
+                  <Tooltip title={!ceepCeeeComplete ? "CEEP et CEEE doivent signer d'abord" : "Signer l'AT en tant que HCEE"}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        color="info"
+                        startIcon={<CheckCircleIcon />}
+                        disabled={!ceepCeeeComplete && !roles.includes('ADMIN')}
+                        onClick={() => navigate(`/visas/validation/${at.id}?role=HCEE`)}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        Signer AT (HCEE — Hors Cadre Exécutant)
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
+
+                {!hasHmep && (isHmepUser || roles.includes('HM')) && (
+                  <Tooltip title={!hcepHceeComplete ? "HCEP et HCEE doivent signer d'abord" : "Signer l'AT en tant que HMEP"}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        startIcon={<CheckCircleIcon />}
+                        disabled={!hcepHceeComplete && !roles.includes('ADMIN')}
+                        onClick={() => navigate(`/visas/validation/${at.id}?role=HMEP`)}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        Signer AT (HMEP — Haute Maîtrise Propriétaire)
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
+
+                {!hasHmee && (isHmeeUser || roles.includes('HM')) && (
+                  <Tooltip title={!hcepHceeComplete ? "HCEP et HCEE doivent signer d'abord" : "Signer l'AT en tant que HMEE"}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<CheckCircleIcon />}
+                        disabled={!hcepHceeComplete && !roles.includes('ADMIN')}
+                        onClick={() => navigate(`/visas/validation/${at.id}?role=HMEE`)}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        Signer AT (HMEE — Haute Maîtrise Exécutant)
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
+              </>
+            );
+          })()}}
 
           {(at.statut === 'VALIDEE' || at.statut === 'AT_REDIGEE') && (
             <Button

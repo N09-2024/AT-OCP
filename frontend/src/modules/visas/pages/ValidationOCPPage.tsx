@@ -73,13 +73,32 @@ export default function ValidationOCPPage() {
 
     setSubmitting(true);
     try {
-      // 1. Signer le visa du CEEE / HCEE
-      await visaApi.createAndSignVisa(id, signatureBlob, commentaire || 'Visa CEEE / HCEE — signature manuscrite', 2);
+      // Déterminer le rôle contextuel (HCEP, HCEE, HMEP, HMEE)
+      const userRoles = _user?.roles?.map((r: any) => r.nom) || [];
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlRole = searchParams.get('role');
+
+      let targetRoleTag = urlRole || 'HCEE';
+      if (!urlRole) {
+        if (userRoles.includes('HCEP')) targetRoleTag = 'HCEP';
+        else if (userRoles.includes('HCEE')) targetRoleTag = 'HCEE';
+        else if (userRoles.includes('HMEP')) targetRoleTag = 'HMEP';
+        else if (userRoles.includes('HMEE')) targetRoleTag = 'HMEE';
+        else if (userRoles.includes('HC')) targetRoleTag = 'HCEE';
+        else if (userRoles.includes('HM')) targetRoleTag = 'HMEP';
+      }
+
+      const finalCommentaire = commentaire
+        ? `Visa ${targetRoleTag} — ${commentaire}`
+        : `Visa ${targetRoleTag} — Signature officielle`;
+
+      // 1. Signer le visa avec l'étiquette de rôle
+      await visaApi.createAndSignVisa(id, signatureBlob, finalCommentaire, 2);
 
       // 2. Valider l'AT
       await autorisationTravailApi.valider(id);
 
-      alert('Autorisation de Travail validée avec succès !');
+      alert(`Visa ${targetRoleTag} apposé et Autorisation de Travail mise à jour avec succès !`);
       navigate('/autorisations');
     } catch (err: any) {
       console.error(err);

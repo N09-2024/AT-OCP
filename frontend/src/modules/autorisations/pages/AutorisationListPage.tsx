@@ -79,8 +79,8 @@ export default function AutorisationListPage() {
       (item.numero || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.objet || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    if (statusFilter === 'a-signer') return matchesSearch && item.statut === 'BROUILLON';
-    if (statusFilter === 'a-valider') return matchesSearch && item.statut === 'SOUMISE';
+    if (statusFilter === 'a-signer') return matchesSearch && (item.statut === 'BROUILLON' || item.statut === 'DEMANDE_CREEE');
+    if (statusFilter === 'a-valider') return matchesSearch && (item.statut === 'SOUMISE' || item.statut === 'EN_VISITE_REDACTION' || item.statut === 'AT_REDIGEE');
     if (statusFilter !== 'TOUS') return matchesSearch && item.statut === statusFilter;
     return matchesSearch;
   });
@@ -88,31 +88,41 @@ export default function AutorisationListPage() {
   const getStatusChip = (statut: string) => {
     switch (statut) {
       case 'CLASSIFICATION_EFFECTUEE':
-        return <Chip label="Classifiée (Niveau 2)" color="secondary" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="Classifiée (Niv.2)" color="secondary" size="small" sx={{ fontWeight: 700 }} />;
       case 'DEMANDE_CREEE':
-        return <Chip label="Demande créée" color="primary" size="small" sx={{ fontWeight: 700 }} />;
+      case 'BROUILLON':
+        return <Chip label="Brouillon / Créée" color="default" size="small" sx={{ fontWeight: 700 }} />;
+      case 'EN_VISITE_REDACTION':
+        return <Chip label="Visite & Rédaction" color="info" size="small" sx={{ fontWeight: 700 }} />;
       case 'VISITE_REALISEE':
         return <Chip label="Visite réalisée" color="info" size="small" sx={{ fontWeight: 700 }} />;
       case 'AT_REDIGEE':
+      case 'SOUMISE':
+        return <Chip label="AT Rédigée ✏️" color="warning" size="small" sx={{ fontWeight: 700 }} />;
+      case 'AT_VALIDEE':
       case 'VALIDEE':
-        return <Chip label="AT Rédigée / Validée ✓" color="success" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="AT Validée ✓" color="success" size="small" sx={{ fontWeight: 700 }} />;
+      case 'EN_COURS':
       case 'INTERVENTION_EN_COURS':
         return <Chip label="En cours ⚡" color="warning" size="small" sx={{ fontWeight: 700 }} />;
+      case 'EN_RECONDUCTION':
       case 'AT_RECONDUITE':
         return <Chip label="Reconduite 🔄" color="warning" size="small" sx={{ fontWeight: 700 }} />;
+      case 'DECLAREE_TERMINEE':
       case 'FIN_TRAVAUX_DECLAREE':
         return <Chip label="Fin déclarée 🏁" color="info" size="small" sx={{ fontWeight: 700 }} />;
+      case 'RECEPTIONEES':
       case 'TRAVAUX_RECEPTIONES':
       case 'CLOTUREE':
-        return <Chip label="Réceptionnée / Clôturée" color="success" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="Réceptionnée ✓" color="success" size="small" sx={{ fontWeight: 700 }} />;
       case 'ARCHIVEE':
         return <Chip label="Archivée" color="secondary" size="small" sx={{ fontWeight: 700 }} />;
-      case 'SOUMISE':
-        return <Chip label="Soumise" color="warning" size="small" sx={{ fontWeight: 700 }} />;
       case 'REJETEE':
         return <Chip label="Rejetée ✗" color="error" size="small" sx={{ fontWeight: 700 }} />;
+      case 'ANNULEE':
+        return <Chip label="Annulée" color="error" size="small" variant="outlined" sx={{ fontWeight: 700 }} />;
       default:
-        return <Chip label={statut || "Brouillon"} color="default" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label={statut || 'Brouillon'} color="default" size="small" sx={{ fontWeight: 700 }} />;
     }
   };
 
@@ -182,13 +192,24 @@ export default function AutorisationListPage() {
 
           <Grid size={{ xs: 12, md: 7 }}>
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-              {['TOUS', 'BROUILLON', 'SOUMISE', 'VALIDEE', 'REJETEE', 'CLOTUREE'].map((st) => (
+              {[
+                { label: 'Toutes', value: 'TOUS' },
+                { label: 'Brouillon', value: 'DEMANDE_CREEE' },
+                { label: 'Visite & Rédaction', value: 'EN_VISITE_REDACTION' },
+                { label: 'AT Rédigée', value: 'AT_REDIGEE' },
+                { label: 'Validée', value: 'AT_VALIDEE' },
+                { label: 'En cours', value: 'EN_COURS' },
+                { label: 'Fin déclarée', value: 'DECLAREE_TERMINEE' },
+                { label: 'Réceptionnée', value: 'RECEPTIONEES' },
+                { label: 'Rejetée', value: 'REJETEE' },
+                { label: 'Annulée', value: 'ANNULEE' },
+              ].map((f) => (
                 <Chip
-                  key={st}
-                  label={st === 'TOUS' ? 'Toutes' : st}
-                  onClick={() => setStatusFilter(st)}
-                  color={statusFilter === st ? 'primary' : 'default'}
-                  variant={statusFilter === st ? 'filled' : 'outlined'}
+                  key={f.value}
+                  label={f.label}
+                  onClick={() => setStatusFilter(f.value)}
+                  color={statusFilter === f.value ? 'primary' : 'default'}
+                  variant={statusFilter === f.value ? 'filled' : 'outlined'}
                   sx={{ fontWeight: 600, cursor: 'pointer' }}
                 />
               ))}
@@ -319,26 +340,29 @@ export default function AutorisationListPage() {
                           </Tooltip>
                         )}
 
-                        {(row.statut === 'VALIDEE' || row.statut === 'CLOTUREE') && (
-                          <Tooltip title="Exporter le PDF officiel">
-                            <IconButton
-                              size="small"
-                              onClick={async () => {
-                                try {
-                                  const blob = await autorisationTravailApi.exportPdf(row.id);
-                                  const url = window.URL.createObjectURL(blob);
-                                  const a = document.createElement('a');
-                                  a.href = url;
-                                  a.download = `${row.numero}.pdf`;
-                                  a.click();
-                                } catch (e) {
-                                  alert('Erreur lors de l\'export PDF.');
-                                }
-                              }}
-                              color="error"
-                            >
-                              <PictureAsPdfIcon fontSize="small" />
-                            </IconButton>
+                        {(row.statut === 'VALIDEE' || row.statut === 'CLOTUREE' || row.statut === 'AT_REDIGEE' || row.statut === 'EN_COURS') && (
+                          <Tooltip title={row.exportPdfAutorise ? "Exporter le PDF officiel" : "PDF verrouillé : Signatures HCEP, HCEE, HMEP, HMEE requises"}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={row.exportPdfAutorise === false}
+                                onClick={async () => {
+                                  try {
+                                    const blob = await autorisationTravailApi.exportPdf(row.id);
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${row.numero}.pdf`;
+                                    a.click();
+                                  } catch (e: any) {
+                                    alert(e.response?.data?.message || 'Erreur lors de l\'export PDF.');
+                                  }
+                                }}
+                                color="error"
+                              >
+                                <PictureAsPdfIcon fontSize="small" />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         )}
                       </Stack>

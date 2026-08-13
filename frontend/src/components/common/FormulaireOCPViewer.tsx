@@ -7,13 +7,15 @@ import { Box, CircularProgress } from '@mui/material';
 interface FormulaireOCPViewerProps {
   at: AutorisationTravail;
   visas?: Visa[];
+  signMode?: 'ceep' | 'ceee' | 'all' | 'none';
+  onVisaCeee?: (formData: any, blob: Blob) => void | Promise<void>; // ← union
 }
 
 /**
  * Affiche le formulaire F-HSE-SEC-31-04 en lecture seule.
  * Les signatures sont chargées via Axios (JWT) car <img src="/api/..."> → 401.
  */
-export default function FormulaireOCPViewer({ at, visas = [] }: FormulaireOCPViewerProps) {
+export default function FormulaireOCPViewer({ at, visas = [], signMode, onVisaCeee }: FormulaireOCPViewerProps) {
   const [signatureUrls, setSignatureUrls] = useState<Record<string, string>>({});
   const [loadingSig, setLoadingSig] = useState(false);
 
@@ -53,22 +55,32 @@ export default function FormulaireOCPViewer({ at, visas = [] }: FormulaireOCPVie
   const formattedData = {
     ...at,
     numero: at.numero,
-    site: at.zoneProprietaire?.nomZone || '..................',
-    entite: at.servicesIntervenants || '..................',
-    lieu: at.zoneProprietaire?.nomZone || '..................',
+    site: (at as any).zoneProprietaireNom || at.zoneProprietaire?.nomZone || '..................',
+    entite: at.servicesIntervenants || (at as any).zoneExecutanteNom || '..................',
+    lieu: (at as any).zoneProprietaireNom || at.zoneProprietaire?.nomZone || '..................',
+    servicesIntervenants: at.servicesIntervenants || '',
+    entreprisesIntervenantes: at.entreprisesIntervenantes || '',
     description: at.objet || at.descriptionTravaux || '',
     dateIntervention: at.dateDebut ? new Date(at.dateDebut).toISOString().split('T')[0] : '',
     heureDebut: at.heureDebut || '',
     heureFin: at.heureFin || '',
-    risquesIds: (at.risques || []).map((r) => r.id),
-    mesuresIds: (at.mesures || []).map((m) => m.id),
-    episIds: (at.epis || []).map((e) => e.id),
-    moyensAccesIds: (at.moyensAcces || []).map((ma) => ma.id),
-    permisIds: (at.permis || []).map((p) => p.id),
+    risquesIds: (at as any).risquesIds || (at.risques || []).map((r) => r.id),
+    mesuresIds: (at as any).mesuresIds || (at.mesures || []).map((m) => m.id),
+    episIds: (at as any).episIds || (at.epis || []).map((e) => e.id),
+    moyensAccesIds: (at as any).moyensAccesIds || (at.moyensAcces || []).map((ma) => ma.id),
+    permisIds: (at as any).permisIds || (at.permis || []).map((p) => p.typePermis?.id || p.id),
     sectionF: at.mesuresSecuriteExecutant || '',
-    g1NomCeep: at.proprietaireBrouillon
-      ? `${at.proprietaireBrouillon.prenom} ${at.proprietaireBrouillon.nom}`
-      : 'CEEP OCP',
+    typeDocumentSource: at.typeDocumentSource || 'DI',
+    documentSourceType: at.typeDocumentSource || 'DI',
+    documentSourceId: (at as any).documentSourceId || '',
+    documentSourceNumero: (at as any).documentSourceNumero || '',
+    g1NomCeep: (at as any).g1NomCeep || ((at as any).proprietaireBrouillonNomComplet || (at.proprietaireBrouillon ? `${at.proprietaireBrouillon.prenom} ${at.proprietaireBrouillon.nom}` : 'CEEP OCP')),
+    g1NomCeee: (at as any).g1NomCeee || '',
+    latitude: (at as any).latitude || null,
+    longitude: (at as any).longitude || null,
+    visiteCommentaire: (at as any).visiteCommentaire || '',
+    visiteEffectuee: (at as any).visiteEffectuee ?? true,
+    photoPath: (at as any).photoPath || null,
     // blob: URL authentifiée — utilisable dans <img src>
     g1VisaCeep,
   };
@@ -81,5 +93,17 @@ export default function FormulaireOCPViewer({ at, visas = [] }: FormulaireOCPVie
     );
   }
 
-  return <FormulaireOCPInteractive initialData={formattedData} readOnly={true} />;
+  return (
+    <FormulaireOCPInteractive
+      initialData={formattedData}
+      readOnly={!signMode || signMode === 'none'}
+      signMode={signMode ?? 'none'}
+      onVisaCeee={
+        onVisaCeee
+          ? async (formData, blob) => onVisaCeee(formData, blob)  // ← wrap async
+          : undefined
+      }
+    />
+  );
 }
+

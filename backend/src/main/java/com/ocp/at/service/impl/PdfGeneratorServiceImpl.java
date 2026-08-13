@@ -1,29 +1,33 @@
 package com.ocp.at.service.impl;
 
 import com.ocp.at.entity.*;
-
 import com.ocp.at.service.PdfGeneratorService;
+import com.ocp.at.storage.StorageService;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
  * Implémentation du service de génération PDF utilisant OpenPDF (com.lowagie).
- * Génère des PDFs complets pour les Autorisations de Travail OCP.
- * Basé uniquement sur les champs réels des entités du projet.
+ * Génère des PDFs conformes au Formulaire F-HSE-SEC-31-04 (Édition 1.0)
+ * incluant les signatures HCEP, HCEE, HMEP, HMEE, la géolocalisation et les photos.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PdfGeneratorServiceImpl implements PdfGeneratorService {
+
+    private final StorageService storageService;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -600,11 +604,76 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
     // =========================================================================
 
     private void ajouterSectionVisas(Document doc, AutorisationTravail at) throws DocumentException {
-        ajouterTitreSection(doc, "6. VISAS & SIGNATURES");
+        ajouterTitreSection(doc, "6. VISAS & SIGNATURES ELECTRONIQUES");
 
         List<Visa> visas = at.getVisas();
+
+        // Tableau synthétique HCEP, HCEE, HMEP, HMEE (S-HSE-SEC-31)
+        Paragraph pTitleRoles = new Paragraph("Tableau de Synthèse des Validations Hiérarchiques :",
+                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, COULEUR_SECTION));
+        pTitleRoles.setSpacingBefore(5);
+        pTitleRoles.setSpacingAfter(10);
+        doc.add(pTitleRoles);
+
+        PdfPTable tableRoles = new PdfPTable(2);
+        tableRoles.setWidthPercentage(100);
+        tableRoles.setWidths(new float[]{1f, 1f});
+        tableRoles.setSpacingAfter(15);
+
+        Font fontLabelRole = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, COULEUR_ENTETE);
+        Font fontValueRole = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.BLACK);
+
+        String[] rolesRequis = {"HCEP", "HCEE", "HMEP", "HMEE"};
+        String[] labelsRoles = {
+                "Hors Cadre Entité Propriétaire (HCEP)",
+                "Hors Cadre Entité Exécutante (HCEE)",
+                "Haute Maîtrise Entité Propriétaire (HMEP)",
+                "Haute Maîtrise Entité Exécutante (HMEE)"
+        };
+
+        for (int i = 0; i < rolesRequis.length; i++) {
+            String roleCode = rolesRequis[i];
+            String roleLabel = labelsRoles[i];
+
+            Visa vRole = findVisaForRole(visas, roleCode);
+
+            PdfPCell cell = new PdfPCell();
+            cell.setPadding(6);
+            cell.setBackgroundColor(new Color(245, 247, 250));
+
+            cell.addElement(new Paragraph(roleLabel, fontLabelRole));
+            if (vRole != null && vRole.getUtilisateur() != null) {
+                Utilisateur u = vRole.getUtilisateur();
+                cell.addElement(new Paragraph("Signataire : " + u.getPrenom() + " " + u.getNom() + " (" + u.getMatricule() + ")", fontValueRole));
+                cell.addElement(new Paragraph("Date : " + (vRole.getDateSignature() != null ? vRole.getDateSignature().format(DATETIME_FMT) : "-"), fontValueRole));
+                if (vRole.getAdresseIP() != null) {
+                    cell.addElement(new Paragraph("IP : " + vRole.getAdresseIP(), fontValueRole));
+                }
+
+                // Incruster l'image PNG si présente
+                if (vRole.getSignaturePath() != null && !vRole.getSignaturePath().isBlank()) {
+                    try {
+                        Resource res = storageService.loadSignature(vRole.getSignaturePath());
+                        if (res != null && res.exists()) {
+                            byte[] imgBytes = res.getInputStream().readAllBytes();
+                            Image img = Image.getInstance(imgBytes);
+                            img.scaleToFit(100, 40);
+                            cell.addElement(img);
+                        }
+                    } catch (Exception e) {
+                        log.warn("Impossible de charger l'image de signature pour " + roleCode, e);
+                    }
+                }
+            } else {
+                cell.addElement(new Paragraph("Statut : Signature en attente", FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, Color.RED)));
+            }
+            tableRoles.addCell(cell);
+        }
+
+        doc.add(tableRoles);
+
         if (visas == null || visas.isEmpty()) {
-            doc.add(new Paragraph("Aucun visa enregistré.",
+            doc.add(new Paragraph("Aucun visa individuel enregistré.",
                     FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 11, COULEUR_GRIS)));
             return;
         }
@@ -635,8 +704,44 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
             ajouterLigneCellule(table, "Signataire :", nomSignataire, fl, fv);
             ajouterLigneCellule(table, "Adresse IP :", v.getAdresseIP() != null ? v.getAdresseIP() : "-", fl, fv);
 
+            // Charger et ajouter la signature manuscrite PNG
+            if (v.getSignaturePath() != null && !v.getSignaturePath().isBlank()) {
+                try {
+                    Resource res = storageService.loadSignature(v.getSignaturePath());
+                    if (res != null && res.exists()) {
+                        byte[] imgBytes = res.getInputStream().readAllBytes();
+                        Image img = Image.getInstance(imgBytes);
+                        img.scaleToFit(120, 50);
+
+                        PdfPCell cellLbl = new PdfPCell(new Phrase("Signature manuscrite :", fl));
+                        cellLbl.setPadding(5);
+                        table.addCell(cellLbl);
+
+                        PdfPCell cellImg = new PdfPCell(img);
+                        cellImg.setPadding(5);
+                        table.addCell(cellImg);
+                    }
+                } catch (Exception e) {
+                    log.warn("Erreur chargement signature PNG visa {}", v.getId(), e);
+                }
+            }
+
             doc.add(table);
         }
+    }
+
+    private Visa findVisaForRole(List<Visa> visas, String roleCode) {
+        if (visas == null) return null;
+        return visas.stream().filter(v -> {
+            if (v.getStatut() == null || v.getStatut() == com.ocp.at.entity.enums.StatutVisa.REFUS) return false;
+            String comment = v.getCommentaire() != null ? v.getCommentaire().toUpperCase() : "";
+            if (comment.contains(roleCode.toUpperCase())) return true;
+            Utilisateur u = v.getUtilisateur();
+            if (u != null && u.getRoles() != null) {
+                return u.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().equalsIgnoreCase(roleCode));
+            }
+            return false;
+        }).findFirst().orElse(null);
     }
 
     // =========================================================================

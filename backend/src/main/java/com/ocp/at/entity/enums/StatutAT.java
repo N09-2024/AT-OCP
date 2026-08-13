@@ -22,36 +22,35 @@ public enum StatutAT {
     /** Étape 1 — CEEP a créé la demande (DI/BT/OT) : zone, date, durée définis. */
     DEMANDE_CREEE,
 
-    /** Étape 2 — Visite chantier réalisée par CEEP, garantie par HCEE + HMEP. */
+    /** Étape 2+3 — Co-action conjointe CEEP+CEEE : Visite & Rédaction terrain (garants HCEE + HMEP). */
+    EN_VISITE_REDACTION,
+
+    /** Étape 2 — Visite chantier réalisée. */
     VISITE_REALISEE,
 
-    /** Étape 3 — AT et permis rédigés et signés sur le terrain (CEEP E, HCEE G, CEEE P). */
+    /** Étape 3 — AT rédigée. */
     AT_REDIGEE,
 
-    /** Étape 4 — Travaux en cours (démarrés par CEEE E, garantis par HCEE G + HMEP G). */
+    /** AT validée et prête pour démarrage. */
+    AT_VALIDEE,
+
+    /** Travaux en cours (démarrés par CEEE E, garants HCEE G + HMEE G). */
+    EN_COURS,
     INTERVENTION_EN_COURS,
 
-    /**
-     * Étape 5b — AT reconduite (dépassement d'un poste).
-     * CEEP revérifie et vise (E), HCEE garantit (G), CEEE participe (P).
-     * Si dépassement > 24h → retour à l'Étape 2.
-     */
+    /** Étape 5b — AT reconduite (dépassement d'un poste). */
+    EN_RECONDUCTION,
     AT_RECONDUITE,
 
-    /** Étape 6 — Fin des travaux déclarée par CEEE (E). CEEP est informé (I). */
+    /** Étape 6 — Fin des travaux déclarée par CEEE (E). CEEP informé (I). */
+    DECLAREE_TERMINEE,
     FIN_TRAVAUX_DECLAREE,
 
-    /**
-     * Étape 7 — Réception des travaux effectuée : CEEP (E) + CEEE (P).
-     * Essais concluants, AT et permis clôturés.
-     * Permis de feu : clôture 2h après fin travaux par points chauds.
-     */
+    /** Étape 7 — Réception conjointe CEEP (E) + CEEE (P). Clôture permis de feu 2h après fin. */
+    RECEPTIONEES,
     TRAVAUX_RECEPTIONES,
 
-    /**
-     * Étape 8 — Documents archivés par l'entité propriétaire.
-     * HCEE exécute (E), HCEP est garant (G). Durée minimale : 1 an.
-     */
+    /** Étape 8 — Documents archivés par HMEP (E) + HCEP (G). */
     ARCHIVEE,
 
     // =========================================================================

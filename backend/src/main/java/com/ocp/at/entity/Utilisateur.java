@@ -95,6 +95,10 @@ public class Utilisateur {
     @EqualsAndHashCode.Exclude
     private Service service;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "niveau_hierarchique")
+    private com.ocp.at.entity.enums.NiveauHierarchique niveauHierarchique;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "utilisateur_roles",
@@ -106,4 +110,21 @@ public class Utilisateur {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<Role> roles = new HashSet<>();
+
+    public com.ocp.at.entity.enums.NiveauHierarchique getNiveau() {
+        if (niveauHierarchique != null) {
+            return niveauHierarchique;
+        }
+        if (roles != null && !roles.isEmpty()) {
+            for (Role r : roles) {
+                if (r.getNom() != null) {
+                    com.ocp.at.entity.enums.NiveauHierarchique n = com.ocp.at.entity.enums.NiveauHierarchique.fromRoleName(r.getNom());
+                    if (n != com.ocp.at.entity.enums.NiveauHierarchique.CHEF_EQUIPE) {
+                        return n;
+                    }
+                }
+            }
+        }
+        return com.ocp.at.entity.enums.NiveauHierarchique.CHEF_EQUIPE;
+    }
 }

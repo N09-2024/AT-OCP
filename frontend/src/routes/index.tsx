@@ -27,6 +27,10 @@ import PermisDetailsPage from '../modules/permis/pages/PermisDetailsPage';
 import ProfilePage from '../modules/profile/pages/ProfilePage';
 import NotificationsPage from '../modules/profile/pages/NotificationsPage';
 
+import { ChefEquipeDashboard } from '../modules/chef-equipe/ChefEquipeDashboard';
+import { HierarchieChefDashboard } from '../modules/hierarchie-chef/HierarchieChefDashboard';
+import { MaitriseDashboard } from '../modules/maitrise/MaitriseDashboard';
+
 // AT & Workflow Pages
 import AutorisationListPage from '../modules/autorisations/pages/AutorisationListPage';
 import AutorisationFormPage from '../modules/autorisations/pages/AutorisationFormPage';
@@ -178,10 +182,13 @@ export default function AppRoutes() {
         {/* Dashboard Router & Sub-dashboards per role */}
         <Route path="dashboard">
           <Route index element={<DashboardRouter />} />
-          <Route path="ce" element={<RoleGuard roles={['CE', 'CEEP', 'CEEE', 'ADMIN']}><CEDashboardPage /></RoleGuard>} />
+          <Route path="ce" element={<RoleGuard roles={['CE', 'CEEP', 'CEEE', 'ADMIN']}><ChefEquipeDashboard /></RoleGuard>} />
+          <Route path="chef-equipe" element={<RoleGuard roles={['CE', 'CEEP', 'CEEE', 'ADMIN']}><ChefEquipeDashboard /></RoleGuard>} />
           <Route path="demandeur" element={<RoleGuard roles={['CE', 'CEEP', 'CEEE', 'DEMANDEUR', 'ADMIN']}><DemandeurDashboardPage /></RoleGuard>} />
-          <Route path="hm" element={<RoleGuard roles={['HM', 'HMEP', 'HMEE', 'ADMIN']}><HMDashboardPage /></RoleGuard>} />
-          <Route path="hc" element={<RoleGuard roles={['HC', 'HCEP', 'HCEE', 'ADMIN']}><HCDashboardPage /></RoleGuard>} />
+          <Route path="hm" element={<RoleGuard roles={['HM', 'HMEP', 'HMEE', 'ADMIN']}><MaitriseDashboard /></RoleGuard>} />
+          <Route path="maitrise" element={<RoleGuard roles={['HM', 'HMEP', 'HMEE', 'ADMIN']}><MaitriseDashboard /></RoleGuard>} />
+          <Route path="hc" element={<RoleGuard roles={['HC', 'HCEP', 'HCEE', 'ADMIN']}><HierarchieChefDashboard /></RoleGuard>} />
+          <Route path="hierarchie-chef" element={<RoleGuard roles={['HC', 'HCEP', 'HCEE', 'ADMIN']}><HierarchieChefDashboard /></RoleGuard>} />
           <Route path="ocp" element={<RoleGuard roles={['HC', 'HCEP', 'HCEE', 'RESPONSABLE_OCP', 'ADMIN']}><ResponsableOcpDashboardPage /></RoleGuard>} />
           <Route path="admin" element={<RoleGuard roles={['ADMIN']}><AdminDashboardPage /></RoleGuard>} />
           <Route path="externe" element={<RoleGuard roles={['RESPONSABLE_EXTERIEUR', 'RESPONSABLE_ENTREPRISE', 'ADMIN']}><ResponsableExterieurDashboardPage /></RoleGuard>} />

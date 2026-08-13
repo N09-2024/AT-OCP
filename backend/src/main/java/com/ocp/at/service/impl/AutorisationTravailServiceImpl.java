@@ -182,31 +182,13 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             return atRepository.findAll(pageable).map(this::mapToResponse);
         }
 
-        // CEEP : uniquement ses propres AT (brouillons + soumises + en cours)
-        if (RoleUtils.isCeep(currentUser) && !RoleUtils.isCeee(currentUser)) {
-            return atRepository.findByCeep(currentUser.getId(), pageable).map(this::mapToResponse);
-        }
-
-        // CEEE : uniquement les AT dont le service exécutant est le sien, hors brouillons
-        if (RoleUtils.isCeee(currentUser) && !RoleUtils.isCeep(currentUser)) {
-            if (currentUser.getService() != null) {
-                String zoneId = currentUser.getService().getZone() != null ? currentUser.getService().getZone().getId() : "";
-                String serviceNom = currentUser.getService().getNomService();
-                return atRepository.findByCeeeByZoneAndService(zoneId, serviceNom, pageable)
-                        .map(this::mapToResponse);
-            }
-            return Page.empty(pageable);
-        }
-
-        // CE générique (rôle CE sans précision P/E) : ses propres AT + AT de son service exécutant
+        // CE / CEEP / CEEE (Chef d'Équipe) : voit ses propres AT (propriétaire CEEP) + AT où son service est exécutant (CEEE)
         if (RoleUtils.userHasRolePattern(currentUser, "CE")) {
-            if (currentUser.getService() != null) {
-                String zoneId = currentUser.getService().getZone() != null ? currentUser.getService().getZone().getId() : "";
-                String serviceNom = currentUser.getService().getNomService();
-                return atRepository.findByCeeeByZoneAndService(zoneId, serviceNom, pageable)
-                        .map(this::mapToResponse);
-            }
-            return atRepository.findByCeep(currentUser.getId(), pageable).map(this::mapToResponse);
+            String zoneId = (currentUser.getService() != null && currentUser.getService().getZone() != null)
+                    ? currentUser.getService().getZone().getId() : "";
+            String serviceNom = currentUser.getService() != null ? currentUser.getService().getNomService() : "";
+            return atRepository.findForChefEquipe(currentUser.getId(), zoneId, serviceNom, pageable)
+                    .map(this::mapToResponse);
         }
 
         // HC (HCEP/HCEE) : AT liées à leur service (propriétaire ou exécutant)
@@ -217,12 +199,11 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                 return atRepository.findByHcByZoneAndService(zoneId, serviceNom, pageable)
                         .map(this::mapToResponse);
             }
-            return Page.empty(pageable);
+            return atRepository.findByCeep(currentUser.getId(), pageable).map(this::mapToResponse);
         }
 
-        // Défaut sécurisé : vue vide pour les rôles non catégorisés
-        log.warn("findAll() appelé pour un utilisateur sans rôle reconnu : {}", currentUser.getEmail());
-        return Page.empty(pageable);
+        // Défaut sécurisé : les AT créées par l'utilisateur
+        return atRepository.findByCeep(currentUser.getId(), pageable).map(this::mapToResponse);
     }
 
     @Override
@@ -283,6 +264,64 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setEntreprisesIntervenantes(request.getEntreprisesIntervenantes());
         at.setMesuresSecuriteExecutant(request.getMesuresSecuriteExecutant());
 
+        // Document Source (DI / OT / BT)
+        if (request.getTypeDocumentSource() != null && request.getDocumentSourceId() != null) {
+            try {
+                String docType = request.getTypeDocumentSource();
+                String docId = request.getDocumentSourceId();
+                if ("DI".equalsIgnoreCase(docType)) {
+                    at.setTypeDocumentSource(TypeDocumentSource.DI);
+                    diRepository.findById(docId).ifPresent(at::setDemandeIntervention);
+                } else if ("OT".equalsIgnoreCase(docType)) {
+                    at.setTypeDocumentSource(TypeDocumentSource.OT);
+                    otRepository.findById(docId).ifPresent(at::setOrdreTravail);
+                } else if ("BT".equalsIgnoreCase(docType)) {
+                    at.setTypeDocumentSource(TypeDocumentSource.BT);
+                    btRepository.findById(docId).ifPresent(at::setBonTravail);
+                }
+                if (request.getDocumentSourceNumero() != null) {
+                    at.setNumeroDocumentSource(request.getDocumentSourceNumero());
+                }
+            } catch (Exception e) {
+                log.warn("autoSave document source error: {}", e.getMessage());
+            }
+        }
+
+        // Visite Préalable (§8.2) — mise à jour ou création sur le document source
+        if (request.getLatitude() != null || request.getLongitude() != null || request.getVisiteCommentaire() != null || Boolean.TRUE.equals(request.getVisiteEffectuee())) {
+            try {
+                VisitePrealable vp = null;
+                if (at.getDemandeIntervention() != null) {
+                    vp = at.getDemandeIntervention().getVisitePrealable();
+                    if (vp == null) {
+                        vp = new VisitePrealable();
+                        at.getDemandeIntervention().setVisitePrealable(vp);
+                    }
+                } else if (at.getOrdreTravail() != null) {
+                    vp = at.getOrdreTravail().getVisitePrealable();
+                    if (vp == null) {
+                        vp = new VisitePrealable();
+                        at.getOrdreTravail().setVisitePrealable(vp);
+                    }
+                } else if (at.getBonTravail() != null) {
+                    vp = at.getBonTravail().getVisitePrealable();
+                    if (vp == null) {
+                        vp = new VisitePrealable();
+                        at.getBonTravail().setVisitePrealable(vp);
+                    }
+                }
+                if (vp != null) {
+                    if (request.getLatitude() != null) vp.setLatitude(request.getLatitude());
+                    if (request.getLongitude() != null) vp.setLongitude(request.getLongitude());
+                    if (request.getVisiteCommentaire() != null) vp.setCommentaire(request.getVisiteCommentaire());
+                    if (request.getVisiteEffectuee() != null) vp.setEffectuee(request.getVisiteEffectuee());
+                    visiteRepository.save(vp);
+                }
+            } catch (Exception e) {
+                log.warn("autoSave visitePrealable error: {}", e.getMessage());
+            }
+        }
+
         // Lier zone exécutante (E) pour résoudre/notifier les CEEE
         resoudreEtAffecterZones(at, request);
         verifierServicesDifferents(at, request);
@@ -329,13 +368,21 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     public AutorisationTravailResponse accuserReceptionCeee(String id) {
         AutorisationTravail at = getEntityById(id);
         Utilisateur currentUser = getCurrentUser();
-        if (!RoleUtils.userHasRolePattern(currentUser, "CEEE")) {
-            throw new com.ocp.at.exception.ForbiddenException("Seul le CEEE du service intervenant peut accuser réception de cette AT.");
+
+        // 1. Le créateur/propriétaire (CEEP) ne peut PAS accuser réception à la place du CEEE
+        if (at.getProprietaireBrouillon() != null && at.getProprietaireBrouillon().getId().equals(currentUser.getId())) {
+            throw new BusinessException("En tant que CEEP (créateur/propriétaire), vous ne pouvez pas accuser réception à la place du CEEE. L'accusé de réception et le visa doivent être effectués par le CEEE du service exécutant depuis son propre compte.");
         }
+
+        // 2. Vérifier que l'utilisateur a le rôle CE/CEEE
+        if (!RoleUtils.userHasRolePattern(currentUser, "CE")) {
+            throw new com.ocp.at.exception.ForbiddenException("Seul un Chef d'Équipe du service exécutant (CEEE) peut accuser réception de cette AT.");
+        }
+
         at.setDateReceptionCeee(LocalDateTime.now());
         AutorisationTravail saved = atRepository.save(at);
         enregistrerHistorique(saved, TypeActionAT.AUTO_SAVE, saved.getStatut(), saved.getStatut(),
-                "AT reçue et accusée par le CEEE " + currentUser.getEmail());
+                "AT reçue et accusée par le CEEE " + currentUser.getNom() + " (" + currentUser.getEmail() + ")");
         return mapToResponse(saved);
     }
 
@@ -904,6 +951,33 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                 && userServiceName.trim().equalsIgnoreCase(executantServiceName.trim())) {
             throw new BusinessException("Une Autorisation de Travail ne peut pas être établie au sein d'un même service. Le service demandeur (" + userServiceName + ") et le service exécutant (" + executantServiceName + ") doivent être différents.");
         }
+
+        // Contrainte stricte §2 Standard S-HSE-SEC-31 — vérification par zones
+        if (at.getZoneProprietaire() != null && at.getZoneExecutante() != null) {
+            if (at.getZoneProprietaire().getId().equals(at.getZoneExecutante().getId())) {
+                throw new BusinessException(
+                    "La zone propriétaire et la zone exécutante doivent être différentes " +
+                    "(Standard S-HSE-SEC-31 §2 — une AT ne peut pas lier deux zones identiques)."
+                );
+            }
+            // Chercher les services associés à chaque zone
+            java.util.List<com.ocp.at.entity.Service> servicesZoneP = serviceRepository.findAll().stream()
+                    .filter(s -> s.getZone() != null && s.getZone().getId().equals(at.getZoneProprietaire().getId()))
+                    .collect(java.util.stream.Collectors.toList());
+            java.util.List<com.ocp.at.entity.Service> servicesZoneE = serviceRepository.findAll().stream()
+                    .filter(s -> s.getZone() != null && s.getZone().getId().equals(at.getZoneExecutante().getId()))
+                    .collect(java.util.stream.Collectors.toList());
+            if (!servicesZoneP.isEmpty() && !servicesZoneE.isEmpty()) {
+                boolean memeService = servicesZoneP.stream()
+                        .anyMatch(sP -> servicesZoneE.stream().anyMatch(sE -> sE.getId().equals(sP.getId())));
+                if (memeService) {
+                    throw new BusinessException(
+                        "Le service propriétaire et le service exécutant doivent être différents " +
+                        "(Standard S-HSE-SEC-31 §2 — une AT ne peut pas lier deux zones du même service)."
+                    );
+                }
+            }
+        }
     }
 
 
@@ -927,18 +1001,22 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
         List<Visa> visas = visaRepository.findByAutorisationTravailId(at.getId());
 
-        boolean hmOk = visas.stream().anyMatch(v -> 
-            isVisaPositif(v) && RoleUtils.userHasRolePattern(v.getUtilisateur(), "HM")
-        );
-        if (!hmOk) {
-            motifs.add("Validation Haute Maîtrise (HM) manquante.");
-        }
+        boolean hcepOk = hasSignedAsRole(visas, at, "HCEP");
+        boolean hceeOk = hasSignedAsRole(visas, at, "HCEE");
+        boolean hmepOk = hasSignedAsRole(visas, at, "HMEP");
+        boolean hmeeOk = hasSignedAsRole(visas, at, "HMEE");
 
-        boolean hcOk = visas.stream().anyMatch(v -> 
-            isVisaPositif(v) && RoleUtils.userHasRolePattern(v.getUtilisateur(), "HC")
-        );
-        if (!hcOk) {
-            motifs.add("Validation Hors Cadre (HC) manquante.");
+        if (!hcepOk) {
+            motifs.add("Signature Hors Cadre Propriétaire (HCEP) manquante.");
+        }
+        if (!hceeOk) {
+            motifs.add("Signature Hors Cadre Exécutant (HCEE) manquante.");
+        }
+        if (!hmepOk) {
+            motifs.add("Signature Haute Maîtrise Propriétaire (HMEP) manquante.");
+        }
+        if (!hmeeOk) {
+            motifs.add("Signature Haute Maîtrise Exécutant (HMEE) manquante.");
         }
 
         List<com.ocp.at.entity.Permis> permisList = permisRepository.findByAutorisationTravailId(at.getId());
@@ -952,6 +1030,45 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         }
 
         return motifs;
+    }
+
+    public boolean hasSignedAsRole(List<Visa> visas, AutorisationTravail at, String targetRole) {
+        if (visas == null || visas.isEmpty()) return false;
+
+        return visas.stream().anyMatch(v -> {
+            if (!isVisaPositif(v)) return false;
+            Utilisateur u = v.getUtilisateur();
+            if (u == null) return false;
+
+            String comment = v.getCommentaire() != null ? v.getCommentaire().toUpperCase() : "";
+
+            // Check 1: Le commentaire mentionne explicitement le rôle
+            if (comment.contains(targetRole.toUpperCase())) return true;
+
+            // Check 2: L'utilisateur possède le rôle spécifique
+            if (u.getRoles() != null && u.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().equalsIgnoreCase(targetRole))) {
+                return true;
+            }
+
+            // Check 3: Résolution par rôle générique HC / HM et position P/E selon le territoire de l'AT
+            PositionAT pos = atContextService != null ? atContextService.resolvePosition(u, at) : PositionAT.AUCUNE;
+            boolean isHc = RoleUtils.userHasRolePattern(u, "HC");
+            boolean isHm = RoleUtils.userHasRolePattern(u, "HM");
+            boolean isAdmin = u.getRoles() != null && u.getRoles().stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getNom()));
+
+            switch (targetRole.toUpperCase()) {
+                case "HCEP":
+                    return (isHc && pos == PositionAT.PROPRIETAIRE) || (isAdmin && comment.contains("HCEP"));
+                case "HCEE":
+                    return (isHc && (pos == PositionAT.EXECUTANT || pos == PositionAT.AUCUNE)) || (isAdmin && comment.contains("HCEE"));
+                case "HMEP":
+                    return (isHm && (pos == PositionAT.PROPRIETAIRE || pos == PositionAT.AUCUNE)) || (isAdmin && comment.contains("HMEP"));
+                case "HMEE":
+                    return (isHm && pos == PositionAT.EXECUTANT) || (isAdmin && comment.contains("HMEE"));
+                default:
+                    return false;
+            }
+        });
     }
 
     private boolean isVisaPositif(Visa v) {
@@ -1062,6 +1179,46 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     private void verifierStatutModifiable(AutorisationTravail at) {
         if (at.getStatut() != StatutAT.BROUILLON) {
             throw new BusinessException("Une AT au statut " + at.getStatut() + " ne peut pas être modifiée.");
+        }
+    }
+
+    /**
+     * Contrainte inter-services obligatoire (Standard S-HSE-SEC-31 §2) :
+     * une AT ne peut jamais lier deux zones du même service.
+     */
+    private void verifierServicesIntervenantsDifferents(AutorisationTravail at) {
+        if (at.getZoneProprietaire() == null || at.getZoneExecutante() == null) {
+            return; // pas encore assignées, on laisse passer (peut être un brouillon)
+        }
+        Zone zP = at.getZoneProprietaire();
+        Zone zE = at.getZoneExecutante();
+
+        // Même zone → interdit
+        if (zP.getId().equals(zE.getId())) {
+            throw new BusinessException(
+                "La zone propriétaire et la zone exécutante doivent être différentes (§8 OCP)."
+            );
+        }
+
+        // Accès au service via le repository (zones peuvent avoir un service associé au niveau du territoire)
+        // On recherche les services qui déclarent cette zone via la table services
+        java.util.List<com.ocp.at.entity.Service> servicesP = serviceRepository.findAll().stream()
+                .filter(s -> s.getZone() != null && s.getZone().getId().equals(zP.getId()))
+                .collect(java.util.stream.Collectors.toList());
+        java.util.List<com.ocp.at.entity.Service> servicesE = serviceRepository.findAll().stream()
+                .filter(s -> s.getZone() != null && s.getZone().getId().equals(zE.getId()))
+                .collect(java.util.stream.Collectors.toList());
+
+        // Si les deux zones appartiennent exactement aux mêmes services → interdit
+        if (!servicesP.isEmpty() && !servicesE.isEmpty()) {
+            boolean memeService = servicesP.stream()
+                    .anyMatch(sP -> servicesE.stream().anyMatch(sE -> sE.getId().equals(sP.getId())));
+            if (memeService) {
+                throw new BusinessException(
+                    "Le service propriétaire et le service exécutant doivent être différents " +
+                    "(Standard S-HSE-SEC-31 §2 — une AT ne peut pas lier deux zones du même service)."
+                );
+            }
         }
     }
 
@@ -1223,6 +1380,44 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                     .filter(p -> p.getTypePermis() != null)
                     .map(p -> p.getTypePermis().getId())
                     .collect(Collectors.toList()));
+        }
+
+        // Noms CEEP & CEEE pour la section G
+        if (at.getProprietaireBrouillon() != null) {
+            response.setG1NomCeep(at.getProprietaireBrouillon().getPrenom() + " " + at.getProprietaireBrouillon().getNom());
+        }
+        response.setDateReceptionCeee(at.getDateReceptionCeee());
+
+        // Récupération CEEE chef d'équipe
+        if (atContextService != null) {
+            try {
+                List<Utilisateur> ceees = atContextService.findChefsEquipeExecutants(at.getId());
+                if (!ceees.isEmpty()) {
+                    String names = ceees.stream()
+                            .map(u -> u.getPrenom() + " " + u.getNom())
+                            .collect(Collectors.joining(" / "));
+                    response.setG1NomCeee(names);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Visite Préalable (§8.2) — extraite du document source ou des données d'inspection
+        VisitePrealable vp = null;
+        if (at.getDemandeIntervention() != null) {
+            vp = at.getDemandeIntervention().getVisitePrealable();
+        } else if (at.getOrdreTravail() != null) {
+            vp = at.getOrdreTravail().getVisitePrealable();
+        } else if (at.getBonTravail() != null) {
+            vp = at.getBonTravail().getVisitePrealable();
+        }
+        if (vp != null) {
+            response.setLatitude(vp.getLatitude());
+            response.setLongitude(vp.getLongitude());
+            response.setVisiteCommentaire(vp.getCommentaire());
+            response.setVisiteEffectuee(vp.isEffectuee());
+            if (vp.getPhotos() != null && !vp.getPhotos().isEmpty()) {
+                response.setPhotoPath(vp.getPhotos().get(0).getPath());
+            }
         }
 
         // Calcul des droits et motifs d'export PDF (HM + HC + Permis conformes)

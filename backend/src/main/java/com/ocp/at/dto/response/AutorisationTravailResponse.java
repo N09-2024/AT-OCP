@@ -56,9 +56,18 @@ public class AutorisationTravailResponse {
     private String entreprisesIntervenantes;
     private String mesuresSecuriteExecutant;
 
-    // We can just return basic DTOs or lists of IDs. Let's return objects or just IDs to keep it simple.
-    // Assuming simple Response inner classes or basic types for simplicity. For now, returning objects might be complex. Let's return IDs or basic info.
-    // Actually the easiest is to just return a map or list of strings/objects if they exist in the project, but we don't have them here. I will just add lists of strings for the IDs for the frontend to know what's selected.
+    // Nom CEEP et CEEE pour la section G
+    private String g1NomCeep;
+    private String g1NomCeee;
+    private LocalDateTime dateReceptionCeee;
+
+    // Visite Préalable (§8.2 Standard OCP)
+    private Double latitude;
+    private Double longitude;
+    private String visiteCommentaire;
+    private Boolean visiteEffectuee;
+    private String photoPath;
+
     private java.util.List<String> risquesIds;
     private java.util.List<String> mesuresIds;
     private java.util.List<String> episIds;

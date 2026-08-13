@@ -63,4 +63,28 @@ public class AutoSaveRequest {
 
     @Schema(description = "Liste des IDs des types de permis nécessaires")
     private java.util.List<String> permisIds;
+
+    @Schema(description = "Type de document source (DI, OT, BT)")
+    private String typeDocumentSource;
+
+    @Schema(description = "ID du document source (DI, OT, BT)")
+    private String documentSourceId;
+
+    @Schema(description = "Numéro du document source (DI, OT, BT)")
+    private String documentSourceNumero;
+
+    @Schema(description = "Latitude GPS Visite préalable")
+    private Double latitude;
+
+    @Schema(description = "Longitude GPS Visite préalable")
+    private Double longitude;
+
+    @Schema(description = "Commentaire / Constats Visite préalable")
+    private String visiteCommentaire;
+
+    @Schema(description = "Visite préalable effectuée (true/false)")
+    private Boolean visiteEffectuee;
+
+    @Schema(description = "Chemin/Nom de la photo de visite")
+    private String photoPath;
 }

@@ -46,9 +46,15 @@ export default function CeeeReceptionPage() {
     try {
       // Charge les AT filtrées pour ce CEEE (backend ne renvoie QUE celles liées à son service)
       const res = await autorisationTravailApi.findAll(0, 100);
-      // Filtre côté client : uniquement les AT soumises (à viser)
+      // Filtre côté client : AT où le CEEE doit agir (visite, rédaction, visa)
+      const STATUTS_A_TRAITER = [
+        'SOUMISE',          // legacy — AT soumise en attente de visa
+        'AT_REDIGEE',       // AT rédigée, en attente signature CEEE
+        'EN_VISITE_REDACTION', // §8.2-8.3 — Co-action CEEP+CEEE en cours
+        'DEMANDE_CREEE',    // §8.1 — AT créée, CEEE notifié
+      ];
       const soumises = (res.content || []).filter(
-        (at: AutorisationTravail) => at.statut === 'SOUMISE' || at.statut === 'AT_REDIGEE'
+        (at: AutorisationTravail) => STATUTS_A_TRAITER.includes(at.statut)
       );
       setAts(soumises);
     } catch (e: any) {
@@ -61,11 +67,17 @@ export default function CeeeReceptionPage() {
   useEffect(() => { load(); }, []);
 
   const getStatutChip = (statut: string) => {
-    if (statut === 'SOUMISE')
-      return <Chip label="⏳ En attente de votre visa" color="warning" size="small" sx={{ fontWeight: 700 }} />;
-    if (statut === 'AT_REDIGEE')
-      return <Chip label="✏️ AT Rédigée — à viser" color="info" size="small" sx={{ fontWeight: 700 }} />;
-    return <Chip label={statut} color="default" size="small" />;
+    switch (statut) {
+      case 'SOUMISE':
+      case 'AT_REDIGEE':
+        return <Chip label="✏️ AT Rédigée — à viser" color="warning" size="small" sx={{ fontWeight: 700 }} />;
+      case 'EN_VISITE_REDACTION':
+        return <Chip label="🔍 Visite & Rédaction" color="info" size="small" sx={{ fontWeight: 700 }} />;
+      case 'DEMANDE_CREEE':
+        return <Chip label="📋 Demande créée — notifié" color="primary" size="small" sx={{ fontWeight: 700 }} />;
+      default:
+        return <Chip label={statut} color="default" size="small" />;
+    }
   };
 
   const hasAlreadySigned = (at: AutorisationTravail) => {

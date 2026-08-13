@@ -131,4 +131,18 @@ class AutorisationTravailServiceImplTest {
             verify(notificationService).sendNotificationToRole(anyString(), anyString(), anyString(), anyString(), anyString());
         }
     }
+
+    @Test
+    void calculerMotifsRefusExportPdf_ShouldRefuse_WhenSignaturesMissing() {
+        AutorisationTravail at = new AutorisationTravail();
+        at.setId("at-test-1");
+        at.setStatut(StatutAT.VALIDEE);
+
+        java.util.List<String> motifs = service.calculerMotifsRefusExportPdf(at);
+        assertFalse(motifs.isEmpty());
+        assertTrue(motifs.stream().anyMatch(m -> m.contains("HCEP")));
+        assertTrue(motifs.stream().anyMatch(m -> m.contains("HCEE")));
+        assertTrue(motifs.stream().anyMatch(m -> m.contains("HMEP")));
+        assertTrue(motifs.stream().anyMatch(m -> m.contains("HMEE")));
+    }
 }

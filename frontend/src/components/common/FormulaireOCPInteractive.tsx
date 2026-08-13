@@ -25,6 +25,7 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -81,7 +82,8 @@ export default function FormulaireOCPInteractive({
   const isSubmittedOrTransmitted = Boolean(atStatut && atStatut !== 'BROUILLON' && atStatut !== 'DEMANDE_CREEE' && atStatut !== 'CLASSIFICATION_EFFECTUEE');
   const fieldsLocked = readOnly || signMode === 'ceee' || signMode === 'none' || isSubmittedOrTransmitted;
   const canSignCeep = !readOnly && (signMode === 'all' || signMode === 'ceep');
-  const canSignCeee = !readOnly && (signMode === 'all' || signMode === 'ceee');
+  // canSignCeee est indépendant de readOnly : le CEEE signe après que les champs sont verrouillés
+  const canSignCeee = signMode === 'ceee' || (!readOnly && signMode === 'all');
 
   // Lists for dropdowns loaded from backend
   const [zonesList, setZonesList] = useState<any[]>([]);
@@ -166,6 +168,38 @@ export default function FormulaireOCPInteractive({
     valCeee: initialData.valCeee || '',
     valSt: initialData.valSt || '',
   });
+
+  // State Visite Préalable (§8.2 Standard OCP)
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(
+    initialData.latitude ? { lat: initialData.latitude, lng: initialData.longitude } : null
+  );
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [visitePhotoName, setVisitePhotoName] = useState<string | null>(initialData.photoPath || null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [visiteCommentaire, setVisiteCommentaire] = useState(initialData.visiteCommentaire || '');
+  const [preventionEnPlace, setPreventionEnPlace] = useState<boolean>(initialData.visiteEffectuee ?? true);
+
+  const handleGetGps = () => {
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setGpsCoords(coords);
+        setGpsLoading(false);
+      },
+      () => {
+        alert("Impossible d'accéder à la géolocalisation GPS. Veuillez autoriser l'accès GPS.");
+        setGpsLoading(false);
+      }
+    );
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setVisitePhotoName(file.name);
+    }
+  };
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
@@ -484,6 +518,12 @@ export default function FormulaireOCPInteractive({
   const handleOpenSignature = (fieldKey: string) => {
     const key = fieldKey.toLowerCase();
     const isCeeeField = key.includes('ceee');
+    // En mode ceee : les champs sont verrouillés (readOnly) mais le CEEE peut signer son propre visa
+    if (signMode === 'ceee' && isCeeeField) {
+      setActiveSigField(fieldKey);
+      setSigDialogOpen(true);
+      return;
+    }
     if (readOnly || signMode === 'none') return;
     if (signMode === 'ceee' && !isCeeeField) return;
     if (signMode === 'ceep' && isCeeeField) return;
@@ -496,6 +536,11 @@ export default function FormulaireOCPInteractive({
     setFormData((prev) => ({ ...prev, [activeSigField]: dataUrl }));
     setSigBlobs((prev) => ({ ...prev, [activeSigField]: blob }));
     setSigDialogOpen(false);
+    // Si le CEEE vient de signer son visa depuis le formulaire, notifier le parent
+    const isCeeeVisa = activeSigField.toLowerCase().includes('ceee');
+    if (isCeeeVisa && onVisaCeee) {
+      onVisaCeee(formData, blob);
+    }
   };
 
   // Export PDF Serveur — seul export disponible. Le backend refuse (400)
@@ -520,6 +565,16 @@ export default function FormulaireOCPInteractive({
   };
 
   const handleSignerEtTransmettre = async () => {
+    // §8.2 OCP S-HSE-SEC-31 — Visite Préalable Obligatoire
+    if (!preventionEnPlace) {
+      alert(
+        '⛔ Visite Préalable obligatoire (§8.2)\n\n' +
+        'Vous devez effectuer la visite conjointe de chantier, cocher la confirmation des mesures de prévention, ' +
+        'puis signer avant de transmettre l\'Autorisation de Travail.'
+      );
+      return;
+    }
+
     const complet = await controlerAvantSoumission();
     if (!complet) {
       const confirmer = window.confirm(
@@ -527,7 +582,17 @@ export default function FormulaireOCPInteractive({
       );
       if (!confirmer) return;
     }
-    onSubmitAT?.(formData, sigBlobs['g1VisaCeep']);
+
+    // Enrich formData with Visite Préalable fields before submission
+    const enrichedData = {
+      ...formData,
+      latitude: gpsCoords?.lat ?? null,
+      longitude: gpsCoords?.lng ?? null,
+      visiteCommentaire,
+      visiteEffectuee: preventionEnPlace,
+      photoPath: visitePhotoName,
+    };
+    onSubmitAT?.(enrichedData, sigBlobs['g1VisaCeep']);
   };
 
   return (
@@ -947,6 +1012,141 @@ export default function FormulaireOCPInteractive({
         </CardContent>
       </Card>
 
+      {/* VISITE PRÉALABLE CONJOINTE DU CHANTIER (§8.2 STANDARD OCP) */}
+      <Card sx={{ mb: 3, borderRadius: 3, border: '2px solid #3b82f6', boxShadow: '0 4px 16px rgba(59,130,246,0.08)' }}>
+        <CardHeader
+          avatar={<BuildIcon sx={{ color: '#2563eb' }} />}
+          title={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e40af' }}>
+                Visite Préalable Conjointe du Chantier (§8.2 Standard OCP)
+              </Typography>
+              <Chip
+                label={preventionEnPlace ? "Visite validée ✓" : "Visite obligatoire ⚠️"}
+                color={preventionEnPlace ? "success" : "warning"}
+                size="small"
+                sx={{ fontWeight: 800 }}
+              />
+            </Box>
+          }
+          subheader="Vérification conjointe sur le terrain (CEEP + CEEE) avec géolocalisation GPS et photo d'inspection"
+          sx={{ bgcolor: '#eff6ff', borderBottom: '1px solid #bfdbfe', py: 1.5 }}
+        />
+        <CardContent sx={{ p: 3 }}>
+          <Grid container spacing={2.5}>
+            {/* Relevé GPS */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: '#1e293b' }}>
+                  1. Géolocalisation GPS du Chantier (§8.2)
+                </Typography>
+                {gpsCoords ? (
+                  <Chip
+                    label={`GPS: Lat ${gpsCoords.lat.toFixed(5)}, Lng ${gpsCoords.lng.toFixed(5)}`}
+                    color="success"
+                    sx={{ fontSize: 12, py: 1.8, px: 1, fontWeight: 700 }}
+                  />
+                ) : (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="primary"
+                    disabled={fieldsLocked}
+                    onClick={handleGetGps}
+                    sx={{ fontWeight: 700 }}
+                  >
+                    {gpsLoading ? 'Acquisition GPS...' : 'Relever position GPS sur le chantier'}
+                  </Button>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Photo Chantier */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: '#1e293b' }}>
+                  2. Photo d'Inspection du Chantier (§8.2)
+                </Typography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={photoInputRef}
+                  onChange={handlePhotoUpload}
+                  style={{ display: 'none' }}
+                />
+                {visitePhotoName ? (
+                  <Chip
+                    label={`Photo : ${visitePhotoName}`}
+                    color="success"
+                    sx={{ fontSize: 12, py: 1.8, px: 1, fontWeight: 700 }}
+                  />
+                ) : (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="secondary"
+                    disabled={fieldsLocked}
+                    onClick={() => photoInputRef.current?.click()}
+                    sx={{ fontWeight: 700 }}
+                  >
+                    Prendre une photo du chantier
+                  </Button>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Observations terrain */}
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                size="small"
+                multiline
+                rows={2}
+                label="Constats & Remarques de la Visite Terrain (Zone d'intervention, accès, risques spécifiques)"
+                placeholder="Indiquer les observations de la visite conjointe CEEP + CEEE..."
+                value={visiteCommentaire}
+                disabled={fieldsLocked}
+                onChange={(e) => setVisiteCommentaire(e.target.value)}
+              />
+            </Grid>
+
+            {/* Point de contrôle obligatoire §8.2 */}
+            <Grid size={12}>
+              <Paper
+                sx={{
+                  p: 2,
+                  bgcolor: preventionEnPlace ? '#f0fdf4' : '#fff1f2',
+                  border: `2px solid ${preventionEnPlace ? '#16a34a' : '#e11d48'}`,
+                  borderRadius: 2,
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={preventionEnPlace}
+                      disabled={fieldsLocked}
+                      onChange={(e) => setPreventionEnPlace(e.target.checked)}
+                      color="success"
+                    />
+                  }
+                  label={
+                    <Typography variant="subtitle2" sx={{ fontWeight: 900, color: preventionEnPlace ? '#15803d' : '#be123c' }}>
+                      Point de contrôle obligatoire (§8.2) : « Les conditions de sécurité et les mesures de prévention ont été inspectées conjointement et sont effectivement mises en place sur le chantier »
+                    </Typography>
+                  }
+                />
+                {!preventionEnPlace && (
+                  <Typography variant="caption" sx={{ color: '#be123c', display: 'block', mt: 0.5, ml: 4, fontStyle: 'italic' }}>
+                    ⚠️ La validation de cette visite préalable est obligatoire avant la soumission et signature de l'AT.
+                  </Typography>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
       {/* SECTION A: RISQUES LIÉS AUX TRAVAUX */}
       <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #fee2e2', boxShadow: '0 4px 12px rgba(239,68,68,0.05)' }}>
         <CardHeader
@@ -1250,15 +1450,22 @@ export default function FormulaireOCPInteractive({
                     onChange={(e) => updateTextValue('g1NomCeee', e.target.value)}
                   />
                   <Button
-                    variant="outlined"
+                    variant={canSignCeee ? 'contained' : 'outlined'}
                     size="small"
                     color="success"
                     startIcon={<DrawIcon />}
                     disabled={!canSignCeee}
                     onClick={() => handleOpenSignature('g1VisaCeee')}
-                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                    sx={{
+                      justifyContent: 'flex-start',
+                      textTransform: 'none',
+                      fontWeight: canSignCeee ? 800 : 500,
+                      boxShadow: canSignCeee ? '0 0 0 2px #16a34a40' : 'none',
+                    }}
                   >
-                    {formData.g1VisaCeee ? 'Visa CEEE signé (cliquer pour modifier)' : 'Signer Visa CEEE'}
+                    {formData.g1VisaCeee
+                      ? '✅ Visa CEEE signé (cliquer pour modifier)'
+                      : '✍️ Signer le Visa CEEE'}
                   </Button>
                 </Stack>
               </Paper>

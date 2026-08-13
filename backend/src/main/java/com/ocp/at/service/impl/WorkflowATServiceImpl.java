@@ -41,39 +41,60 @@ public class WorkflowATServiceImpl implements WorkflowATService {
     private static final Map<StatutAT, Map<TypeActionAT, StatutAT>> TRANSITIONS = new EnumMap<>(StatutAT.class);
 
     static {
+        // Standard S-HSE-SEC-31 §7 workflow principal
         put(StatutAT.CLASSIFICATION_EFFECTUEE, TypeActionAT.CREATION_DEMANDE, StatutAT.DEMANDE_CREEE);
 
-        put(StatutAT.DEMANDE_CREEE, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
-        put(StatutAT.DEMANDE_CREEE, TypeActionAT.SOUMISSION, StatutAT.AT_REDIGEE);
-        put(StatutAT.DEMANDE_CREEE, TypeActionAT.REDACTION_AT, StatutAT.AT_REDIGEE);
+        put(StatutAT.DEMANDE_CREEE, TypeActionAT.VISITE_CHANTIER, StatutAT.EN_VISITE_REDACTION);
+        put(StatutAT.DEMANDE_CREEE, TypeActionAT.SOUMISSION, StatutAT.EN_VISITE_REDACTION);
+        put(StatutAT.DEMANDE_CREEE, TypeActionAT.REDACTION_AT, StatutAT.EN_VISITE_REDACTION);
         put(StatutAT.DEMANDE_CREEE, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
+
+        put(StatutAT.EN_VISITE_REDACTION, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
+        put(StatutAT.EN_VISITE_REDACTION, TypeActionAT.REDACTION_AT, StatutAT.AT_REDIGEE);
+        put(StatutAT.EN_VISITE_REDACTION, TypeActionAT.SOUMISSION, StatutAT.AT_REDIGEE);
+        put(StatutAT.EN_VISITE_REDACTION, TypeActionAT.VALIDATION, StatutAT.AT_VALIDEE);
+        put(StatutAT.EN_VISITE_REDACTION, TypeActionAT.REFUS, StatutAT.REJETEE);
+        put(StatutAT.EN_VISITE_REDACTION, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
 
         put(StatutAT.VISITE_REALISEE, TypeActionAT.REDACTION_AT, StatutAT.AT_REDIGEE);
         put(StatutAT.VISITE_REALISEE, TypeActionAT.SOUMISSION, StatutAT.AT_REDIGEE);
         put(StatutAT.VISITE_REALISEE, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
         put(StatutAT.VISITE_REALISEE, TypeActionAT.REFUS, StatutAT.REJETEE);
         put(StatutAT.VISITE_REALISEE, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
-        // AT rédigée / soumise → validation HCEE ou démarrage
-        put(StatutAT.AT_REDIGEE, TypeActionAT.VALIDATION, StatutAT.VALIDEE);
+
+        put(StatutAT.AT_REDIGEE, TypeActionAT.VALIDATION, StatutAT.AT_VALIDEE);
         put(StatutAT.AT_REDIGEE, TypeActionAT.REFUS, StatutAT.REJETEE);
-        put(StatutAT.AT_REDIGEE, TypeActionAT.DEBUT_INTERVENTION, StatutAT.INTERVENTION_EN_COURS);
+        put(StatutAT.AT_REDIGEE, TypeActionAT.DEBUT_INTERVENTION, StatutAT.EN_COURS);
         put(StatutAT.AT_REDIGEE, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
 
-        put(StatutAT.AT_REDIGEE, TypeActionAT.DEBUT_INTERVENTION, StatutAT.INTERVENTION_EN_COURS);
-        put(StatutAT.AT_REDIGEE, TypeActionAT.REFUS, StatutAT.REJETEE);
-        put(StatutAT.AT_REDIGEE, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
+        put(StatutAT.AT_VALIDEE, TypeActionAT.DEBUT_INTERVENTION, StatutAT.EN_COURS);
+        put(StatutAT.AT_VALIDEE, TypeActionAT.RECONDUCTION, StatutAT.EN_RECONDUCTION);
+        put(StatutAT.AT_VALIDEE, TypeActionAT.DECLARATION_FIN, StatutAT.DECLAREE_TERMINEE);
+        put(StatutAT.AT_VALIDEE, TypeActionAT.REFUS, StatutAT.REJETEE);
+        put(StatutAT.AT_VALIDEE, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
+
+        put(StatutAT.EN_COURS, TypeActionAT.RECONDUCTION, StatutAT.EN_RECONDUCTION);
+        put(StatutAT.EN_COURS, TypeActionAT.DECLARATION_FIN, StatutAT.DECLAREE_TERMINEE);
+        put(StatutAT.EN_COURS, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
 
         put(StatutAT.INTERVENTION_EN_COURS, TypeActionAT.RECONDUCTION, StatutAT.AT_RECONDUITE);
         put(StatutAT.INTERVENTION_EN_COURS, TypeActionAT.DECLARATION_FIN, StatutAT.FIN_TRAVAUX_DECLAREE);
         put(StatutAT.INTERVENTION_EN_COURS, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
+
+        put(StatutAT.EN_RECONDUCTION, TypeActionAT.DEBUT_INTERVENTION, StatutAT.EN_COURS);
+        put(StatutAT.EN_RECONDUCTION, TypeActionAT.DECLARATION_FIN, StatutAT.DECLAREE_TERMINEE);
+        put(StatutAT.EN_RECONDUCTION, TypeActionAT.RECONDUCTION, StatutAT.EN_RECONDUCTION);
 
         put(StatutAT.AT_RECONDUITE, TypeActionAT.DEBUT_INTERVENTION, StatutAT.INTERVENTION_EN_COURS);
         put(StatutAT.AT_RECONDUITE, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
         put(StatutAT.AT_RECONDUITE, TypeActionAT.DECLARATION_FIN, StatutAT.FIN_TRAVAUX_DECLAREE);
         put(StatutAT.AT_RECONDUITE, TypeActionAT.RECONDUCTION, StatutAT.AT_RECONDUITE);
 
+        put(StatutAT.DECLAREE_TERMINEE, TypeActionAT.RECEPTION_CONJOINTE, StatutAT.RECEPTIONEES);
+        put(StatutAT.DECLAREE_TERMINEE, TypeActionAT.CLOTURE, StatutAT.RECEPTIONEES);
         put(StatutAT.FIN_TRAVAUX_DECLAREE, TypeActionAT.RECEPTION_CONJOINTE, StatutAT.TRAVAUX_RECEPTIONES);
 
+        put(StatutAT.RECEPTIONEES, TypeActionAT.ARCHIVAGE_OFFICIEL, StatutAT.ARCHIVEE);
         put(StatutAT.TRAVAUX_RECEPTIONES, TypeActionAT.ARCHIVAGE_OFFICIEL, StatutAT.ARCHIVEE);
 
         // Pont legacy
