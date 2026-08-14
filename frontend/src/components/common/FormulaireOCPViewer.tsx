@@ -8,7 +8,7 @@ interface FormulaireOCPViewerProps {
   at: AutorisationTravail;
   visas?: Visa[];
   signMode?: 'ceep' | 'ceee' | 'all' | 'none';
-  onVisaCeee?: (formData: any, blob: Blob) => void | Promise<void>; // ← union
+  onVisaCeee?: (formData: any, blob: Blob) => Promise<void>;
 }
 
 /**

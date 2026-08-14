@@ -187,7 +187,10 @@ export default function AutorisationDetailPage() {
               sx={{ fontWeight: 700, background: '#f59e0b', '&:hover': { background: '#d97706' } }}
             >
               Reprendre le brouillon
-           {/* Actions de signatures adaptées CEEP -> CEEE -> HC (HCEP, HCEE) -> HM (HMEP, HMEE) */}
+            </Button>
+          )}
+
+          {/* Actions de signatures adaptées CEEP -> CEEE -> HC (HCEP, HCEE) -> HM (HMEP, HMEE) */}
           {(() => {
             const hasCeep = at.statut !== 'BROUILLON';
             const hasCeee = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('CEEE') || (v as any).utilisateurNomComplet?.includes('CEEE')));
@@ -275,7 +278,7 @@ export default function AutorisationDetailPage() {
                 )}
               </>
             );
-          })()}}
+          })()}
 
           {(at.statut === 'VALIDEE' || at.statut === 'AT_REDIGEE') && (
             <Button

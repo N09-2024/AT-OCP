@@ -45,7 +45,7 @@ export default function AtTable({ data }: AtTableProps) {
             <TableRow>
               <TableCell>N° AT</TableCell>
               <TableCell>Titre</TableCell>
-              <TableCell>Installation</TableCell>
+              <TableCell>Zone / Équipement</TableCell>
               <TableCell>Statut</TableCell>
               <TableCell>Échéance</TableCell>
               <TableCell align="right" />
@@ -58,7 +58,7 @@ export default function AtTable({ data }: AtTableProps) {
                 <TableRow key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                   <TableCell sx={{ fontWeight: 500, fontSize: '0.85rem' }}>{row.id.substring(0, 8)}...</TableCell>
                   <TableCell>{row.titre}</TableCell>
-                  <TableCell>{row.installation}</TableCell>
+                  <TableCell>{row.installation || '-'}</TableCell>
                   <TableCell>
                     <Chip
                       label={config.label}

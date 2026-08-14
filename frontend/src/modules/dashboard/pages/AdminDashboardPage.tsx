@@ -6,7 +6,6 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import SecurityIcon from '@mui/icons-material/Security';
 import MapIcon from '@mui/icons-material/Map';
 import BusinessIcon from '@mui/icons-material/Business';
-import FactoryIcon from '@mui/icons-material/Factory';
 import BuildIcon from '@mui/icons-material/Build';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
@@ -34,7 +33,6 @@ export default function AdminDashboardPage() {
   const referentielCards = [
     { title: 'Zones', subtitle: 'Territoires (base logique P/E)', path: '/administration/zones', icon: <MapIcon />, color: '#00875A' },
     { title: 'Services', subtitle: 'Services rattachés aux zones', path: '/administration/services', icon: <BusinessIcon />, color: '#0284c7' },
-    { title: 'Installations', subtitle: 'Installations & sites OCP', path: '/administration/installations', icon: <FactoryIcon />, color: '#d97706' },
     { title: 'Équipements', subtitle: 'Équipements mobiles / fixes', path: '/administration/equipements', icon: <BuildIcon />, color: '#7c3aed' },
     { title: 'Catalogue Risques', subtitle: 'Risques d’intervention', path: '/administration/risques', icon: <WarningAmberIcon />, color: '#e11d48' },
     { title: 'Mesures de prévention', subtitle: 'Mesures & préparations', path: '/administration/mesures-prevention', icon: <HealthAndSafetyIcon />, color: '#10b981' },

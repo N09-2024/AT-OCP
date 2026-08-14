@@ -5,9 +5,6 @@ import LoginPage from '../modules/auth/pages/LoginPage';
 import RegisterPage from '../modules/auth/pages/RegisterPage';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import DashboardRouter from '../modules/dashboard/pages/DashboardRouter';
-import CEDashboardPage from '../modules/dashboard/pages/CEDashboardPage';
-import HMDashboardPage from '../modules/dashboard/pages/HMDashboardPage';
-import HCDashboardPage from '../modules/dashboard/pages/HCDashboardPage';
 import AdminDashboardPage from '../modules/dashboard/pages/AdminDashboardPage';
 import ResponsableExterieurDashboardPage from '../modules/dashboard/pages/ResponsableExterieurDashboardPage';
 import DemandeurDashboardPage from '../modules/dashboard/pages/DemandeurDashboardPage';
@@ -46,8 +43,7 @@ import VisitesListPage from '../modules/visites/pages/VisitesListPage';
 // Référentiels
 import ZonesListPage from '../modules/administration/pages/ZonesListPage';
 import ZoneFormPage from '../modules/administration/pages/ZoneFormPage';
-import InstallationsListPage from '../modules/administration/pages/InstallationsListPage';
-import InstallationFormPage from '../modules/administration/pages/InstallationFormPage';
+
 import ServicesListPage from '../modules/administration/pages/ServicesListPage';
 import ServiceFormPage from '../modules/administration/pages/ServiceFormPage';
 import SimpleReferentielPage from '../modules/administration/pages/SimpleReferentielPage';
@@ -261,9 +257,7 @@ export default function AppRoutes() {
           <Route path="zones" element={<ZonesListPage />} />
           <Route path="zones/nouveau" element={<ZoneFormPage />} />
           <Route path="zones/:id" element={<ZoneFormPage />} />
-          <Route path="installations" element={<InstallationsListPage />} />
-          <Route path="installations/nouveau" element={<InstallationFormPage />} />
-          <Route path="installations/:id" element={<InstallationFormPage />} />
+
           <Route path="services" element={<ServicesListPage />} />
           <Route path="services/nouveau" element={<ServiceFormPage />} />
           <Route path="services/:id" element={<ServiceFormPage />} />

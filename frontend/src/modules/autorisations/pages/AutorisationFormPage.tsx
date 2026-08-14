@@ -164,6 +164,7 @@ export default function AutorisationFormPage() {
 
       setStatusMsg('Brouillon enregistré ✓');
       setTimeout(() => setStatusMsg(null), 3000);
+      return saved;
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Erreur lors de la sauvegarde du brouillon.');
       throw err;
@@ -201,14 +202,13 @@ export default function AutorisationFormPage() {
     setLoading(true);
     setStatusMsg('Validation et transmission de l\'AT au CEEE...');
     try {
-      let currentId = atId;
-      if (!currentId) {
-        const res = await apiClient.post('/autorisations-travail');
-        currentId = res.data.id;
-        setAtId(currentId);
-      }
+      // Sauvegarder d'abord le brouillon (crée l'AT si besoin et sauvegarde les données)
+      const saved = await handleSaveDraft(data);
+      const currentId = saved?.id || atId;
 
-      await handleSaveDraft(data);
+      if (!currentId) {
+        throw new Error("Impossible d'obtenir l'identifiant de l'AT.");
+      }
 
       if (signatureBlob) {
         try {
@@ -226,7 +226,7 @@ export default function AutorisationFormPage() {
         }
       }
 
-      await autorisationTravailApi.soumettre(currentId!);
+      await autorisationTravailApi.soumettre(currentId);
 
       setStatusMsg('AT soumise et transmise avec succès au Chef d\'Équipe Exécutant (CEEE) ✓');
       setTimeout(() => navigate('/autorisations'), 2000);
@@ -344,6 +344,7 @@ export default function AutorisationFormPage() {
           initialData={formInteractiveData}
           readOnly={false}
           signMode={signMode}
+          onChange={(data) => setFormInteractiveData(data)}
           onSave={modeViser ? undefined : handleSaveDraft}
           onAutoSave={modeViser ? undefined : handleSaveDraft}
           onSubmitAT={modeViser ? undefined : handleSubmitAT}

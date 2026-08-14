@@ -56,6 +56,7 @@ export interface FormulaireOCPInteractiveProps {
   readOnly?: boolean;
   /** all = édition complète | ceee = CEEE vise seulement | none = lecture */
   signMode?: 'all' | 'ceep' | 'ceee' | 'none';
+  onChange?: (formData: any) => void;
   onSave?: (formData: any) => Promise<void>;
   /** Sauvegarde automatique (cases cochées) sans bouton */
   onAutoSave?: (formData: any) => Promise<void>;
@@ -68,6 +69,7 @@ export default function FormulaireOCPInteractive({
   initialData: rawInitialData = {},
   readOnly = false,
   signMode = 'all',
+  onChange,
   onSave,
   onAutoSave,
   onSubmitAT,
@@ -271,6 +273,7 @@ export default function FormulaireOCPInteractive({
     setFormData((prev: any) => {
       const updated = { ...prev, [field]: value };
       scheduleAutoSave(updated);
+      onChange?.(updated);
       return updated;
     });
   };
@@ -364,17 +367,22 @@ export default function FormulaireOCPInteractive({
     const found = docSourceList.find((d) => d.id === docId);
     if (!found) return;
     const numDoc = found.numero || found.numDi || found.numOt || found.numBt || docId;
-    setFormData((prev: any) => ({
-      ...prev,
-      documentSourceType: docSourceType,
-      documentSourceId: docId,
-      documentSourceNumero: numDoc,
-      di: docSourceType === 'DI' ? numDoc : prev.di,
-      ot: docSourceType === 'OT' ? numDoc : prev.ot,
-      bt: docSourceType === 'BT' ? numDoc : prev.bt,
-      description: found.objet || found.description || prev.description,
-      lieu: found.equipement?.installation?.zone?.nomZone || found.installation?.zone?.nomZone || prev.lieu,
-    }));
+    setFormData((prev: any) => {
+      const updated = {
+        ...prev,
+        documentSourceType: docSourceType,
+        documentSourceId: docId,
+        documentSourceNumero: numDoc,
+        di: docSourceType === 'DI' ? numDoc : prev.di,
+        ot: docSourceType === 'OT' ? numDoc : prev.ot,
+        bt: docSourceType === 'BT' ? numDoc : prev.bt,
+        description: found.objet || found.description || prev.description,
+        lieu: found.equipement?.installation?.zone?.nomZone || found.installation?.zone?.nomZone || prev.lieu,
+      };
+      scheduleAutoSave(updated);
+      onChange?.(updated);
+      return updated;
+    });
   };
 
   const handleSelectServiceIntervenant = async (serviceIdOrName: string) => {
@@ -389,17 +397,26 @@ export default function FormulaireOCPInteractive({
       return;
     }
 
-    setFormData((p) => ({ ...p, servicesIntervenants: nomService, serviceIntervenantId: found?.id || null }));
-    if (!found?.id) {
-      setFormData((p) => ({ ...p, g1NomCeee: '' }));
-      return;
+    let displayCeee = '';
+    if (found?.id) {
+      try {
+        const res = await apiClient.get(`/services/${found.id}/chefs-equipe`);
+        const chefs = Array.isArray(res.data) ? res.data : [];
+        displayCeee = chefs.map((c: any) => c.displayName || `${c.prenom || ''} ${c.nom || ''}`.trim()).filter(Boolean).join(' / ');
+      } catch { /* ignore */ }
     }
-    try {
-      const res = await apiClient.get(`/services/${found.id}/chefs-equipe`);
-      const chefs = Array.isArray(res.data) ? res.data : [];
-      const display = chefs.map((c: any) => c.displayName || `${c.prenom || ''} ${c.nom || ''}`.trim()).filter(Boolean).join(' / ');
-      setFormData((p) => ({ ...p, g1NomCeee: display }));
-    } catch { /* ignore */ }
+
+    setFormData((prev: any) => {
+      const updated = {
+        ...prev,
+        servicesIntervenants: nomService,
+        serviceIntervenantId: found?.id || null,
+        g1NomCeee: displayCeee || prev.g1NomCeee || '',
+      };
+      scheduleAutoSave(updated);
+      onChange?.(updated);
+      return updated;
+    });
   };
 
   // Toggle checkbox helper
@@ -419,6 +436,7 @@ export default function FormulaireOCPInteractive({
       const next = list.includes(sid) ? list.filter((i: string) => i !== sid) : [...list, sid];
       const updated = { ...prev, [field]: next };
       scheduleAutoSave(updated);
+      onChange?.(updated);
       return updated;
     });
   };
@@ -428,9 +446,11 @@ export default function FormulaireOCPInteractive({
     if (readOnly) return;
     setFormData((prev) => {
       const list = prev.remiseEnPlace;
-      return list.includes(itemKey)
+      const updated = list.includes(itemKey)
         ? { ...prev, remiseEnPlace: list.filter((i: string) => i !== itemKey) }
         : { ...prev, remiseEnPlace: [...list, itemKey] };
+      onChange?.(updated);
+      return updated;
     });
   };
 
@@ -1651,6 +1671,58 @@ export default function FormulaireOCPInteractive({
           </Grid>
         </CardContent>
       </Card>
+
+      {/* BARRE D'ACTIONS INFERIEURE (BOTTOM ACTION BAR) */}
+      {(!readOnly || signMode === 'ceee') && (
+        <Paper
+          elevation={4}
+          sx={{
+            p: 2.5,
+            mb: 3,
+            borderRadius: 3,
+            bgcolor: '#ffffff',
+            border: '2px solid #00875A',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2,
+          }}
+        >
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00875A' }}>
+              Validation & Transmission du Formulaire F-HSE-SEC-31-04
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Conforme au Standard OCP S-HSE-SEC-31. Assurez-vous que les informations et signatures sont saisies.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={2}>
+            {onSave && (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => onSave(formData)}
+                disabled={loading}
+                sx={{ fontWeight: 700, borderRadius: 2, px: 3, py: 1 }}
+              >
+                Enregistrer Brouillon
+              </Button>
+            )}
+            {onSubmitAT && signMode !== 'ceee' && (
+              <Button
+                variant="contained"
+                onClick={handleSignerEtTransmettre}
+                disabled={loading}
+                startIcon={<CheckCircleIcon />}
+                sx={{ bgcolor: '#00875A', '&:hover': { bgcolor: '#006c48' }, fontWeight: 800, borderRadius: 2, px: 4, py: 1 }}
+              >
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Signer & Transmettre au CEEE'}
+              </Button>
+            )}
+          </Stack>
+        </Paper>
+      )}
 
       {/* SIGNATURE DIALOG MODAL */}
       <Dialog open={sigDialogOpen} onClose={() => setSigDialogOpen(false)} maxWidth="sm" fullWidth>

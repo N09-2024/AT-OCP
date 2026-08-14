@@ -180,7 +180,7 @@ export const ChefEquipeDashboard: React.FC = () => {
       </Stack>
 
       <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-        <strong>Standard OCP S-HSE-SEC-31 (§5 & §7) :</strong> Vos droits (CEEP ou CEEE) sont résolus dynamiquement par AT en fonction de la zone de l'installation et de la zone d'intervention.
+        <strong>Standard OCP S-HSE-SEC-31 (§5 & §7) :</strong> Vos droits (CEEP ou CEEE) sont résolus dynamiquement par AT en fonction du service propriétaire et du service exécutant d'intervention.
       </Alert>
 
       {renderSection('Mes AT — Position Propriétaire (CEEP)', '#00875A', cardsProprietaire)}
