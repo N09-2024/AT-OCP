@@ -9,6 +9,8 @@ public interface PdfGeneratorService {
 
     byte[] generateATPdf(AutorisationTravail autorisationTravail);
 
+    byte[] generateFormulairePdf(AutorisationTravail autorisationTravail);
+
     byte[] generateReceptionPdf(ReceptionTravaux receptionTravaux);
 
     byte[] generatePermisPdf(AutorisationTravail autorisationTravail);

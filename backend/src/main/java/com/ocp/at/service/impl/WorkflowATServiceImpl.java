@@ -47,6 +47,7 @@ public class WorkflowATServiceImpl implements WorkflowATService {
         put(StatutAT.DEMANDE_CREEE, TypeActionAT.VISITE_CHANTIER, StatutAT.EN_VISITE_REDACTION);
         put(StatutAT.DEMANDE_CREEE, TypeActionAT.SOUMISSION, StatutAT.EN_VISITE_REDACTION);
         put(StatutAT.DEMANDE_CREEE, TypeActionAT.REDACTION_AT, StatutAT.EN_VISITE_REDACTION);
+        put(StatutAT.DEMANDE_CREEE, TypeActionAT.VALIDATION, StatutAT.AT_VALIDEE);
         put(StatutAT.DEMANDE_CREEE, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
 
         put(StatutAT.EN_VISITE_REDACTION, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
@@ -59,6 +60,7 @@ public class WorkflowATServiceImpl implements WorkflowATService {
         put(StatutAT.VISITE_REALISEE, TypeActionAT.REDACTION_AT, StatutAT.AT_REDIGEE);
         put(StatutAT.VISITE_REALISEE, TypeActionAT.SOUMISSION, StatutAT.AT_REDIGEE);
         put(StatutAT.VISITE_REALISEE, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
+        put(StatutAT.VISITE_REALISEE, TypeActionAT.VALIDATION, StatutAT.AT_VALIDEE);
         put(StatutAT.VISITE_REALISEE, TypeActionAT.REFUS, StatutAT.REJETEE);
         put(StatutAT.VISITE_REALISEE, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
 
@@ -67,6 +69,7 @@ public class WorkflowATServiceImpl implements WorkflowATService {
         put(StatutAT.AT_REDIGEE, TypeActionAT.DEBUT_INTERVENTION, StatutAT.EN_COURS);
         put(StatutAT.AT_REDIGEE, TypeActionAT.ANNULATION, StatutAT.ANNULEE);
 
+        put(StatutAT.AT_VALIDEE, TypeActionAT.VALIDATION, StatutAT.AT_VALIDEE);
         put(StatutAT.AT_VALIDEE, TypeActionAT.DEBUT_INTERVENTION, StatutAT.EN_COURS);
         put(StatutAT.AT_VALIDEE, TypeActionAT.RECONDUCTION, StatutAT.EN_RECONDUCTION);
         put(StatutAT.AT_VALIDEE, TypeActionAT.DECLARATION_FIN, StatutAT.DECLAREE_TERMINEE);
@@ -102,12 +105,14 @@ public class WorkflowATServiceImpl implements WorkflowATService {
         put(StatutAT.BROUILLON, TypeActionAT.SOUMISSION, StatutAT.SOUMISE);
         put(StatutAT.BROUILLON, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
         put(StatutAT.BROUILLON, TypeActionAT.REDACTION_AT, StatutAT.AT_REDIGEE);
+        put(StatutAT.BROUILLON, TypeActionAT.VALIDATION, StatutAT.VALIDEE);
 
-        put(StatutAT.SOUMISE, TypeActionAT.VALIDATION, StatutAT.AT_REDIGEE);
+        put(StatutAT.SOUMISE, TypeActionAT.VALIDATION, StatutAT.VALIDEE);
         put(StatutAT.SOUMISE, TypeActionAT.VISITE_CHANTIER, StatutAT.VISITE_REALISEE);
         put(StatutAT.SOUMISE, TypeActionAT.REDACTION_AT, StatutAT.AT_REDIGEE);
         put(StatutAT.SOUMISE, TypeActionAT.REFUS, StatutAT.REJETEE);
 
+        put(StatutAT.VALIDEE, TypeActionAT.VALIDATION, StatutAT.VALIDEE);
         put(StatutAT.VALIDEE, TypeActionAT.DEBUT_INTERVENTION, StatutAT.INTERVENTION_EN_COURS);
         put(StatutAT.VALIDEE, TypeActionAT.RECONDUCTION, StatutAT.AT_RECONDUITE);
         put(StatutAT.VALIDEE, TypeActionAT.REDACTION_AT, StatutAT.AT_REDIGEE);

@@ -130,6 +130,13 @@
 			<version>3.5.3</version>
 		</dependency>
 
+		<!-- PDFBox — conversion PDF→image pour analyse IA permis -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+
 		<!-- Testing -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

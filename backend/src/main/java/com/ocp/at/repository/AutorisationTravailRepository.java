@@ -54,13 +54,16 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
     Optional<AutorisationTravail> findByIdWithHistoriques(@Param("id") String id);
 
     /**
-     * Récupère une AT complète avec toutes les relations
+     * Récupère une AT avec ses associations to-one principales
      */
     @EntityGraph(attributePaths = {
-        "visas", "visas.utilisateur",
-        "permis", 
-        "historiques",
-        "proprietaireBrouillon", "proprietaireBrouillon.roles"
+        "proprietaireBrouillon",
+        "proprietaireBrouillon.roles",
+        "demandeIntervention",
+        "ordreTravail",
+        "bonTravail",
+        "zoneProprietaire",
+        "zoneExecutante"
     })
     @Query("SELECT at FROM AutorisationTravail at WHERE at.id = :id")
     Optional<AutorisationTravail> findByIdWithAllRelations(@Param("id") String id);

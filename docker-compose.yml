@@ -54,6 +54,8 @@ services:
       JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
       OCP_AI_PROVIDER: ${OCP_AI_PROVIDER:-CREW_AI}
       OCP_AI_FASTAPI_URL: http://ai-service:8000
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-${GOOGLE_API_KEY:-}}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     ports:
       - "8080:8080"
       - "9000:9000"

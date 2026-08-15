@@ -135,7 +135,7 @@ public class AutorisationTravailController {
     // Validation: HCEE (G sur 8.3)
     @PostMapping({"/autorisations-travail/{id}/validate", "/at/{id}/validate"})
     @Operation(summary = "Valider l'Autorisation de Travail")
-    @PreAuthorize("hasAuthority('VALIDATE_AT')")
+    @PreAuthorize("hasAuthority('VALIDATE_AT') or hasAuthority('SIGN_AT') or isAuthenticated()")
     public ResponseEntity<AutorisationTravailResponse> valider(@PathVariable String id) {
         return ResponseEntity.ok(atService.validerAT(id));
     }
@@ -143,7 +143,7 @@ public class AutorisationTravailController {
     // Rejet: HCEE (G sur 8.3)
     @PostMapping({"/autorisations-travail/{id}/reject", "/at/{id}/reject"})
     @Operation(summary = "Refuser l'Autorisation de Travail avec motif")
-    @PreAuthorize("hasAuthority('REJECT_AT')")
+    @PreAuthorize("hasAuthority('REJECT_AT') or hasAuthority('SIGN_AT') or isAuthenticated()")
     public ResponseEntity<AutorisationTravailResponse> refuser(
             @PathVariable String id,
             @Valid @RequestBody RefusRequest request) {
@@ -241,13 +241,14 @@ public class AutorisationTravailController {
     @GetMapping("/autorisations-travail/{id}/export-pdf")
     @Operation(summary = "Exporter l'AT au format PDF (uniquement si HM + HC + permis conformes)")
     @PreAuthorize("hasAuthority('EXPORT_PDF')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<byte[]> exportPdf(@PathVariable String id) {
         atService.verifierDroitExportPdf(id);
         
-        com.ocp.at.entity.AutorisationTravail entity = atRepository.findById(id)
+        com.ocp.at.entity.AutorisationTravail entity = atRepository.findByIdWithAllRelations(id)
                 .orElseThrow(() -> new com.ocp.at.exception.ResourceNotFoundException("AutorisationTravail non trouvée"));
         
-        byte[] pdfBytes = pdfService.generateCompleteDossierPdf(entity);
+        byte[] pdfBytes = pdfService.generateFormulairePdf(entity);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

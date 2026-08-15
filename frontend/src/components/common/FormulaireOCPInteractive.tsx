@@ -26,6 +26,7 @@ import {
   RadioGroup,
   FormControlLabel,
   Checkbox,
+  Tooltip,
 } from '@mui/material';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -43,9 +44,17 @@ import DrawIcon from '@mui/icons-material/Draw';
 import CloseIcon from '@mui/icons-material/Close';
 
 import SignaturePad from './SignaturePad';
+import PermisUploadCard from './PermisUploadCard';
 import { apiClient } from '../../services/apiClient';
 import { iaApi } from '../../services/iaApi';
 import { autorisationTravailApi } from '../../services/autorisationTravailApi';
+import {
+  type PermisDocumentResponse,
+  initialiserPermis,
+  getPermisDocuments,
+  uploadPermisDocument,
+  relancerAnalyse,
+} from '../../services/permisDocumentApi';
 import { useAuthStore } from '../../store/authStore';
 
 // ⚠️ Export Word supprimé : seul le PDF officiel (gating HC/HM serveur) est autorisé.
@@ -113,6 +122,11 @@ export default function FormulaireOCPInteractive({
   const [iaSuggestions, setIaSuggestions] = useState<{
     risques: string[]; mesures: string[]; epis: string[]; permis: string[];
   }>({ risques: [], mesures: [], epis: [], permis: [] });
+
+  // Permis Documents — validation IA
+  const [permisDocuments, setPermisDocuments] = useState<PermisDocumentResponse[]>([]);
+  const [permisUploading, setPermisUploading] = useState(false);
+  const debounceInitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Form State
   const todayStr = new Date().toISOString().split('T')[0];
@@ -437,6 +451,18 @@ export default function FormulaireOCPInteractive({
       const updated = { ...prev, [field]: next };
       scheduleAutoSave(updated);
       onChange?.(updated);
+      // Si permisIds, déclencher l initialisation des PermisDocument (debounce 1s)
+      if (field === 'permisIds' && initialData?.id) {
+        if (debounceInitRef.current) clearTimeout(debounceInitRef.current);
+        debounceInitRef.current = setTimeout(async () => {
+          try {
+            const docs = await initialiserPermis(initialData.id);
+            setPermisDocuments(docs);
+          } catch (e) {
+            console.error('Initialisation permis IA échouée', e);
+          }
+        }, 1000);
+      }
       return updated;
     });
   };
@@ -615,6 +641,56 @@ export default function FormulaireOCPInteractive({
     onSubmitAT?.(enrichedData, sigBlobs['g1VisaCeep']);
   };
 
+  // ---- Agent IA Permis : chargement initial + polling ----
+  useEffect(() => {
+    if (!initialData?.id || !formData.permisIds?.length) return;
+    // Chargement initial
+    getPermisDocuments(initialData.id).then(setPermisDocuments).catch(() => {});
+  }, [initialData?.id]);
+
+  useEffect(() => {
+    if (!initialData?.id) return;
+    const hasAnalysing = permisDocuments.some((d) => d.statut === 'EN_ATTENTE_ANALYSE');
+    if (!hasAnalysing) return;
+    // Polling toutes les 3s tant qu'un document est en cours d'analyse
+    const timer = setInterval(() => {
+      getPermisDocuments(initialData.id).then(setPermisDocuments).catch(() => {});
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [permisDocuments, initialData?.id]);
+
+  const handlePermisUpload = async (typePermis: string, file: File) => {
+    if (!initialData?.id) return;
+    setPermisUploading(true);
+    try {
+      const updated = await uploadPermisDocument(initialData.id, typePermis, file);
+      setPermisDocuments((prev) =>
+        prev.some((d) => d.id === updated.id)
+          ? prev.map((d) => (d.id === updated.id ? updated : d))
+          : [...prev, updated]
+      );
+    } catch (e: any) {
+      alert('Erreur upload : ' + (e?.response?.data?.message || e?.message || 'Erreur inconnue'));
+    } finally {
+      setPermisUploading(false);
+    }
+  };
+
+  const handleRelancerAnalyse = async (id: string) => {
+    try {
+      const updated = await relancerAnalyse(id);
+      setPermisDocuments((prev) =>
+        prev.map((d) => (d.id === updated.id ? updated : d))
+      );
+    } catch (e) {
+      console.error('Relance analyse échouée', e);
+    }
+  };
+
+  // Blocage soumission si des permis ne sont pas tous VALIDE
+  const permisEnAttente = permisDocuments.filter((d) => d.statut !== 'VALIDE').length;
+  const soumissionBloquee = !readOnly && permisDocuments.length > 0 && permisEnAttente > 0;
+
   return (
     <Box sx={{ pb: 6, maxWidth: 1120, mx: 'auto' }}>
       {/* FLOATING ACTION TOOLBAR */}
@@ -677,16 +753,23 @@ export default function FormulaireOCPInteractive({
               </Button>
             )}
             {onSubmitAT && signMode !== 'ceee' && (
-              <Button
-                variant="contained"
-                sx={{ bgcolor: '#00875A', '&:hover': { bgcolor: '#006c48' }, fontWeight: 700, borderRadius: 2 }}
-                startIcon={<CheckCircleIcon />}
-                onClick={handleSignerEtTransmettre}
-                disabled={loading}
-                size="small"
+              <Tooltip
+                title={soumissionBloquee ? `${permisEnAttente} permis en attente de validation IA` : ''}
+                arrow
               >
-                Signer & Transmettre
-              </Button>
+                <span>
+                  <Button
+                    variant="contained"
+                    sx={{ bgcolor: '#00875A', '&:hover': { bgcolor: '#006c48' }, fontWeight: 700, borderRadius: 2 }}
+                    startIcon={<CheckCircleIcon />}
+                    onClick={handleSignerEtTransmettre}
+                    disabled={loading || soumissionBloquee}
+                    size="small"
+                  >
+                    Signer & Transmettre
+                  </Button>
+                </span>
+              </Tooltip>
             )}
             {onVisaCeee && signMode === 'ceee' && (
               <Button
@@ -1397,10 +1480,35 @@ export default function FormulaireOCPInteractive({
               );
             })}
           </Grid>
+
+          {/* Zone d upload et validation IA — visible si permis cochés et mode édition */}
+          {!fieldsLocked && permisDocuments.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#b45309', mb: 1.5 }}>
+                📋 Documents de permis — Validation IA requise avant soumission
+              </Typography>
+              {permisDocuments.map((doc) => (
+                <PermisUploadCard
+                  key={doc.id}
+                  doc={doc}
+                  onUpload={handlePermisUpload}
+                  onRelancer={handleRelancerAnalyse}
+                  uploading={permisUploading}
+                />
+              ))}
+              {soumissionBloquee && (
+                <Alert severity="warning" sx={{ mt: 1, fontWeight: 600 }}>
+                  ⚠ {permisEnAttente} permis en attente de validation — soumission bloquée jusqu'à validation complète
+                </Alert>
+              )}
+            </Box>
+          )}
         </CardContent>
       </Card>
 
       {/* SECTION F: MESURES SPÉCIFIQUES EXÉCUTANT */}
+
       <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
         <CardHeader
           avatar={<RuleIcon sx={{ color: '#00875A' }} />}

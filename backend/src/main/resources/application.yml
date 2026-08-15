@@ -11,6 +11,12 @@ spring:
       max-file-size: 20MB
       max-request-size: 25MB
       file-size-threshold: 2KB
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 5
+        queue-capacity: 100
 
 app:
   jwt:
@@ -23,6 +29,11 @@ app:
       min-length: 8
   storage:
     location: uploads
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
 
 server:
   port: 8080

@@ -27,3 +27,9 @@ ocp:
   ai:
     provider: ${OCP_AI_PROVIDER:CREW_AI}
     fastapi-url: ${OCP_AI_FASTAPI_URL:http://localhost:8000}
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+

@@ -165,6 +165,7 @@ public class DataInitializer {
                             "CREATE_AT", "EDIT_AT", "SUBMIT_AT", "READ_AT",
                             "CREATE_VISITE", "SIGN_AT", "CLOSE_AT", "RECEIVE_AT",
                             "START_INTERVENTION", "DECLARE_FIN_TRAVAUX", "RENEW_AT",
+                            "VALIDATE_AT", "REJECT_AT",
                             "VIEW_PERMIS", "EDIT_PERMIS", "UPLOAD_FILES", "EXPORT_PDF",
                             "RECEIVE_NOTIFICATION", "TRANSFER_AT"
                         )).forEach(perms::add);
@@ -172,6 +173,7 @@ public class DataInitializer {
                     case "HM":
                         permissionRepository.findByNomIn(Arrays.asList(
                             "READ_AT", "VALIDATE_VISITE", "SIGN_AT", "START_INTERVENTION",
+                            "VALIDATE_AT", "REJECT_AT",
                             "EXPORT_PDF", "RECEIVE_NOTIFICATION", "VIEW_PERMIS"
                         )).forEach(perms::add);
                         break;
