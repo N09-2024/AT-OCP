@@ -33,6 +33,15 @@ public interface PermisDocumentService {
      */
     boolean tousPermisValides(String atId);
 
+    /**
+     * Répercute le statut de tous les PermisDocument d'une AT (résultat agent IA)
+     * sur les entités Permis correspondantes (Permis.statutVerification), qui sont
+     * la valeur réellement contrôlée avant soumission. Idempotent — safe à appeler
+     * à chaque soumission pour rattraper d'éventuels documents validés avant
+     * l'introduction de la synchro automatique.
+     */
+    void resynchroniserStatutsPermis(String atId);
+
     /** Liste tous les PermisDocument d une AT. */
     List<PermisDocumentResponse> getPermisDocuments(String atId);
 

@@ -451,17 +451,20 @@ export default function FormulaireOCPInteractive({
       const updated = { ...prev, [field]: next };
       scheduleAutoSave(updated);
       onChange?.(updated);
-      // Si permisIds, déclencher l initialisation des PermisDocument (debounce 1s)
+      // La synchronisation des PermisDocument (agent IA) se fait désormais côté backend,
+      // dans la même transaction que l'autosave (voir AutorisationTravailServiceImpl.autoSave),
+      // ce qui élimine la race condition entre l'écriture et la relecture de formPermisIds.
+      // On se contente ici de rafraîchir l'affichage un court instant après l'autosave.
       if (field === 'permisIds' && initialData?.id) {
         if (debounceInitRef.current) clearTimeout(debounceInitRef.current);
         debounceInitRef.current = setTimeout(async () => {
           try {
-            const docs = await initialiserPermis(initialData.id);
+            const docs = await getPermisDocuments(initialData.id);
             setPermisDocuments(docs);
           } catch (e) {
-            console.error('Initialisation permis IA échouée', e);
+            console.error('Rafraîchissement permis IA échoué', e);
           }
-        }, 1000);
+        }, 1200);
       }
       return updated;
     });

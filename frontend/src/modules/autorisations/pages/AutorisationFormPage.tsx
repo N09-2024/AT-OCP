@@ -14,7 +14,6 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
-import SendIcon from '@mui/icons-material/Send';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SecurityIcon from '@mui/icons-material/Security';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -304,17 +303,11 @@ export default function AutorisationFormPage() {
               </Button>
             )}
 
-            {!modeViser && (
-              <Button
-                variant="contained"
-                startIcon={<SendIcon />}
-                onClick={() => handleSubmitAT(formInteractiveData)}
-                disabled={loading}
-                sx={{ bgcolor: '#00875A', '&:hover': { bgcolor: '#047857' }, fontWeight: 700, borderRadius: 2, px: 3 }}
-              >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Soumettre & Transmettre au CEEE'}
-              </Button>
-            )}
+            {/* Bouton de soumission unique : voir "Signer & Transmettre" dans le formulaire
+                ci-dessous (handleSignerEtTransmettre), qui vérifie la Visite Préalable §8.2,
+                enrichit GPS/photo/commentaire et attache la signature CEEP avant transmission.
+                L'ancien bouton ici dupliquait la soumission en sautant ces étapes
+                (transmission "vide"/sans signature) — supprimé pour éviter toute confusion. */}
           </Stack>
         </Stack>
       </Paper>

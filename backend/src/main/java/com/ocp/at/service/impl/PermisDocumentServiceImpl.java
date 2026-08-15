@@ -43,6 +43,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
 
     private final PermisDocumentRepository permisDocumentRepository;
     private final AutorisationTravailRepository atRepository;
+    private final com.ocp.at.repository.PermisRepository permisRepository;
     private final ObjectMapper objectMapper;
 
     @Value("${gemini.api.key:}")
@@ -185,6 +186,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             pd.setStatut(StatutPermisDocument.REJETE);
             pd.setMotifRejet("Aucun fichier associé");
             permisDocumentRepository.save(pd);
+            syncPermisStatutVerification(pd);
             return;
         }
 
@@ -199,6 +201,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
                 pd.setStatut(StatutPermisDocument.REJETE);
                 pd.setMotifRejet("Fichier introuvable sur le serveur");
                 permisDocumentRepository.save(pd);
+                syncPermisStatutVerification(pd);
                 return;
             }
 
@@ -268,6 +271,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             pd.setMotifRejet("Erreur lors de l analyse : " + e.getMessage());
             pd.setDateAnalyse(LocalDateTime.now());
             permisDocumentRepository.save(pd);
+            syncPermisStatutVerification(pd);
         }
     }
 
@@ -281,6 +285,15 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
         List<PermisDocument> docs = permisDocumentRepository.findByAutorisationTravailId(atId);
         if (docs.isEmpty()) return true; // pas de permis requis
         return docs.stream().allMatch(d -> d.getStatut() == StatutPermisDocument.VALIDE);
+    }
+
+    @Override
+    @Transactional
+    public void resynchroniserStatutsPermis(String atId) {
+        List<PermisDocument> docs = permisDocumentRepository.findByAutorisationTravailId(atId);
+        for (PermisDocument pd : docs) {
+            syncPermisStatutVerification(pd);
+        }
     }
 
     // ------------------------------------------------------------------ //
@@ -414,6 +427,46 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             pd.setDateAnalyse(LocalDateTime.now());
         }
         permisDocumentRepository.save(pd);
+        syncPermisStatutVerification(pd);
+    }
+
+    // ------------------------------------------------------------------ //
+    //  syncPermisStatutVerification — répercute le résultat de l'agent IA
+    //  (PermisDocument.statut) sur l'entité Permis.statutVerification,
+    //  qui est la valeur réellement contrôlée par la garde de soumission
+    //  (AutorisationTravailServiceImpl.soumettreAT). Sans cette synchro,
+    //  un document validé par l'IA (PermisDocument.VALIDE) ne débloque
+    //  jamais la soumission, car Permis.statutVerification reste à
+    //  A_VERIFIER indéfiniment.
+    // ------------------------------------------------------------------ //
+    private void syncPermisStatutVerification(PermisDocument pd) {
+        try {
+            AutorisationTravail at = pd.getAutorisationTravail();
+            if (at == null || pd.getTypePermisAttendu() == null) return;
+
+            java.util.List<com.ocp.at.entity.Permis> permisList =
+                    permisRepository.findByAutorisationTravailId(at.getId());
+
+            for (com.ocp.at.entity.Permis p : permisList) {
+                if (p.getTypePermis() == null) continue;
+                boolean sameType = pd.getTypePermisAttendu().equals(p.getTypePermis().getId())
+                        || pd.getTypePermisAttendu().equalsIgnoreCase(p.getTypePermis().getNom());
+                if (!sameType) continue;
+
+                if (pd.getStatut() == StatutPermisDocument.VALIDE) {
+                    p.setStatutVerification(com.ocp.at.entity.enums.StatutPermis.CONFORME);
+                    p.setCommentaire(pd.getCommentaireIA());
+                } else if (pd.getStatut() == StatutPermisDocument.REJETE) {
+                    p.setStatutVerification(com.ocp.at.entity.enums.StatutPermis.NON_CONFORME);
+                    p.setCommentaire(pd.getMotifRejet());
+                } else {
+                    p.setStatutVerification(com.ocp.at.entity.enums.StatutPermis.A_VERIFIER);
+                }
+                permisRepository.save(p);
+            }
+        } catch (Exception e) {
+            log.warn("Sync Permis.statutVerification depuis PermisDocument {} : {}", pd.getId(), e.getMessage());
+        }
     }
 
     private String buildMockResponse(String typeAttendu) {

@@ -332,6 +332,17 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
         AutorisationTravail savedAt = atRepository.save(at);
 
+        // Sync PermisDocument (agent IA) dans la MÊME transaction que l'autosave,
+        // pour éviter toute race condition entre l'écriture de formPermisIds et sa relecture
+        // (avant : le frontend déclenchait un appel réseau séparé et débouncé, qui pouvait
+        // lire une valeur de formPermisIds pas encore commitée en base → PermisDocument
+        // fantôme bloqué en EN_ATTENTE_UPLOAD → soumission bloquée indéfiniment).
+        try {
+            permisDocumentService.initialiserPermisRequis(savedAt.getId());
+        } catch (Exception e) {
+            log.warn("Sync PermisDocument (autoSave) AT {} : {}", savedAt.getId(), e.getMessage());
+        }
+
         // Sync Permis
         if (request.getPermisIds() != null) {
             List<com.ocp.at.entity.Permis> existingPermis = permisRepository.findByAutorisationTravailId(savedAt.getId());
@@ -492,6 +503,14 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         }
 
         // Permis : ne bloquer QUE s'il existe au moins un permis obligatoire non conforme
+        // Resynchronise d'abord Permis.statutVerification depuis les résultats de l'agent IA
+        // (PermisDocument), au cas où un document aurait été validé avant l'ajout de la
+        // synchro automatique dans PermisDocumentServiceImpl.
+        try {
+            permisDocumentService.resynchroniserStatutsPermis(id);
+        } catch (Exception e) {
+            log.warn("Resynchronisation statuts permis AT {} : {}", id, e.getMessage());
+        }
         List<com.ocp.at.entity.Permis> permis = permisRepository.findByAutorisationTravailId(id);
         List<com.ocp.at.entity.Permis> obligatoires = permis.stream()
                 .filter(p -> Boolean.TRUE.equals(p.getEstObligatoire()))
