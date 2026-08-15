@@ -339,7 +339,8 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             "contents", List.of(contents),
             "generationConfig", Map.of(
                 "temperature", 0.1,
-                "maxOutputTokens", 500
+                "maxOutputTokens", 2048,
+                "responseMimeType", "application/json"
             )
         );
 
@@ -355,10 +356,17 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
         // Extraire le texte de la réponse Gemini
         try {
             JsonNode root = objectMapper.readTree(response.getBody());
-            return root.path("candidates").get(0)
-                       .path("content").path("parts").get(0)
-                       .path("text").asText();
+            JsonNode candidate = root.path("candidates").get(0);
+            String finishReason = candidate.path("finishReason").asText("");
+            if ("MAX_TOKENS".equals(finishReason)) {
+                log.warn("Réponse Gemini tronquée (MAX_TOKENS) — envisager d'augmenter maxOutputTokens. Body brut : {}",
+                        response.getBody());
+            }
+            String text = candidate.path("content").path("parts").get(0).path("text").asText();
+            log.debug("Réponse brute Gemini : {}", text);
+            return text;
         } catch (Exception e) {
+            log.error("Corps de réponse Gemini brut (échec extraction) : {}", response.getBody());
             throw new RuntimeException("Impossible de parser la réponse Gemini : " + e.getMessage());
         }
     }
@@ -369,6 +377,15 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             String cleaned = jsonText.trim();
             if (cleaned.startsWith("```")) {
                 cleaned = cleaned.replaceAll("^```[a-z]*\\n?", "").replaceAll("```$", "").trim();
+            }
+            // Filet de sécurité : si Gemini ajoute du texte avant/après malgré la consigne,
+            // on isole le premier bloc JSON valide { ... }
+            int firstBrace = cleaned.indexOf('{');
+            int lastBrace = cleaned.lastIndexOf('}');
+            if (firstBrace > 0 || (lastBrace >= 0 && lastBrace < cleaned.length() - 1)) {
+                if (firstBrace >= 0 && lastBrace > firstBrace) {
+                    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+                }
             }
 
             JsonNode json = objectMapper.readTree(cleaned);
@@ -391,7 +408,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             }
 
         } catch (Exception e) {
-            log.error("Erreur parsing réponse IA : {}", e.getMessage());
+            log.error("Erreur parsing réponse IA : {}. Texte brut reçu : {}", e.getMessage(), jsonText);
             pd.setStatut(StatutPermisDocument.REJETE);
             pd.setMotifRejet("Réponse IA non parsable — veuillez re-soumettre le document");
             pd.setDateAnalyse(LocalDateTime.now());
