@@ -2,6 +2,11 @@ package com.ocp.at.service.impl;
 
 import com.ocp.at.entity.*;
 import com.ocp.at.entity.enums.TypeDocumentSource;
+import com.ocp.at.repository.EPIRepository;
+import com.ocp.at.repository.MesurePreparationRepository;
+import com.ocp.at.repository.MoyenAccesRepository;
+import com.ocp.at.repository.RisqueRepository;
+import com.ocp.at.repository.TypePermisRepository;
 import com.ocp.at.service.PdfGeneratorService;
 import com.ocp.at.storage.StorageService;
 import com.lowagie.text.*;
@@ -16,6 +21,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -30,6 +37,11 @@ import java.util.List;
 public class PdfGeneratorServiceImpl implements PdfGeneratorService {
 
     private final StorageService storageService;
+    private final RisqueRepository risqueRepository;
+    private final EPIRepository epiRepository;
+    private final MesurePreparationRepository mesureRepository;
+    private final MoyenAccesRepository moyenAccesRepository;
+    private final TypePermisRepository typePermisRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -1715,21 +1727,56 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         return cell;
     }
 
+    // =========================================================================
+    // RÉSOLUTION DES IDS EN NOMS (Option A — fix bug cases cochées PDF)
+    // Les formXxxIds stockent des UUIDs : on les résout via les repositories
+    // pour retrouver les noms et faire le matching par mot-clé.
+    // =========================================================================
+
+    private List<String> resolveNoms(String jsonIds,
+                                     java.util.function.Function<List<String>, List<String>> fetcher) {
+        if (jsonIds == null || jsonIds.isBlank()) return Collections.emptyList();
+        try {
+            List<String> ids = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(jsonIds, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+            if (ids.isEmpty()) return Collections.emptyList();
+            return fetcher.apply(ids);
+        } catch (Exception e) {
+            log.warn("resolveNoms: impossible de parser les IDs JSON '{}': {}", jsonIds, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private boolean matchesKeywords(String nom, String... keywords) {
+        if (nom == null) return false;
+        String nomLower = nom.toLowerCase();
+        for (String kw : keywords) {
+            if (nomLower.contains(kw.toLowerCase())) return true;
+        }
+        return false;
+    }
+
     private boolean isRisqueCoche(AutorisationTravail at, String... keywords) {
         if (at == null) return false;
-        if (at.getRisques() != null) {
+
+        // Source 1 : collection ManyToMany déjà chargée (cas nominal)
+        if (at.getRisques() != null && !at.getRisques().isEmpty()) {
             for (Risque r : at.getRisques()) {
-                String nom = (r.getNomRisque() != null ? r.getNomRisque() : "").toLowerCase();
-                String id = (r.getId() != null ? r.getId() : "").toLowerCase();
-                for (String kw : keywords) {
-                    if (nom.contains(kw.toLowerCase()) || id.contains(kw.toLowerCase())) return true;
-                }
+                if (matchesKeywords(r.getNomRisque(), keywords)) return true;
             }
         }
-        if (at.getFormRisquesIds() != null) {
-            String form = at.getFormRisquesIds().toLowerCase();
-            for (String kw : keywords) {
-                if (form.contains(kw.toLowerCase())) return true;
+
+        // Source 2 : formRisquesIds (JSON d'UUIDs) → résolution via repository
+        if (at.getFormRisquesIds() != null && !at.getFormRisquesIds().isBlank()) {
+            List<String> noms = resolveNoms(at.getFormRisquesIds(), ids -> {
+                List<String> result = new ArrayList<>();
+                risqueRepository.findAllById(ids).forEach(r -> {
+                    if (r.getNomRisque() != null) result.add(r.getNomRisque());
+                });
+                return result;
+            });
+            for (String nom : noms) {
+                if (matchesKeywords(nom, keywords)) return true;
             }
         }
         return false;
@@ -1737,19 +1784,25 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
 
     private boolean isMesureCoche(AutorisationTravail at, String... keywords) {
         if (at == null) return false;
-        if (at.getMesures() != null) {
+
+        // Source 1 : collection ManyToMany déjà chargée
+        if (at.getMesures() != null && !at.getMesures().isEmpty()) {
             for (MesurePreparation m : at.getMesures()) {
-                String nom = (m.getNomMesure() != null ? m.getNomMesure() : "").toLowerCase();
-                String id = (m.getId() != null ? m.getId() : "").toLowerCase();
-                for (String kw : keywords) {
-                    if (nom.contains(kw.toLowerCase()) || id.contains(kw.toLowerCase())) return true;
-                }
+                if (matchesKeywords(m.getNomMesure(), keywords)) return true;
             }
         }
-        if (at.getFormMesuresIds() != null) {
-            String form = at.getFormMesuresIds().toLowerCase();
-            for (String kw : keywords) {
-                if (form.contains(kw.toLowerCase())) return true;
+
+        // Source 2 : formMesuresIds → résolution via repository
+        if (at.getFormMesuresIds() != null && !at.getFormMesuresIds().isBlank()) {
+            List<String> noms = resolveNoms(at.getFormMesuresIds(), ids -> {
+                List<String> result = new ArrayList<>();
+                mesureRepository.findAllById(ids).forEach(m -> {
+                    if (m.getNomMesure() != null) result.add(m.getNomMesure());
+                });
+                return result;
+            });
+            for (String nom : noms) {
+                if (matchesKeywords(nom, keywords)) return true;
             }
         }
         return false;
@@ -1757,19 +1810,25 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
 
     private boolean isMoyenCoche(AutorisationTravail at, String... keywords) {
         if (at == null) return false;
-        if (at.getMoyensAcces() != null) {
+
+        // Source 1 : collection ManyToMany déjà chargée
+        if (at.getMoyensAcces() != null && !at.getMoyensAcces().isEmpty()) {
             for (MoyenAcces m : at.getMoyensAcces()) {
-                String nom = (m.getNomMoyen() != null ? m.getNomMoyen() : "").toLowerCase();
-                String id = (m.getId() != null ? m.getId() : "").toLowerCase();
-                for (String kw : keywords) {
-                    if (nom.contains(kw.toLowerCase()) || id.contains(kw.toLowerCase())) return true;
-                }
+                if (matchesKeywords(m.getNomMoyen(), keywords)) return true;
             }
         }
-        if (at.getFormMoyensIds() != null) {
-            String form = at.getFormMoyensIds().toLowerCase();
-            for (String kw : keywords) {
-                if (form.contains(kw.toLowerCase())) return true;
+
+        // Source 2 : formMoyensIds → résolution via repository
+        if (at.getFormMoyensIds() != null && !at.getFormMoyensIds().isBlank()) {
+            List<String> noms = resolveNoms(at.getFormMoyensIds(), ids -> {
+                List<String> result = new ArrayList<>();
+                moyenAccesRepository.findAllById(ids).forEach(m -> {
+                    if (m.getNomMoyen() != null) result.add(m.getNomMoyen());
+                });
+                return result;
+            });
+            for (String nom : noms) {
+                if (matchesKeywords(nom, keywords)) return true;
             }
         }
         return false;
@@ -1777,19 +1836,25 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
 
     private boolean isEpiCoche(AutorisationTravail at, String... keywords) {
         if (at == null) return false;
-        if (at.getEpis() != null) {
+
+        // Source 1 : collection ManyToMany déjà chargée
+        if (at.getEpis() != null && !at.getEpis().isEmpty()) {
             for (EPI e : at.getEpis()) {
-                String nom = (e.getNomEPI() != null ? e.getNomEPI() : "").toLowerCase();
-                String id = (e.getId() != null ? e.getId() : "").toLowerCase();
-                for (String kw : keywords) {
-                    if (nom.contains(kw.toLowerCase()) || id.contains(kw.toLowerCase())) return true;
-                }
+                if (matchesKeywords(e.getNomEPI(), keywords)) return true;
             }
         }
-        if (at.getFormEpisIds() != null) {
-            String form = at.getFormEpisIds().toLowerCase();
-            for (String kw : keywords) {
-                if (form.contains(kw.toLowerCase())) return true;
+
+        // Source 2 : formEpisIds → résolution via repository
+        if (at.getFormEpisIds() != null && !at.getFormEpisIds().isBlank()) {
+            List<String> noms = resolveNoms(at.getFormEpisIds(), ids -> {
+                List<String> result = new ArrayList<>();
+                epiRepository.findAllById(ids).forEach(e -> {
+                    if (e.getNomEPI() != null) result.add(e.getNomEPI());
+                });
+                return result;
+            });
+            for (String nom : noms) {
+                if (matchesKeywords(nom, keywords)) return true;
             }
         }
         return false;
@@ -1797,19 +1862,26 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
 
     private boolean isPermisCoche(AutorisationTravail at, String... keywords) {
         if (at == null) return false;
-        if (at.getPermis() != null) {
+
+        // Source 1 : collection Permis déjà chargée (typePermis.nom)
+        if (at.getPermis() != null && !at.getPermis().isEmpty()) {
             for (Permis p : at.getPermis()) {
-                String nom = (p.getTypePermis() != null && p.getTypePermis().getNom() != null ? p.getTypePermis().getNom() : "").toLowerCase();
-                String id = (p.getTypePermis() != null && p.getTypePermis().getId() != null ? p.getTypePermis().getId() : "").toLowerCase();
-                for (String kw : keywords) {
-                    if (nom.contains(kw.toLowerCase()) || id.contains(kw.toLowerCase())) return true;
-                }
+                String nom = p.getTypePermis() != null ? p.getTypePermis().getNom() : null;
+                if (matchesKeywords(nom, keywords)) return true;
             }
         }
-        if (at.getFormPermisIds() != null) {
-            String form = at.getFormPermisIds().toLowerCase();
-            for (String kw : keywords) {
-                if (form.contains(kw.toLowerCase())) return true;
+
+        // Source 2 : formPermisIds → résolution des TypePermis via repository
+        if (at.getFormPermisIds() != null && !at.getFormPermisIds().isBlank()) {
+            List<String> noms = resolveNoms(at.getFormPermisIds(), ids -> {
+                List<String> result = new ArrayList<>();
+                typePermisRepository.findAllById(ids).forEach(tp -> {
+                    if (tp.getNom() != null) result.add(tp.getNom());
+                });
+                return result;
+            });
+            for (String nom : noms) {
+                if (matchesKeywords(nom, keywords)) return true;
             }
         }
         return false;

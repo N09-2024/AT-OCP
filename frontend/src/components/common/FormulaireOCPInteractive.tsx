@@ -165,24 +165,6 @@ export default function FormulaireOCPInteractive({
     g1NomCeee: initialData.g1NomCeee || '',
     g1VisaCeee: initialData.g1VisaCeee || null,
 
-    g2NomCeep: initialData.g2NomCeep || '',
-    g2VisaCeep: initialData.g2VisaCeep || null,
-    g2NomCeee: initialData.g2NomCeee || '',
-    g2VisaCeee: initialData.g2VisaCeee || null,
-
-    g3NomCeep: initialData.g3NomCeep || '',
-    g3VisaCeep: initialData.g3VisaCeep || null,
-    g3NomCeee: initialData.g3NomCeee || '',
-    g3VisaCeee: initialData.g3VisaCeee || null,
-
-    // Réception
-    dateReception: initialData.dateReception || todayStr,
-    heureReception: initialData.heureReception || '17:00',
-    remiseEnPlace: initialData.remiseEnPlace || ([] as string[]),
-    essaiConcluant: initialData.essaiConcluant || 'oui',
-    valCeep: initialData.valCeep || '',
-    valCeee: initialData.valCeee || '',
-    valSt: initialData.valSt || '',
   });
 
   // State Visite Préalable (§8.2 Standard OCP)
@@ -470,18 +452,6 @@ export default function FormulaireOCPInteractive({
     });
   };
 
-  // Toggle Remise en place checkbox
-  const toggleRemiseEnPlace = (itemKey: string) => {
-    if (readOnly) return;
-    setFormData((prev) => {
-      const list = prev.remiseEnPlace;
-      const updated = list.includes(itemKey)
-        ? { ...prev, remiseEnPlace: list.filter((i: string) => i !== itemKey) }
-        : { ...prev, remiseEnPlace: [...list, itemKey] };
-      onChange?.(updated);
-      return updated;
-    });
-  };
 
   // ------------------------------------------------------------------
   // IA IMPLICITE — plus de bouton "Assistant IA". L'analyse se déclenche
@@ -780,9 +750,9 @@ export default function FormulaireOCPInteractive({
                 sx={{ bgcolor: '#00875A', '&:hover': { bgcolor: '#006c48' }, fontWeight: 700 }}
                 startIcon={<CheckCircleIcon />}
                 onClick={() => {
-                  const blob = sigBlobs['g1VisaCeee'] || sigBlobs['valCeee'];
+                  const blob = sigBlobs['g1VisaCeee'];
                   if (!blob) {
-                    alert('Signez d\'abord la case Visa CEEE (section G).');
+                    alert('Signez d\'abord le Visa CEEE avant d\'enregistrer.');
                     return;
                   }
                   onVisaCeee(formData, blob);
@@ -1533,255 +1503,44 @@ export default function FormulaireOCPInteractive({
         </CardContent>
       </Card>
 
-      {/* SECTION G: VISAS & SIGNATURES */}
+      {/* SECTION G: SIGNATURE CEEP */}
       <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
         <CardHeader
           avatar={<DrawIcon sx={{ color: '#00875A' }} />}
-          title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b' }}>G. Approbations, Visas & Signatures Numériques</Typography>}
-          subheader="Validation des 3 postes de travail par CEEP (Émetteur) et CEEE (Exécutant)"
+          title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b' }}>G. Validation & Signature</Typography>}
+          subheader="Signature du Chef d'Équipe Émetteur (CEEP) pour validation de l'AT"
           sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', py: 1.5 }}
         />
         <CardContent sx={{ p: 3 }}>
-          <Grid container spacing={3}>
-            {/* 1er Poste */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Paper elevation={0} sx={{ p: 2, borderRadius: 2.5, border: '1px solid #cbd5e1', bgcolor: '#f8fafc' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00875A', mb: 1.5 }}>
-                  1er Poste de Travail
-                </Typography>
-                <Stack spacing={1.5}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Chef d'Équipe Emetteur (CEEP)"
-                    value={formData.g1NomCeep}
-                    disabled={fieldsLocked}
-                    onChange={(e) => updateTextValue('g1NomCeep', e.target.value)}
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    color="primary"
-                    startIcon={<DrawIcon />}
-                    disabled={!canSignCeep}
-                    onClick={() => handleOpenSignature('g1VisaCeep')}
-                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
-                  >
-                    {formData.g1VisaCeep ? 'Visa CEEP signé (cliquer pour modifier)' : 'Signer Visa CEEP'}
-                  </Button>
-
-                  <Divider />
-
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Chef d'Équipe Exécutant (CEEE)"
-                    value={formData.g1NomCeee}
-                    disabled={fieldsLocked}
-                    onChange={(e) => updateTextValue('g1NomCeee', e.target.value)}
-                  />
-                  <Button
-                    variant={canSignCeee ? 'contained' : 'outlined'}
-                    size="small"
-                    color="success"
-                    startIcon={<DrawIcon />}
-                    disabled={!canSignCeee}
-                    onClick={() => handleOpenSignature('g1VisaCeee')}
-                    sx={{
-                      justifyContent: 'flex-start',
-                      textTransform: 'none',
-                      fontWeight: canSignCeee ? 800 : 500,
-                      boxShadow: canSignCeee ? '0 0 0 2px #16a34a40' : 'none',
-                    }}
-                  >
-                    {formData.g1VisaCeee
-                      ? '✅ Visa CEEE signé (cliquer pour modifier)'
-                      : '✍️ Signer le Visa CEEE'}
-                  </Button>
-                </Stack>
-              </Paper>
-            </Grid>
-
-            {/* 2ème Poste */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Paper elevation={0} sx={{ p: 2, borderRadius: 2.5, border: '1px solid #cbd5e1', bgcolor: '#f8fafc' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#475569', mb: 1.5 }}>
-                  2ème Poste (Reconduction)
-                </Typography>
-                <Stack spacing={1.5}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Nom CEEP (2e poste)"
-                    value={formData.g2NomCeep}
-                    disabled={fieldsLocked}
-                    onChange={(e) => updateTextValue('g2NomCeep', e.target.value)}
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    disabled={!canSignCeep}
-                    onClick={() => handleOpenSignature('g2VisaCeep')}
-                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
-                  >
-                    {formData.g2VisaCeep ? 'Visa CEEP 2e poste' : 'Signer CEEP (2e poste)'}
-                  </Button>
-
-                  <Divider />
-
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Nom CEEE (2e poste)"
-                    value={formData.g2NomCeee}
-                    disabled={fieldsLocked}
-                    onChange={(e) => updateTextValue('g2NomCeee', e.target.value)}
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    color="success"
-                    disabled={!canSignCeee}
-                    onClick={() => handleOpenSignature('g2VisaCeee')}
-                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
-                  >
-                    {formData.g2VisaCeee ? 'Visa CEEE 2e poste' : 'Signer CEEE (2e poste)'}
-                  </Button>
-                </Stack>
-              </Paper>
-            </Grid>
-
-            {/* 3ème Poste */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Paper elevation={0} sx={{ p: 2, borderRadius: 2.5, border: '1px solid #cbd5e1', bgcolor: '#f8fafc' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#475569', mb: 1.5 }}>
-                  3ème Poste (Reconduction)
-                </Typography>
-                <Stack spacing={1.5}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Nom CEEP (3e poste)"
-                    value={formData.g3NomCeep}
-                    disabled={fieldsLocked}
-                    onChange={(e) => updateTextValue('g3NomCeep', e.target.value)}
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    disabled={!canSignCeep}
-                    onClick={() => handleOpenSignature('g3VisaCeep')}
-                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
-                  >
-                    {formData.g3VisaCeep ? 'Visa CEEP 3e poste' : 'Signer CEEP (3e poste)'}
-                  </Button>
-
-                  <Divider />
-
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Nom CEEE (3e poste)"
-                    value={formData.g3NomCeee}
-                    disabled={fieldsLocked}
-                    onChange={(e) => updateTextValue('g3NomCeee', e.target.value)}
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    color="success"
-                    disabled={!canSignCeee}
-                    onClick={() => handleOpenSignature('g3VisaCeee')}
-                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
-                  >
-                    {formData.g3VisaCeee ? 'Visa CEEE 3e poste' : 'Signer CEEE (3e poste)'}
-                  </Button>
-                </Stack>
-              </Paper>
-            </Grid>
-          </Grid>
+          <Stack spacing={2} sx={{ maxWidth: 480 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Chef d'Équipe Émetteur (CEEP)"
+              value={formData.g1NomCeep}
+              disabled={fieldsLocked}
+              onChange={(e) => updateTextValue('g1NomCeep', e.target.value)}
+            />
+            <Button
+              variant={formData.g1VisaCeep ? 'contained' : 'outlined'}
+              size="medium"
+              color="primary"
+              startIcon={<DrawIcon />}
+              disabled={!canSignCeep}
+              onClick={() => handleOpenSignature('g1VisaCeep')}
+              sx={{
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                fontWeight: 700,
+                boxShadow: canSignCeep && !formData.g1VisaCeep ? '0 0 0 2px #2563eb40' : 'none',
+              }}
+            >
+              {formData.g1VisaCeep ? '✅ Visa CEEP signé — cliquer pour modifier' : '✍️ Signer l\'AT (Visa CEEP)'}
+            </Button>
+          </Stack>
         </CardContent>
       </Card>
 
-      {/* SECTION H: CLÔTURE & RÉCEPTION DE TRAVAUX */}
-      <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
-        <CardHeader
-          avatar={<VerifiedUserIcon sx={{ color: '#00875A' }} />}
-          title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b' }}>H. Réception des Travaux & Restitution</Typography>}
-          subheader="Déclaration de fin d'intervention et conformité de remise en état"
-          sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', py: 1.5 }}
-        />
-        <CardContent sx={{ p: 3 }}>
-          <Grid container spacing={2.5}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="Date de réception"
-                slotProps={{ inputLabel: { shrink: true } }}
-                value={formData.dateReception}
-                disabled={readOnly}
-                onChange={(e) => updateTextValue('dateReception', e.target.value)}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                size="small"
-                type="time"
-                label="Heure de réception"
-                slotProps={{ inputLabel: { shrink: true } }}
-                value={formData.heureReception}
-                disabled={readOnly}
-                onChange={(e) => updateTextValue('heureReception', e.target.value)}
-              />
-            </Grid>
-
-            <Grid size={12}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                Restitution des installations :
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                {[
-                  { key: 'protect', label: 'Protections retirées' },
-                  { key: 'propre', label: 'Lieu nettoyé & propre' },
-                  { key: 'consigne', label: 'Déconsignation effectuée' },
-                ].map((item) => {
-                  const checked = formData.remiseEnPlace.includes(item.key);
-                  return (
-                    <Chip
-                      key={item.key}
-                      label={item.label}
-                      icon={checked ? <CheckBoxIcon /> : <CheckBoxOutlineBlankIcon />}
-                      clickable={!readOnly}
-                      color={checked ? 'success' : 'default'}
-                      onClick={() => toggleRemiseEnPlace(item.key)}
-                      sx={{ fontWeight: 700 }}
-                    />
-                  );
-                })}
-              </Stack>
-            </Grid>
-
-            <Grid size={12}>
-              <FormControl component="fieldset">
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  Essais de bon fonctionnement concluants :
-                </Typography>
-                <RadioGroup
-                  row
-                  value={formData.essaiConcluant}
-                  onChange={(e) => updateTextValue('essaiConcluant', e.target.value)}
-                >
-                  <FormControlLabel value="oui" control={<Radio disabled={readOnly} size="small" />} label="Oui (Concluant)" />
-                  <FormControlLabel value="non" control={<Radio disabled={readOnly} size="small" />} label="Non (Réserves)" />
-                </RadioGroup>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
 
       {/* BARRE D'ACTIONS INFERIEURE (BOTTOM ACTION BAR) */}
       {(!readOnly || signMode === 'ceee') && (
