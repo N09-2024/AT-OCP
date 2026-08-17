@@ -209,21 +209,20 @@ export default function AutorisationFormPage() {
         throw new Error("Impossible d'obtenir l'identifiant de l'AT.");
       }
 
-      if (signatureBlob) {
-        try {
-          const visasRes = await apiClient.get(`/visa/at/${currentId}`);
-          const visaCeep = visasRes.data.find((v: any) => v.commentaire === 'g1VisaCeep' || v.champ === 'g1VisaCeep')
-            ?? visasRes.data.find((v: any) => v.statut === 'EN_ATTENTE');
-          if (visaCeep) {
-            const formData = new FormData();
-            formData.append('signature', signatureBlob);
-            formData.append('commentaire', 'g1VisaCeep');
-            await apiClient.post(`/visa/${visaCeep.id}/sign`, formData);
-          }
-        } catch (sigErr) {
-          console.warn("Signature optionnelle CEEP non enregistrée", sigErr);
-        }
+      // Le visa CEEP doit être créé ET signé avant la soumission.
+      // L'ancien code cherchait un visa EN_ATTENTE qui n'était pas garanti d'exister,
+      // ce qui pouvait laisser l'AT avec uniquement la date de création dans le PDF,
+      // sans fichier PNG de signature.
+      if (!signatureBlob) {
+        throw new Error("La signature CEEP est obligatoire avant la transmission de l'AT.");
       }
+
+      await visaApi.createAndSignVisa(
+        currentId,
+        signatureBlob,
+        'g1VisaCeep',
+        1
+      );
 
       await autorisationTravailApi.soumettre(currentId);
 

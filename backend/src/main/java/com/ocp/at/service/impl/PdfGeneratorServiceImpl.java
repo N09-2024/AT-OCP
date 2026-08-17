@@ -1916,6 +1916,27 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
                 if (v == null || v.getStatut() == com.ocp.at.entity.enums.StatutVisa.REFUS) continue;
                 String comment = v.getCommentaire() != null ? v.getCommentaire().toLowerCase() : "";
 
+                // Le visa créé par le formulaire CEEP porte explicitement le marqueur g1VisaCeep.
+                // Cela évite de sélectionner par erreur un autre visa du même utilisateur.
+                if (isCeep && posteNum == 1 && comment.contains("g1visaceep")) {
+                    PosteVisa exact = new PosteVisa();
+                    Utilisateur u = v.getUtilisateur();
+                    if (u != null) {
+                        exact.nomSignataire = (u.getPrenom() != null ? u.getPrenom() : "") + " "
+                                + (u.getNom() != null ? u.getNom() : "")
+                                + (u.getMatricule() != null ? " (" + u.getMatricule() + ")" : "");
+                    }
+                    if (v.getSignaturePath() != null && !v.getSignaturePath().isBlank()) {
+                        exact.signatureImage = loadSignatureImage(v.getSignaturePath());
+                    }
+                    if (v.getDateSignature() != null) {
+                        exact.dateHeure = v.getDateSignature().format(DATETIME_FMT);
+                    } else if (v.getDateVisa() != null) {
+                        exact.dateHeure = v.getDateVisa().format(DATETIME_FMT);
+                    }
+                    return exact;
+                }
+
                 // Identification rôle CEEP vs CEEE
                 boolean matchesRole;
                 if (isCeep) {
