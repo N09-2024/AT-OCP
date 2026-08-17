@@ -663,110 +663,12 @@ export default function FormulaireOCPInteractive({
   // Blocage soumission si des permis ne sont pas tous VALIDE
   const permisEnAttente = permisDocuments.filter((d) => d.statut !== 'VALIDE').length;
   const soumissionBloquee = !readOnly && permisDocuments.length > 0 && permisEnAttente > 0;
+  // Le PDF officiel n'est affiché qu'après les visas HMEP et HMEE.
+  // Les indicateurs sont calculés par FormulaireOCPViewer à partir des visas serveur.
+  const hmepAndHmeeSigned = Boolean(initialData?.hmepVisaSigne && initialData?.hmeeVisaSigne);
 
   return (
     <Box sx={{ pb: 6, maxWidth: 1120, mx: 'auto' }}>
-      {/* FLOATING ACTION TOOLBAR */}
-      <Paper
-        elevation={6}
-        sx={{
-          p: 2,
-          mb: 3,
-          position: 'sticky',
-          top: 16,
-          zIndex: 100,
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 1.5,
-          bgcolor: '#0E2A21',
-          color: '#FFFFFF',
-          borderRadius: 3,
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-        }}
-      >
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-          <Button variant="contained" color="error" startIcon={<PictureAsPdfIcon />} onClick={exportPDFServer} size="small" sx={{ fontWeight: 700, borderRadius: 2 }}>
-            PDF Officiel
-          </Button>
-
-          {/* AUTOSAVE CHIP */}
-          {saveStatus === 'saving' && (
-            <Chip label="Enregistrement..." color="info" size="small" icon={<CircularProgress size={12} color="inherit" />} sx={{ fontWeight: 700 }} />
-          )}
-          {saveStatus === 'saved' && (
-            <Chip label={`Enregistré à ${lastSavedTime}`} color="success" size="small" icon={<CheckCircleIcon sx={{ fontSize: 14 }} />} sx={{ fontWeight: 700 }} />
-          )}
-          {saveStatus === 'error' && (
-            <Chip label="Échec enregistrement" color="error" size="small" sx={{ fontWeight: 700 }} />
-          )}
-
-          {/* Indicateur IA discret — remplace le bouton "Assistant IA" */}
-          {iaLoading && (
-            <Chip
-              label="Analyse IA…"
-              size="small"
-              icon={<CircularProgress size={12} color="inherit" />}
-              sx={{ fontWeight: 700, bgcolor: 'rgba(31,77,62,0.18)', color: '#7FC8A9' }}
-            />
-          )}
-        </Box>
-
-        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#5C6E67', letterSpacing: 0.5, display: { xs: 'none', md: 'block' } }}>
-          OCP S-HSE-SEC-31 &bull; F-HSE-SEC-31-04
-        </Typography>
-
-        {(!readOnly || signMode === 'ceee') && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {onSave && (
-              <Button variant="outlined" sx={{ color: '#FFFFFF', borderColor: '#5C6E67', '&:hover': { borderColor: '#5C6E67', bgcolor: '#16241E' } }} onClick={() => onSave(formData)} disabled={loading} size="small">
-                Brouillon
-              </Button>
-            )}
-            {onSubmitAT && signMode !== 'ceee' && (
-              <Tooltip
-                title={soumissionBloquee ? `${permisEnAttente} permis en attente de validation IA` : ''}
-                arrow
-              >
-                <span>
-                  <Button
-                    variant="contained"
-                    sx={{ bgcolor: '#1F4D3E', '&:hover': { bgcolor: '#1F4D3E' }, fontWeight: 700, borderRadius: 2 }}
-                    startIcon={<CheckCircleIcon />}
-                    onClick={handleSignerEtTransmettre}
-                    disabled={loading || soumissionBloquee}
-                    size="small"
-                  >
-                    Signer & Transmettre
-                  </Button>
-                </span>
-              </Tooltip>
-            )}
-            {onVisaCeee && signMode === 'ceee' && (
-              <Button
-                variant="contained"
-                sx={{ bgcolor: '#1F4D3E', '&:hover': { bgcolor: '#1F4D3E' }, fontWeight: 700 }}
-                startIcon={<CheckCircleIcon />}
-                onClick={() => {
-                  const blob = sigBlobs['g1VisaCeee'];
-                  if (!blob) {
-                    alert('Signez d\'abord le Visa CEEE avant d\'enregistrer.');
-                    return;
-                  }
-                  onVisaCeee(formData, blob);
-                }}
-                disabled={loading}
-                size="small"
-              >
-                Enregistrer visa CEEE
-              </Button>
-            )}
-          </Box>
-        )}
-      </Paper>
-
       {/* IA SUGGESTION BANNER — implicite, avec suggestions cliquables */}
       {(iaRapport || iaAlertes.length > 0) && (
         <Alert
@@ -882,27 +784,42 @@ export default function FormulaireOCPInteractive({
       <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #D6E3DC', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
         <CardHeader
           avatar={<AssignmentIcon sx={{ color: '#1F4D3E' }} />}
-          title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#16241E' }}>Section A &bull; Nature de l'AT & Affectation des Services</Typography>}
+          title={
+            <Typography variant="h6" sx={{ fontWeight: 800, color: '#16241E' }}>
+              Section A &bull; Nature de l'AT & Affectation des Services
+            </Typography>
+          }
           subheader="Identification du type d'AT et définition du service demandeur vs service exécutant"
           sx={{ bgcolor: '#F7FAF8', borderBottom: '1px solid #D6E3DC', py: 1.5 }}
         />
-        <CardContent sx={{ p: 3 }}>
-          <Grid container spacing={2.5}>
-            {/* Nature / Type de l'AT (DI, OT, BT) */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#5C6E67', mb: 1, display: 'block' }}>
-                Nature de l'Autorisation de Travail :
-              </Typography>
-              <Stack direction="row" spacing={1.5}>
-                {[
-                  { key: 'DI', label: "Demande d'Intervention (DI)" },
-                  { key: 'OT', label: "Ordre de Travail (OT)" },
-                  { key: 'BT', label: "Bon de Travail (BT)" },
-                ].map((item) => {
-                  const selected = docSourceType === item.key;
-                  return (
+        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+          {/* 1. Nature de l'AT */}
+          <Box>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 800,
+                color: '#5C6E67',
+                mb: 1,
+                display: 'block',
+                textTransform: 'uppercase',
+                letterSpacing: 0.4,
+              }}
+            >
+              1. Nature de l'Autorisation de Travail
+            </Typography>
+
+            <Grid container spacing={1.5}>
+              {[
+                { key: 'DI', label: "Demande d'Intervention (DI)" },
+                { key: 'OT', label: "Ordre de Travail (OT)" },
+                { key: 'BT', label: "Bon de Travail (BT)" },
+              ].map((item) => {
+                const selected = docSourceType === item.key;
+
+                return (
+                  <Grid key={item.key} size={{ xs: 12, sm: 4 }}>
                     <Paper
-                      key={item.key}
                       elevation={0}
                       onClick={() => {
                         if (fieldsLocked) return;
@@ -910,7 +827,7 @@ export default function FormulaireOCPInteractive({
                         updateTextValue('documentSourceType', item.key);
                       }}
                       sx={{
-                        flex: 1,
+                        minHeight: 76,
                         p: 1.5,
                         textAlign: 'center',
                         borderRadius: 2,
@@ -918,109 +835,186 @@ export default function FormulaireOCPInteractive({
                         border: selected ? '2px solid #1F4D3E' : '1px solid #D6E3DC',
                         bgcolor: selected ? '#EDF2EE' : '#FFFFFF',
                         transition: 'all 0.15s ease-in-out',
-                        '&:hover': fieldsLocked ? {} : { borderColor: '#1F4D3E', bgcolor: '#EDF2EE' },
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        '&:hover': fieldsLocked
+                          ? {}
+                          : { borderColor: '#1F4D3E', bgcolor: '#EDF2EE' },
                       }}
                     >
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: selected ? '#1F4D3E' : '#5C6E67' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontWeight: 800,
+                          color: selected ? '#1F4D3E' : '#5C6E67',
+                        }}
+                      >
                         {item.key}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: selected ? '#1F4D3E' : '#5C6E67', fontSize: 11, display: 'block' }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: selected ? '#1F4D3E' : '#5C6E67',
+                          fontSize: 11,
+                          display: 'block',
+                        }}
+                      >
                         {item.label}
                       </Typography>
                     </Paper>
-                  );
-                })}
-              </Stack>
+                  </Grid>
+                );
+              })}
             </Grid>
+          </Box>
 
-            {/* Site / Zone Propriétaire */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}>
-                Site / Zone Propriétaire (P)
-              </Typography>
-              <FormControl fullWidth size="small" disabled={readOnly}>
-                <Select
-                  value={formData.site}
-                  displayEmpty
-                  onChange={(e) => updateTextValue('site', e.target.value)}
+          <Divider sx={{ my: 2.5 }} />
+
+          {/* 2. Affectation propriétaire */}
+          <Box>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 800,
+                color: '#5C6E67',
+                mb: 1,
+                display: 'block',
+                textTransform: 'uppercase',
+                letterSpacing: 0.4,
+              }}
+            >
+              2. Affectation propriétaire
+            </Typography>
+
+            <Grid container spacing={2}>
+              {/* Site / Zone Propriétaire */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}
                 >
-                  <MenuItem value=""><em>Sélectionner zone...</em></MenuItem>
-                  {zonesList.map((z) => (
-                    <MenuItem key={z.id} value={z.nomZone}>
-                      {z.nomZone}
+                  Site / Zone Propriétaire (P)
+                </Typography>
+                <FormControl fullWidth size="small" disabled={readOnly}>
+                  <Select
+                    value={formData.site}
+                    displayEmpty
+                    onChange={(e) => updateTextValue('site', e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>Sélectionner zone...</em>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+                    {zonesList.map((z) => (
+                      <MenuItem key={z.id} value={z.nomZone}>
+                        {z.nomZone}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
 
-            {/* Service Demandeur (P) */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}>
-                Service Demandeur / Propriétaire (P)
-              </Typography>
-              <FormControl fullWidth size="small" disabled={readOnly}>
-                <Select
-                  value={formData.entite}
-                  displayEmpty
-                  onChange={(e) => updateTextValue('entite', e.target.value)}
+              {/* Service Demandeur */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}
                 >
-                  <MenuItem value=""><em>Sélectionner service...</em></MenuItem>
-                  {servicesList.map((s) => (
-                    <MenuItem key={s.id} value={s.nomService}>
-                      {s.nomService}
+                  Service Demandeur / Propriétaire (P)
+                </Typography>
+                <FormControl fullWidth size="small" disabled={readOnly}>
+                  <Select
+                    value={formData.entite}
+                    displayEmpty
+                    onChange={(e) => updateTextValue('entite', e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>Sélectionner service...</em>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    {servicesList.map((s) => (
+                      <MenuItem key={s.id} value={s.nomService}>
+                        {s.nomService}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
+          </Box>
 
-            <Grid size={12}>
-              <Divider sx={{ my: 0.5 }} />
-            </Grid>
+          <Divider sx={{ my: 2.5 }} />
 
-            {/* Service Intervenant (CEEE) */}
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}>
-                Service Intervenant / Exécutant (CEEE) *
-              </Typography>
-              <FormControl fullWidth size="small" disabled={fieldsLocked}>
-                <Select
-                  value={formData.serviceIntervenantId || formData.servicesIntervenants}
-                  displayEmpty
-                  onChange={(e) => handleSelectServiceIntervenant(e.target.value)}
+          {/* 3. Exécution */}
+          <Box>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 800,
+                color: '#5C6E67',
+                mb: 1,
+                display: 'block',
+                textTransform: 'uppercase',
+                letterSpacing: 0.4,
+              }}
+            >
+              3. Exécution de l'intervention
+            </Typography>
+
+            <Grid container spacing={2}>
+              {/* Service Intervenant */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}
                 >
-                  <MenuItem value=""><em>-- Sélectionner le service exécutant (différent de P) --</em></MenuItem>
-                  {servicesList.map((s) => (
-                    <MenuItem key={s.id} value={s.id}>
-                      {s.nomService}
+                  Service Intervenant / Exécutant (CEEE) *
+                </Typography>
+                <FormControl fullWidth size="small" disabled={fieldsLocked}>
+                  <Select
+                    value={formData.serviceIntervenantId || formData.servicesIntervenants}
+                    displayEmpty
+                    onChange={(e) => handleSelectServiceIntervenant(e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>-- Sélectionner le service exécutant (différent de P) --</em>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+                    {servicesList.map((s) => (
+                      <MenuItem key={s.id} value={s.id}>
+                        {s.nomService}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
 
-            {/* Entreprises Intervenantes Sous-traitantes */}
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}>
-                Entreprise Extérieure (Tiers / Sous-traitant)
-              </Typography>
-              <FormControl fullWidth size="small" disabled={fieldsLocked}>
-                <Select
-                  value={formData.entreprisesIntervenantes}
-                  displayEmpty
-                  onChange={(e) => updateTextValue('entreprisesIntervenantes', e.target.value)}
+              {/* Entreprise extérieure */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}
                 >
-                  <MenuItem value=""><em>Aucune (Régie interne OCP)</em></MenuItem>
-                  {entreprisesList.map((ee) => (
-                    <MenuItem key={ee.id} value={ee.nomEntreprise}>
-                      {ee.nomEntreprise}
+                  Entreprise Extérieure (Tiers / Sous-traitant)
+                </Typography>
+                <FormControl fullWidth size="small" disabled={fieldsLocked}>
+                  <Select
+                    value={formData.entreprisesIntervenantes}
+                    displayEmpty
+                    onChange={(e) => updateTextValue('entreprisesIntervenantes', e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>Aucune (Régie interne OCP)</em>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    {entreprisesList.map((ee) => (
+                      <MenuItem key={ee.id} value={ee.nomEntreprise}>
+                        {ee.nomEntreprise}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
-          </Grid>
+          </Box>
         </CardContent>
       </Card>
 
@@ -1321,92 +1315,125 @@ export default function FormulaireOCPInteractive({
         </CardContent>
       </Card>
 
-      {/* SECTION C & D: MOYENS D'ACCÈS ET EPI */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* SECTION C: MOYENS D'ACCÈS */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ height: '100%', borderRadius: 3, border: '1px solid #D6E3DC' }}>
-            <CardHeader
-              avatar={<BuildIcon sx={{ color: '#3C7A5C' }} />}
-              title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#2E624A' }}>C. Moyens d'accès</Typography>}
-              subheader="Échafaudages, nacelles, échelles"
-              sx={{ bgcolor: '#EDF2EE', borderBottom: '1px solid #E2F0E8', py: 1.5 }}
-            />
-            <CardContent sx={{ p: 2.5 }}>
-              <Grid container spacing={1.5}>
-                {refMoyens.map((ma) => {
-                  const active = isChecked('moyensAccesIds', ma.id);
-                  return (
-                    <Grid key={ma.id} size={12}>
-                      <Paper
-                        elevation={0}
-                        onClick={() => toggleCheckbox('moyensAccesIds', ma.id)}
-                        sx={{
-                          p: 1.25,
-                          borderRadius: 2,
-                          cursor: fieldsLocked ? 'default' : 'pointer',
-                          border: active ? '2px solid #3C7A5C' : '1px solid #D6E3DC',
-                          bgcolor: active ? '#EDF2EE' : '#FFFFFF',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                        }}
-                      >
-                        {active ? <CheckBoxIcon sx={{ color: '#3C7A5C' }} /> : <CheckBoxOutlineBlankIcon sx={{ color: '#5C6E67' }} />}
-                        <Typography variant="body2" sx={{ fontWeight: active ? 700 : 500, color: active ? '#2E624A' : '#16241E' }}>
-                          {ma.nomMoyen || ma.nom || ma.libelle || ma.descriptionMoyen}
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
+      {/* SECTION C: MOYENS D'ACCÈS */}
+      <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #D6E3DC', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+        <CardHeader
+          avatar={<BuildIcon sx={{ color: '#3C7A5C' }} />}
+          title={
+            <Typography variant="h6" sx={{ fontWeight: 800, color: '#2E624A' }}>
+              C. Moyens d'accès
+            </Typography>
+          }
+          subheader="Échafaudages, nacelles, échelles"
+          sx={{ bgcolor: '#EDF2EE', borderBottom: '1px solid #E2F0E8', py: 1.5 }}
+        />
+        <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
+          <Grid container spacing={1.5}>
+            {refMoyens.map((ma) => {
+              const active = isChecked('moyensAccesIds', ma.id);
 
-        {/* SECTION D: EPI */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ height: '100%', borderRadius: 3, border: '1px solid #D6E3DC' }}>
-            <CardHeader
-              avatar={<RuleIcon sx={{ color: '#1F4D3E' }} />}
-              title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#2E624A' }}>D. Équipements de Protection (EPI)</Typography>}
-              subheader="Protections individuelles requises"
-              sx={{ bgcolor: '#EDF2EE', borderBottom: '1px solid #E3ECE7', py: 1.5 }}
-            />
-            <CardContent sx={{ p: 2.5 }}>
-              <Grid container spacing={1.5}>
-                {refEpis.map((e) => {
-                  const active = isChecked('episIds', e.id);
-                  return (
-                    <Grid key={e.id} size={12}>
-                      <Paper
-                        elevation={0}
-                        onClick={() => toggleCheckbox('episIds', e.id)}
-                        sx={{
-                          p: 1.25,
-                          borderRadius: 2,
-                          cursor: fieldsLocked ? 'default' : 'pointer',
-                          border: active ? '2px solid #1F4D3E' : '1px solid #D6E3DC',
-                          bgcolor: active ? '#EDF2EE' : '#FFFFFF',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                        }}
-                      >
-                        {active ? <CheckBoxIcon sx={{ color: '#1F4D3E' }} /> : <CheckBoxOutlineBlankIcon sx={{ color: '#5C6E67' }} />}
-                        <Typography variant="body2" sx={{ fontWeight: active ? 700 : 500, color: active ? '#2E624A' : '#16241E' }}>
-                          {e.nomEPI || e.nomepi || e.nomEpi || e.nom || e.libelle || e.descriptionEPI}
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+              return (
+                <Grid key={ma.id} size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Paper
+                    elevation={0}
+                    onClick={() => toggleCheckbox('moyensAccesIds', ma.id)}
+                    sx={{
+                      minHeight: 52,
+                      p: 1.25,
+                      borderRadius: 2,
+                      cursor: fieldsLocked ? 'default' : 'pointer',
+                      border: active ? '2px solid #3C7A5C' : '1px solid #D6E3DC',
+                      bgcolor: active ? '#EDF2EE' : '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      transition: 'all 0.15s ease-in-out',
+                      '&:hover': fieldsLocked
+                        ? {}
+                        : { borderColor: '#3C7A5C', bgcolor: '#EDF2EE' },
+                    }}
+                  >
+                    {active ? (
+                      <CheckBoxIcon sx={{ color: '#3C7A5C', flexShrink: 0 }} />
+                    ) : (
+                      <CheckBoxOutlineBlankIcon sx={{ color: '#5C6E67', flexShrink: 0 }} />
+                    )}
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: active ? 700 : 500,
+                        color: active ? '#2E624A' : '#16241E',
+                      }}
+                    >
+                      {ma.nomMoyen || ma.nom || ma.libelle || ma.descriptionMoyen}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* SECTION D: ÉQUIPEMENTS DE PROTECTION (EPI) */}
+      <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #D6E3DC', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+        <CardHeader
+          avatar={<RuleIcon sx={{ color: '#1F4D3E' }} />}
+          title={
+            <Typography variant="h6" sx={{ fontWeight: 800, color: '#2E624A' }}>
+              D. Équipements de Protection (EPI)
+            </Typography>
+          }
+          subheader="Protections individuelles requises"
+          sx={{ bgcolor: '#EDF2EE', borderBottom: '1px solid #E3ECE7', py: 1.5 }}
+        />
+        <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
+          <Grid container spacing={1.5}>
+            {refEpis.map((e) => {
+              const active = isChecked('episIds', e.id);
+
+              return (
+                <Grid key={e.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Paper
+                    elevation={0}
+                    onClick={() => toggleCheckbox('episIds', e.id)}
+                    sx={{
+                      minHeight: 52,
+                      p: 1.25,
+                      borderRadius: 2,
+                      cursor: fieldsLocked ? 'default' : 'pointer',
+                      border: active ? '2px solid #1F4D3E' : '1px solid #D6E3DC',
+                      bgcolor: active ? '#EDF2EE' : '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      transition: 'all 0.15s ease-in-out',
+                      '&:hover': fieldsLocked
+                        ? {}
+                        : { borderColor: '#1F4D3E', bgcolor: '#EDF2EE' },
+                    }}
+                  >
+                    {active ? (
+                      <CheckBoxIcon sx={{ color: '#1F4D3E', flexShrink: 0 }} />
+                    ) : (
+                      <CheckBoxOutlineBlankIcon sx={{ color: '#5C6E67', flexShrink: 0 }} />
+                    )}
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: active ? 700 : 500,
+                        color: active ? '#2E624A' : '#16241E',
+                      }}
+                    >
+                      {e.nomEPI || e.nomepi || e.nomEpi || e.nom || e.libelle || e.descriptionEPI}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* SECTION E: PERMIS COMPLÉMENTAIRES OBLIGATOIRES */}
       <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #D6B56A', boxShadow: '0 4px 12px rgba(60,122,92,0.08)' }}>
@@ -1504,94 +1531,113 @@ export default function FormulaireOCPInteractive({
       </Card>
 
       {/* SECTION G: SIGNATURE CEEP */}
-      <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid #D6E3DC' }}>
-        <CardHeader
-          avatar={<DrawIcon sx={{ color: '#1F4D3E' }} />}
-          title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#16241E' }}>G. Validation & Signature</Typography>}
-          subheader="Signature du Chef d'Équipe Émetteur (CEEP) pour validation de l'AT"
-          sx={{ bgcolor: '#F7FAF8', borderBottom: '1px solid #D6E3DC', py: 1.5 }}
-        />
-        <CardContent sx={{ p: 3 }}>
-          <Stack spacing={2} sx={{ maxWidth: 480 }}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Chef d'Équipe Émetteur (CEEP)"
-              value={formData.g1NomCeep}
-              disabled={fieldsLocked}
-              onChange={(e) => updateTextValue('g1NomCeep', e.target.value)}
-            />
-            <Button
-              variant={formData.g1VisaCeep ? 'contained' : 'outlined'}
-              size="medium"
-              color="primary"
-              startIcon={<DrawIcon />}
-              disabled={!canSignCeep}
-              onClick={() => handleOpenSignature('g1VisaCeep')}
-              sx={{
-                justifyContent: 'flex-start',
-                textTransform: 'none',
-                fontWeight: 700,
-                boxShadow: canSignCeep && !formData.g1VisaCeep ? '0 0 0 2px #2E624A40' : 'none',
-              }}
-            >
-              {formData.g1VisaCeep ? '✅ Visa CEEP signé — cliquer pour modifier' : '✍️ Signer l\'AT (Visa CEEP)'}
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
+      <Box sx={{ width: '100%', mb: 3 }}>
+        <Card sx={{ borderRadius: 3, border: '1px solid #D6E3DC', overflow: 'hidden' }}>
+          <CardHeader
+            avatar={<DrawIcon sx={{ color: '#1F4D3E' }} />}
+            title={<Typography variant="h6" sx={{ fontWeight: 800, color: '#16241E' }}>G. Validation & Signature</Typography>}
+            subheader="Signature du Chef d'Équipe Émetteur (CEEP) pour validation de l'AT"
+            sx={{ bgcolor: '#F7FAF8', borderBottom: '1px solid #D6E3DC', py: 1.5 }}
+          />
+          <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
+            <Stack spacing={1.5} sx={{ width: '100%', maxWidth: 520 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Chef d'Équipe Émetteur (CEEP)"
+                value={formData.g1NomCeep}
+                disabled={fieldsLocked}
+                onChange={(e) => updateTextValue('g1NomCeep', e.target.value)}
+              />
+              <Button
+                variant={formData.g1VisaCeep ? 'contained' : 'outlined'}
+                size="medium"
+                color="primary"
+                startIcon={<DrawIcon />}
+                disabled={!canSignCeep}
+                onClick={() => handleOpenSignature('g1VisaCeep')}
+                sx={{
+                  width: '100%',
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  py: 1.1,
+                  boxShadow: canSignCeep && !formData.g1VisaCeep ? '0 0 0 2px #2E624A40' : 'none',
+                }}
+              >
+                {formData.g1VisaCeep ? '✅ Visa CEEP signé — cliquer pour modifier' : '✍️ Signer l\'AT (Visa CEEP)'}
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
 
-
-      {/* BARRE D'ACTIONS INFERIEURE (BOTTOM ACTION BAR) */}
+      {/* BARRE D'ACTIONS INFÉRIEURE */}
       {(!readOnly || signMode === 'ceee') && (
-        <Paper
-          elevation={4}
-          sx={{
-            p: 2.5,
-            mb: 3,
-            borderRadius: 3,
-            bgcolor: '#FFFFFF',
-            border: '2px solid #1F4D3E',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 2,
-          }}
-        >
-          <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#1F4D3E' }}>
+        <Box sx={{ width: '100%', mb: 3 }}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: { xs: 2, md: 2.5 },
+              borderRadius: 3,
+              bgcolor: '#FFFFFF',
+              border: '2px solid #1F4D3E',
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#1F4D3E', mb: 0.5 }}>
               Validation & Transmission du Formulaire F-HSE-SEC-31-04
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
               Conforme au Standard OCP S-HSE-SEC-31. Assurez-vous que les informations et signatures sont saisies.
             </Typography>
-          </Box>
-          <Stack direction="row" spacing={2}>
-            {onSave && (
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={() => onSave(formData)}
-                disabled={loading}
-                sx={{ fontWeight: 700, borderRadius: 2, px: 3, py: 1 }}
-              >
-                Enregistrer Brouillon
-              </Button>
-            )}
-            {onSubmitAT && signMode !== 'ceee' && (
-              <Button
-                variant="contained"
-                onClick={handleSignerEtTransmettre}
-                disabled={loading}
-                startIcon={<CheckCircleIcon />}
-                sx={{ bgcolor: '#1F4D3E', '&:hover': { bgcolor: '#1F4D3E' }, fontWeight: 800, borderRadius: 2, px: 4, py: 1 }}
-              >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Signer & Transmettre au CEEE'}
-              </Button>
-            )}
-          </Stack>
-        </Paper>
+
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                rowGap: 1.5,
+              }}
+            >
+              {onSave && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => onSave(formData)}
+                  disabled={loading}
+                  sx={{ fontWeight: 700, borderRadius: 2, px: 2.5, py: 1 }}
+                >
+                  Enregistrer Brouillon
+                </Button>
+              )}
+              {onSubmitAT && signMode !== 'ceee' && (
+                <Button
+                  variant="contained"
+                  onClick={handleSignerEtTransmettre}
+                  disabled={loading}
+                  startIcon={<CheckCircleIcon />}
+                  sx={{ bgcolor: '#1F4D3E', '&:hover': { bgcolor: '#1F4D3E' }, fontWeight: 800, borderRadius: 2, px: 3, py: 1 }}
+                >
+                  {loading ? <CircularProgress size={24} color="inherit" /> : 'Signer & Transmettre au CEEE'}
+                </Button>
+              )}
+              {hmepAndHmeeSigned && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<PictureAsPdfIcon />}
+                  onClick={exportPDFServer}
+                  disabled={loading}
+                  sx={{ fontWeight: 700, borderRadius: 2, px: 2.5, py: 1 }}
+                >
+                  PDF Officiel
+                </Button>
+              )}
+            </Stack>
+          </Paper>
+        </Box>
       )}
 
       {/* SIGNATURE DIALOG MODAL */}

@@ -52,6 +52,22 @@ export default function FormulaireOCPViewer({ at, visas = [], signMode, onVisaCe
   const firstSigned = visas.find((v) => v.signaturePresente) || visas[0];
   const g1VisaCeep = firstSigned?.id ? signatureUrls[firstSigned.id] ?? null : null;
 
+  // Le PDF officiel devient visible dans le formulaire uniquement lorsque
+  // les deux visas Haute Maîtrise (HMEP + HMEE) sont positifs.
+  const isPositiveVisa = (v: Visa) => v.statut === 'VALIDE' || v.statut === 'VALIDATION' || v.statut === 'SIGNATURE';
+  const hasHmepVisa = visas.some((v) =>
+    isPositiveVisa(v) && (
+      v.commentaire?.toUpperCase().includes('HMEP') ||
+      (v as any).utilisateurNomComplet?.toUpperCase?.().includes('HMEP')
+    )
+  );
+  const hasHmeeVisa = visas.some((v) =>
+    isPositiveVisa(v) && (
+      v.commentaire?.toUpperCase().includes('HMEE') ||
+      (v as any).utilisateurNomComplet?.toUpperCase?.().includes('HMEE')
+    )
+  );
+
   const formattedData = {
     ...at,
     numero: at.numero,
@@ -83,6 +99,8 @@ export default function FormulaireOCPViewer({ at, visas = [], signMode, onVisaCe
     photoPath: (at as any).photoPath || null,
     // blob: URL authentifiée — utilisable dans <img src>
     g1VisaCeep,
+    hmepVisaSigne: hasHmepVisa,
+    hmeeVisaSigne: hasHmeeVisa,
   };
 
   if (loadingSig) {
@@ -106,4 +124,3 @@ export default function FormulaireOCPViewer({ at, visas = [], signMode, onVisaCe
     />
   );
 }
-

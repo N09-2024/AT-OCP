@@ -170,6 +170,22 @@ export default function AutorisationDetailPage() {
   const canGarantirSoumise = isHc || isHm;
   const canViserSoumise = canGarantirSoumise || isCeee;
 
+  // Le bouton PDF officiel n'est disponible qu'après les deux visas HM : HMEP + HMEE.
+  const isPositiveVisa = (v: Visa) => v.statut === 'VALIDE' || v.statut === 'VALIDATION' || v.statut === 'SIGNATURE';
+  const hasHmepVisa = visas.some((v) =>
+    isPositiveVisa(v) && (
+      v.commentaire?.toUpperCase().includes('HMEP') ||
+      (v as any).utilisateurNomComplet?.toUpperCase?.().includes('HMEP')
+    )
+  );
+  const hasHmeeVisa = visas.some((v) =>
+    isPositiveVisa(v) && (
+      v.commentaire?.toUpperCase().includes('HMEE') ||
+      (v as any).utilisateurNomComplet?.toUpperCase?.().includes('HMEE')
+    )
+  );
+  const hmSignaturesComplete = hasHmepVisa && hasHmeeVisa;
+
   return (
     <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
       {/* Header Actions */}
@@ -331,10 +347,10 @@ export default function AutorisationDetailPage() {
             </Button>
           )}
 
-          {at.exportPdfAutorise ? (
+          {hmSignaturesComplete && (
             <Button
               variant="contained"
-              color="error"
+              color="primary"
               startIcon={pdfLoading ? <CircularProgress size={18} color="inherit" /> : <PictureAsPdfIcon />}
               onClick={handleExportPdf}
               disabled={pdfLoading}
@@ -342,20 +358,6 @@ export default function AutorisationDetailPage() {
             >
               Télécharger le PDF Officiel
             </Button>
-          ) : (
-            <Tooltip title={at.exportPdfMotifsRefus && at.exportPdfMotifsRefus.length > 0 ? at.exportPdfMotifsRefus.join(' | ') : "Validation HM/HC et conformité permis requises"}>
-              <span>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  disabled
-                  startIcon={<PictureAsPdfIcon />}
-                  sx={{ fontWeight: 700 }}
-                >
-                  Télécharger le PDF (Incomplet)
-                </Button>
-              </span>
-            </Tooltip>
           )}
 
           {(at.statut === 'CLOTUREE' || at.statut === 'TRAVAUX_RECEPTIONES') && hasValidationRights && (
