@@ -33,6 +33,9 @@ public class ZoneControllerIntegrationTest {
     @MockBean
     private ZoneService zoneService;
 
+    @MockBean
+    private com.ocp.at.service.ServiceService serviceService;
+
     @Autowired
     private ObjectMapper objectMapper;
 

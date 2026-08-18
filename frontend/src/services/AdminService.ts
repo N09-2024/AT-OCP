@@ -318,17 +318,23 @@ export const AdminService = {
   listAuditLogs: async () => {
     try {
       const res = await apiClient.get('/audit-logs?size=1000&sort=date,desc');
-      return res.data.content.map((entry: any): AuditLogEntryFlat => ({
-        id: entry.id,
-        dateCreation: entry.date,
-        action: entry.action,
-        entity: entry.resultat || 'SYSTEM',
-        entityId: entry.id,
-        utilisateur: entry.utilisateur
-          ? `${entry.utilisateur.prenom} ${entry.utilisateur.nom}`
-          : 'Système',
-        details: `${entry.action} depuis ${entry.adresseIP || 'IP inconnue'}`,
-      }));
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      return items.map((entry: any): AuditLogEntryFlat => {
+        let userName = 'Système';
+        if (entry.utilisateur) {
+          const fullName = `${entry.utilisateur.prenom || ''} ${entry.utilisateur.nom || ''}`.trim();
+          userName = fullName || entry.utilisateur.email || entry.utilisateur.matricule || 'Utilisateur';
+        }
+        return {
+          id: entry.id,
+          dateCreation: entry.date,
+          action: entry.action,
+          entity: entry.resultat || 'SUCCES',
+          entityId: entry.id,
+          utilisateur: userName,
+          details: `${entry.action} depuis ${entry.adresseIP || '127.0.0.1'} (${entry.systemeExploitation || 'Navigateur'})`,
+        };
+      });
     } catch {
       return [];
     }

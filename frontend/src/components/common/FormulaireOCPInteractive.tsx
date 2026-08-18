@@ -42,9 +42,12 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import DrawIcon from '@mui/icons-material/Draw';
 import CloseIcon from '@mui/icons-material/Close';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 import SignaturePad from './SignaturePad';
 import PermisUploadCard from './PermisUploadCard';
+import { AIAssistantDrawer } from '../ia/AIAssistantDrawer';
 import { apiClient } from '../../services/apiClient';
 import { iaApi } from '../../services/iaApi';
 import { autorisationTravailApi } from '../../services/autorisationTravailApi';
@@ -115,10 +118,13 @@ export default function FormulaireOCPInteractive({
   const [sigDialogOpen, setSigDialogOpen] = useState(false);
   const [activeSigField, setActiveSigField] = useState<string | null>(null);
 
-  // --- IA implicite (plus de bouton "Assistant IA") ---
+  // --- IA Multi-Agents & RAG ---
   const [iaLoading, setIaLoading] = useState(false);
   const [iaRapport, setIaRapport] = useState<string | null>(null);
   const [iaAlertes, setIaAlertes] = useState<string[]>([]);
+  const [iaSources, setIaSources] = useState<string[]>([]);
+  const [iaConfidence, setIaConfidence] = useState<string>('HIGH');
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const [iaSuggestions, setIaSuggestions] = useState<{
     risques: string[]; mesures: string[]; epis: string[]; permis: string[];
   }>({ risques: [], mesures: [], epis: [], permis: [] });
@@ -471,42 +477,59 @@ export default function FormulaireOCPInteractive({
 
 
   // ------------------------------------------------------------------
-  // IA IMPLICITE - plus de bouton "Assistant IA". L'analyse se déclenche
-  // automatiquement, en arrière-plan, dès que la description est assez
-  // longue et n'a pas déjà été analysée. Découplée de l'autosave (800ms)
-  // par un débounce plus long (2s) pour ne pas multiplier les appels au
-  // microservice IA à chaque frappe.
+  // IA MULTI-AGENTS (CrewAI + LangChain + RAG)
+  // Analyse complète déclenchable manuellement ou en arrière-plan
   // ------------------------------------------------------------------
   const iaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAnalyzedDescRef = useRef<string>('');
 
+  const lancerAnalyseIA = async () => {
+    const desc = (formData.description || '').trim();
+    if (!desc) {
+      alert("Veuillez renseigner une description des travaux avant de lancer l'analyse IA.");
+      return;
+    }
+    setIaLoading(true);
+    try {
+      const res = await iaApi.analyzeAt({
+        atId: initialData?.id,
+        description: desc,
+        installation: formData.lieu,
+        visiteFaite: preventionEnPlace,
+        sectionFRenseignee: Boolean(formData.sectionF?.trim()),
+        risques: formData.risquesIds,
+        mesures: formData.mesuresIds,
+        epi: formData.episIds,
+        moyensAcces: formData.moyensAccesIds,
+      });
+      setIaRapport(res.summary || res.rapport || 'Analyse IA multi-agents effectuée.');
+      setIaAlertes(res.warnings || res.alertes || []);
+      setIaSources(res.sources || []);
+      setIaConfidence(res.confidence || 'HIGH');
+      setIaSuggestions({
+        risques: res.identifiedRisks || res.risques || [],
+        mesures: res.recommendedMeasures || res.mesures || [],
+        epis: res.epis || [],
+        permis: res.permis || [],
+      });
+    } catch (e) {
+      console.error('Erreur analyse IA', e);
+    } finally {
+      setIaLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (readOnly || fieldsLocked) return;
     const desc = (formData.description || '').trim();
-    if (desc.length < 15) return; // pas assez de contexte pour être utile
+    if (desc.length < 15) return;
     if (desc === lastAnalyzedDescRef.current) return;
 
     if (iaDebounceRef.current) clearTimeout(iaDebounceRef.current);
     iaDebounceRef.current = setTimeout(async () => {
       lastAnalyzedDescRef.current = desc;
-      setIaLoading(true);
-      try {
-        const res = await iaApi.analyserIntervention(desc);
-        const data = (res as any).data ?? res; // tolère les deux formats de retour du service
-        setIaRapport(data.rapport || null);
-        setIaAlertes(data.alertes || []);
-        setIaSuggestions({
-          risques: data.risques || [],
-          mesures: data.mesures || [],
-          epis: data.epis || [],
-          permis: data.permis || [],
-        });
-      } catch {
-        // IA best-effort : un échec ne doit jamais bloquer la saisie du formulaire.
-      } finally {
-        setIaLoading(false);
-      }
-    }, 2000);
+      lancerAnalyseIA();
+    }, 2500);
 
     return () => {
       if (iaDebounceRef.current) clearTimeout(iaDebounceRef.current);
@@ -686,56 +709,122 @@ export default function FormulaireOCPInteractive({
 
   return (
     <Box sx={{ pb: 6, maxWidth: 1120, mx: 'auto' }}>
-      {/* IA SUGGESTION BANNER - implicite, avec suggestions cliquables */}
+      {/* IA SUGGESTION BANNER - Recommandations enrichies CrewAI + LangChain + RAG */}
       {(iaRapport || iaAlertes.length > 0) && (
         <Alert
-          icon={<AutoAwesomeIcon />}
+          icon={<AutoAwesomeIcon sx={{ color: 'primary.main' }} />}
           severity={iaAlertes.length ? 'warning' : 'info'}
-          sx={{ mb: 3, borderRadius: 3, boxShadow: 2 }}
+          sx={{ mb: 3, borderRadius: 3, boxShadow: 3, bgcolor: '#F0FDF4', border: '1px solid #BBF7D0' }}
           onClose={() => {
             setIaRapport(null);
             setIaAlertes([]);
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <Chip
+                label="Recommandation IA (CrewAI + LangChain)"
+                size="small"
+                color="primary"
+                sx={{ fontWeight: 800, fontSize: '0.72rem' }}
+              />
+              {iaConfidence && (
+                <Chip
+                  label={`Confiance : ${iaConfidence}`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontSize: '0.68rem', height: 20 }}
+                />
+              )}
+            </Stack>
+
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                startIcon={<SmartToyIcon />}
+                onClick={() => setAiDrawerOpen(true)}
+                sx={{ textTransform: 'none', py: 0.2, px: 1, fontSize: '0.75rem' }}
+              >
+                Discuter avec l'Assistant
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                color="inherit"
+                onClick={() => {
+                  setIaRapport(null);
+                  setIaAlertes([]);
+                }}
+                sx={{ textTransform: 'none', py: 0.2, px: 1, fontSize: '0.75rem' }}
+              >
+                Ignorer
+              </Button>
+            </Stack>
+          </Box>
+
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#14532D', mt: 0.5 }}>
             {iaRapport}
           </Typography>
-          {iaAlertes.length > 0 && (
-            <ul style={{ margin: '4px 0 8px 16px', padding: 0 }}>
-              {iaAlertes.map((a, i) => (
-                <li key={i}>{a}</li>
+
+          {/* Sources officielles RAG */}
+          {iaSources.length > 0 && (
+            <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+              <MenuBookIcon sx={{ fontSize: 13, color: '#15803D' }} />
+              <Typography variant="caption" sx={{ fontWeight: 600, color: '#15803D' }}>
+                Sources réglementaires :
+              </Typography>
+              {iaSources.map((s, idx) => (
+                <Chip key={idx} label={s} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 18, bgcolor: 'rgba(255,255,255,0.7)' }} />
               ))}
-            </ul>
+            </Box>
           )}
+
+          {/* Alertes et informations manquantes */}
+          {iaAlertes.length > 0 && (
+            <Box sx={{ mt: 1, p: 1, bgcolor: '#FEF3C7', borderRadius: 1.5, border: '1px solid #FDE68A' }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#92400E' }}>
+                Points d'attention / Informations manquantes :
+              </Typography>
+              <ul style={{ margin: '2px 0 0 16px', padding: 0, fontSize: '0.8rem', color: '#92400E' }}>
+                {iaAlertes.map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+              </ul>
+            </Box>
+          )}
+
+          {/* Suggestions cliquables */}
           {!fieldsLocked && (iaSuggestions.risques.length + iaSuggestions.mesures.length + iaSuggestions.epis.length + iaSuggestions.permis.length > 0) && (
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                Suggestions (cliquez pour cocher) :
+            <Box sx={{ mt: 1.5, pt: 1, borderTop: '1px dashed #86EFAC' }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#166534' }}>
+                Suggestions détectées (cliquez pour cocher ou appliquer) :
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
                 {iaSuggestions.risques
                   .filter((label) => !refRisques.some((r) => (r.nom || r.nomRisque || '').toLowerCase() === label.toLowerCase() && isChecked('risquesIds', r.id)))
                   .map((label) => (
-                    <Chip key={`r-${label}`} label={label} size="small" variant="outlined" color="error"
-                      onClick={() => appliquerSuggestion('risquesIds', refRisques, label)} />
+                    <Chip key={`r-${label}`} label={`+ ${label}`} size="small" variant="filled" color="error"
+                      onClick={() => appliquerSuggestion('risquesIds', refRisques, label)} sx={{ cursor: 'pointer' }} />
                   ))}
                 {iaSuggestions.mesures
                   .filter((label) => !refMesures.some((m) => (m.nom || m.nomMesure || '').toLowerCase() === label.toLowerCase() && isChecked('mesuresIds', m.id)))
                   .map((label) => (
-                    <Chip key={`m-${label}`} label={label} size="small" variant="outlined" color="success"
-                      onClick={() => appliquerSuggestion('mesuresIds', refMesures, label)} />
+                    <Chip key={`m-${label}`} label={`+ ${label}`} size="small" variant="filled" color="success"
+                      onClick={() => appliquerSuggestion('mesuresIds', refMesures, label)} sx={{ cursor: 'pointer' }} />
                   ))}
                 {iaSuggestions.epis
                   .filter((label) => !refEpis.some((e) => (e.nom || e.nomEPI || '').toLowerCase() === label.toLowerCase() && isChecked('episIds', e.id)))
                   .map((label) => (
-                    <Chip key={`e-${label}`} label={label} size="small" variant="outlined" color="secondary"
-                      onClick={() => appliquerSuggestion('episIds', refEpis, label)} />
+                    <Chip key={`e-${label}`} label={`+ ${label}`} size="small" variant="filled" color="secondary"
+                      onClick={() => appliquerSuggestion('episIds', refEpis, label)} sx={{ cursor: 'pointer' }} />
                   ))}
                 {iaSuggestions.permis
                   .filter((label) => !refPermis.some((p) => (p.nomType || p.nom || '').toLowerCase() === label.toLowerCase() && isChecked('permisIds', p.id)))
                   .map((label) => (
-                    <Chip key={`p-${label}`} label={label} size="small" variant="outlined" color="warning"
-                      onClick={() => appliquerSuggestion('permisIds', refPermis, label)} />
+                    <Chip key={`p-${label}`} label={`+ ${label}`} size="small" variant="filled" color="warning"
+                      onClick={() => appliquerSuggestion('permisIds', refPermis, label)} sx={{ cursor: 'pointer' }} />
                   ))}
               </Box>
             </Box>
@@ -775,11 +864,43 @@ export default function FormulaireOCPInteractive({
           </Box>
 
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={iaLoading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
+              onClick={lancerAnalyseIA}
+              disabled={iaLoading || fieldsLocked}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.2)',
+                color: '#FFFFFF',
+                fontWeight: 700,
+                backdropFilter: 'blur(8px)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.35)' },
+                border: '1px solid rgba(255,255,255,0.4)',
+                textTransform: 'none',
+              }}
+            >
+              {iaLoading ? 'Analyse CrewAI...' : 'Analyser avec l\'IA'}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SmartToyIcon />}
+              onClick={() => setAiDrawerOpen(true)}
+              sx={{
+                color: '#FFFFFF',
+                borderColor: 'rgba(255,255,255,0.4)',
+                fontWeight: 700,
+                '&:hover': { borderColor: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.1)' },
+                textTransform: 'none',
+              }}
+            >
+              Assistant IA
+            </Button>
             <Chip
               label={formData.numero ? `AT N° ${formData.numero}` : 'Brouillon en cours'}
               sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#FFFFFF', fontWeight: 800, fontSize: 13, border: '1px solid rgba(255,255,255,0.3)' }}
             />
-            <Chip label="Édition 1.0" sx={{ bgcolor: 'rgba(0,0,0,0.2)', color: '#FFFFFF', fontWeight: 600, fontSize: 12 }} />
           </Stack>
         </Box>
       </Paper>
@@ -1796,6 +1917,18 @@ export default function FormulaireOCPInteractive({
           </Box>
         </DialogContent>
       </Dialog>
+
+      {/* TIROIR ASSISTANT IA (CREWAI + RAG OCP) */}
+      <AIAssistantDrawer
+        open={aiDrawerOpen}
+        onClose={() => setAiDrawerOpen(false)}
+        atContext={{
+          atId: initialData?.id || formData.numero,
+          description: formData.description,
+          installation: formData.lieu,
+          statut: atStatut,
+        }}
+      />
     </Box>
   );
 }

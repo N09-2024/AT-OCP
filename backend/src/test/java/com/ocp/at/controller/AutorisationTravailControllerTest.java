@@ -41,6 +41,9 @@ class AutorisationTravailControllerTest {
     @MockBean
     private PdfGeneratorService pdfGeneratorService;
 
+    @MockBean
+    private com.ocp.at.repository.AutorisationTravailRepository atRepository;
+
     private AutorisationTravailResponse mockResponse;
 
     @BeforeEach

@@ -39,17 +39,7 @@ const ADMIN_MENU = {
         { text: 'Vue globale AT', path: '/dashboard/global', icon: <ClipboardDocumentCheckIcon width={20} /> },
       ],
     },
-    {
-      title: 'Gestion des AT & Travaux',
-      items: [
-        { text: 'Autorisations de Travail', path: '/autorisations', icon: <ClipboardDocumentCheckIcon width={20} /> },
-        { text: 'Documents source', path: '/documents', icon: <DocumentTextIcon width={20} /> },
-        { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
-        { text: 'Permis de travail', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
-        { text: 'Réceptions travaux', path: '/receptions', icon: <ArchiveBoxIcon width={20} /> },
-        { text: 'Archives & PDF', path: '/archives', icon: <FolderIcon width={20} /> },
-      ],
-    },
+
     {
       title: 'Gestion des comptes & Habilitations',
       items: [

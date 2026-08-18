@@ -7,6 +7,7 @@ import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.NotificationMapper;
 import com.ocp.at.repository.NotificationRepository;
 import com.ocp.at.repository.UtilisateurRepository;
+import com.ocp.at.security.RoleUtils;
 import com.ocp.at.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,24 +49,18 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
 
         notificationRepository.save(notification);
-        log.info("Notification créée pour {} : {}", utilisateur.getNom(), titre);
+        log.info("Notification créée pour {} (ID: {}) : {}", utilisateur.getNom(), utilisateur.getId(), titre);
     }
 
     @Override
     @Transactional
     public void sendNotificationToRole(String roleName, String titre, String message, String type, String lien) {
-        // Requête optimisée en base - évite le findAll() en mémoire
-        List<Utilisateur> users;
-        try {
-            users = utilisateurRepository.findActiveByRoleFragment(roleName);
-        } catch (Exception e) {
-            // Fallback si la colonne actif n'existe pas encore
-            log.warn("findActiveByRoleFragment a échoué, fallback findAll: {}", e.getMessage());
-            users = utilisateurRepository.findAll().stream()
-                    .filter(u -> u.getRoles() != null && u.getRoles().stream()
-                            .anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains(roleName.toUpperCase())))
-                    .collect(Collectors.toList());
-        }
+        if (roleName == null || roleName.isBlank()) return;
+
+        List<Utilisateur> allUsers = utilisateurRepository.findAll();
+        List<Utilisateur> users = allUsers.stream()
+                .filter(u -> u != null && !u.isCompteVerrouille() && u.isActif() && RoleUtils.userHasRolePattern(u, roleName))
+                .collect(Collectors.toList());
 
         for (Utilisateur u : users) {
             createNotification(u, titre, message, type, lien);
@@ -74,9 +70,18 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public Page<NotificationResponse> getUserNotifications(String utilisateurId, Pageable pageable) {
+        if (utilisateurId == null || utilisateurId.isBlank()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
         List<Notification> notifs = notificationRepository.findByUtilisateurIdOrderByDateCreationDesc(utilisateurId);
-        // Pagination manuelle pour conserver le tri DB
+        if (notifs == null || notifs.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
         int start = (int) pageable.getOffset();
+        if (start >= notifs.size()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, notifs.size());
+        }
         int end = Math.min((start + pageable.getPageSize()), notifs.size());
         List<NotificationResponse> content = notifs.subList(start, end).stream()
                 .map(mapper::toResponse)
@@ -99,12 +104,14 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void markAllAsRead(String utilisateurId) {
+        if (utilisateurId == null || utilisateurId.isBlank()) return;
         int updated = notificationRepository.markAllReadByUtilisateurId(utilisateurId);
         log.info("markAllAsRead: {} notification(s) marquée(s) comme lues pour userId={}", updated, utilisateurId);
     }
 
     @Override
     public long countUnread(String utilisateurId) {
+        if (utilisateurId == null || utilisateurId.isBlank()) return 0;
         return notificationRepository.countByUtilisateurIdAndLuFalse(utilisateurId);
     }
 }

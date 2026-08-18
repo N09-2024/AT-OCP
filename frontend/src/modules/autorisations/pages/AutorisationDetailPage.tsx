@@ -181,15 +181,30 @@ export default function AutorisationDetailPage() {
     v.statut === 'VALIDE' || v.statut === 'VALIDATION' || v.statut === 'SIGNATURE';
 
   const detectVisa = (roleKeyword: string) =>
-    visas.some(v =>
-      isPositiveVisa(v) && (
-        v.commentaire?.toUpperCase().includes(roleKeyword) ||
-        (v as any).role?.toUpperCase().includes(roleKeyword) ||
-        (v as any).utilisateurRole?.toUpperCase().includes(roleKeyword)
-      )
-    );
+    visas.some(v => {
+      if (!isPositiveVisa(v)) return false;
+      const comment = (v.commentaire || '').toUpperCase();
+      const keyword = roleKeyword.toUpperCase();
+      if (comment.includes(keyword)) return true;
+      // Fallback: rôle de l'utilisateur signataire
+      const userRoles: string[] = ((v as any).utilisateur?.roles || []).map((r: any) =>
+        (r.nom || r.name || '').toUpperCase()
+      );
+      if (userRoles.some(r => r === keyword || r.includes(keyword))) return true;
+      // Fallback: champ role direct sur la réponse visa
+      const directRole = ((v as any).role || (v as any).utilisateurRole || (v as any).roleSignataire || '').toUpperCase();
+      if (directRole === keyword || directRole.includes(keyword)) return true;
+      return false;
+    });
 
-  const hasCeeeVisa = detectVisa('CEEE');
+  // hasCeeeVisa : aussi vrai si AT a progressé au-delà de SOUMISE (preuve implicite de réception CEEE)
+  const hasCeeeVisaExact = detectVisa('CEEE');
+  const hasCeeeVisa = hasCeeeVisaExact ||
+    statut === 'EN_ATTENTE_VALIDATION' ||
+    statut === 'VALIDEE' ||
+    statut === 'AT_VALIDEE' ||
+    statut === 'AT_REDIGEE' ||
+    Boolean((at as any).dateReceptionCeee);
   const hasHcepVisa = detectVisa('HCEP');
   const hasHceeVisa = detectVisa('HCEE');
   const hasHmepVisa = detectVisa('HMEP');
@@ -207,32 +222,39 @@ export default function AutorisationDetailPage() {
   // Standard S-HSE-SEC-31 - Cycle de vie séquentiel
   // ═══════════════════════════════════════════════════════════════════════
 
+  const canSignVisaStatus =
+    statut === 'SOUMISE' ||
+    statut === 'AT_REDIGEE' ||
+    statut === 'EN_ATTENTE_VALIDATION' ||
+    statut === 'VALIDEE' ||
+    statut === 'AT_VALIDEE';
+
   // Étape 0 - Reprendre le brouillon (CEEP uniquement, AT en BROUILLON)
   const showEditDraft = statut === 'BROUILLON' && isCeep;
 
-  // Étape 3b - Visa CEEE (CEEE uniquement, AT en SOUMISE/AT_REDIGEE)
+  // Étape 3b - Visa CEEE (CEEE uniquement, AT transmise / pas encore CEEE signé)
   const showSignCeee =
-    (statut === 'SOUMISE' || statut === 'AT_REDIGEE') &&
-    isCeee && !hasCeeeVisa;
+    canSignVisaStatus &&
+    isCeee && !hasCeeeVisaExact;
 
-  // Étape 3c - Visa HCEP (HCEP uniquement, après visa CEEE, AT non encore validée HCEP)
+  // Étape 3c - Visa HCEP (HCEP uniquement, après visa CEEE)
   const showSignHcep =
-    (statut === 'SOUMISE' || statut === 'AT_REDIGEE' || statut === 'EN_ATTENTE_VALIDATION') &&
+    canSignVisaStatus &&
     isHcep && hasCeeeVisa && !hasHcepVisa;
 
   // Étape 3d - Visa HCEE (HCEE uniquement, après visa HCEP)
   const showSignHcee =
-    (statut === 'SOUMISE' || statut === 'AT_REDIGEE' || statut === 'EN_ATTENTE_VALIDATION') &&
+    canSignVisaStatus &&
     isHcee && hasHcepVisa && !hasHceeVisa;
 
   // Étape 3e - Visa HMEP (HMEP uniquement, après visa HCEE)
   const showSignHmep =
-    (statut === 'SOUMISE' || statut === 'AT_REDIGEE' || statut === 'EN_ATTENTE_VALIDATION') &&
+    canSignVisaStatus &&
     isHmep && hasHceeVisa && !hasHmepVisa;
 
   // Étape 3f - Visa HMEE (HMEE uniquement, après visa HMEP)
   const showSignHmee =
-    (statut === 'SOUMISE' || statut === 'AT_REDIGEE' || statut === 'EN_ATTENTE_VALIDATION') &&
+    canSignVisaStatus &&
     isHmee && hasHmepVisa && !hasHmeeVisa;
 
   // Étape 4 - Démarrer l'intervention (CEEE uniquement, AT VALIDEE)

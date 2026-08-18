@@ -64,15 +64,15 @@ public class AuditAspect {
         }
     }
 
-private Utilisateur safeCurrentUser() {
-    try {
-        return SecurityUtils.getCurrentUtilisateurId() // email
-                .flatMap(utilisateurRepository::findByEmail)
-                .orElse(null);
-    } catch (Exception e) {
-        return null; // action anonyme (ex: tentative sur endpoint public)
+    private Utilisateur safeCurrentUser() {
+        try {
+            return SecurityUtils.getCurrentUtilisateurId()
+                    .flatMap(id -> utilisateurRepository.findById(id).or(() -> utilisateurRepository.findByEmail(id)))
+                    .orElse(null);
+        } catch (Exception e) {
+            return null; // action anonyme (ex: tentative sur endpoint public)
+        }
     }
-}
 
     private String extractIp() {
         try {

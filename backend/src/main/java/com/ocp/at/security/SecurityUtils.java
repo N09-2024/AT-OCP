@@ -9,23 +9,46 @@ import java.util.Optional;
 public class SecurityUtils {
 
     /**
-     * Get the login of the current user.
+     * Get the ID (UUID) of the current user.
      *
-     * @return the login of the current user.
+     * @return the UUID of the current user.
      */
     public static Optional<String> getCurrentUtilisateurId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return Optional.empty();
         }
-        
-        // In the existing project, the UserDetails username is probably the ID or matricule.
-        // Assuming we map username to Utilisateur ID or matricule.
-        if (authentication.getPrincipal() instanceof UserDetails) {
-            UserDetails springSecurityUser = (UserDetails) authentication.getPrincipal();
-            return Optional.of(springSecurityUser.getUsername());
-        } else if (authentication.getPrincipal() instanceof String) {
-            return Optional.of((String) authentication.getPrincipal());
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            return Optional.ofNullable(userDetails.getId());
+        } else if (principal instanceof UserDetails) {
+            UserDetails springSecurityUser = (UserDetails) principal;
+            return Optional.ofNullable(springSecurityUser.getUsername());
+        } else if (principal instanceof String) {
+            return Optional.of((String) principal);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Get the email/login of the current user.
+     *
+     * @return the email of the current user.
+     */
+    public static Optional<String> getCurrentUserLogin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return Optional.empty();
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDetails) {
+            UserDetails springSecurityUser = (UserDetails) principal;
+            return Optional.ofNullable(springSecurityUser.getUsername());
+        } else if (principal instanceof String) {
+            return Optional.of((String) principal);
         }
         return Optional.empty();
     }

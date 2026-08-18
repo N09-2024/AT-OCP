@@ -26,6 +26,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      ai-service:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: staging
       DB_HOST: postgres
@@ -57,6 +59,30 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    networks:
+      - at-ocp-network
+
+  # AI Microservice (FastAPI - CrewAI / LangChain)
+  ai-service:
+    image: at-ocp-ai-service:staging
+    container_name: at-ocp-ai-service-staging
+    restart: unless-stopped
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-GEMINI}
+      LLM_MODEL: ${LLM_MODEL:-gemini-2.5-flash}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-${GOOGLE_API_KEY:-}}
+      RAG_ENABLED: "true"
+      CREWAI_TELEMETRY_OPT_OUT: "true"
+      OTEL_SDK_DISABLED: "true"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
     networks:
       - at-ocp-network
 

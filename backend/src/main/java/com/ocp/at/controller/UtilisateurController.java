@@ -137,9 +137,10 @@ public class UtilisateurController {
     @PutMapping("/me/password")
     @Operation(summary = "Changer son mot de passe", description = "Permet à l'utilisateur connecté de changer son propre mot de passe")
     public ResponseEntity<Void> changerMonMotDePasse(@Valid @RequestBody ChangePasswordRequest request) {
-        String email = SecurityUtils.getCurrentUtilisateurId()
+        String userIdOrLogin = SecurityUtils.getCurrentUtilisateurId()
                 .orElseThrow(() -> new RuntimeException("Non authentifié"));
-        com.ocp.at.entity.Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
+        com.ocp.at.entity.Utilisateur utilisateur = utilisateurRepository.findById(userIdOrLogin)
+                .or(() -> utilisateurRepository.findByEmail(userIdOrLogin))
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
         utilisateurService.changerMotDePasse(utilisateur.getId(), request);
         return ResponseEntity.noContent().build();

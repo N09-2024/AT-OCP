@@ -21,6 +21,34 @@ services:
       timeout: 3s
       retries: 10
 
+  # AI Microservice (FastAPI - CrewAI / LangChain) — dev avec hot-reload
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: at-ocp-ai-service-dev
+    restart: unless-stopped
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-MOCK}
+      LLM_MODEL: ${LLM_MODEL:-gemini-2.5-flash}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-${GOOGLE_API_KEY:-}}
+      RAG_ENABLED: "true"
+      CREWAI_TELEMETRY_OPT_OUT: "true"
+      OTEL_SDK_DISABLED: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Hot-reload : le code source est monté en lecture dans le conteneur
+      - ./ai-service/app:/app/app:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 volumes:
   postgres_dev_data:
     driver: local
+

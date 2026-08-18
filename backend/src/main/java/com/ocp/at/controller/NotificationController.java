@@ -1,6 +1,7 @@
 package com.ocp.at.controller;
 
 import com.ocp.at.dto.response.NotificationResponse;
+import com.ocp.at.exception.UnauthorizedException;
 import com.ocp.at.security.SecurityUtils;
 import com.ocp.at.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,7 +26,7 @@ public class NotificationController {
     @Operation(summary = "Lister les notifications de l'utilisateur connecté")
     public ResponseEntity<Page<NotificationResponse>> getMyNotifications(Pageable pageable) {
         String userId = SecurityUtils.getCurrentUtilisateurId()
-                .orElseThrow(() -> new RuntimeException("Non authentifié"));
+                .orElseThrow(() -> new UnauthorizedException("Utilisateur non authentifié"));
         return ResponseEntity.ok(notificationService.getUserNotifications(userId, pageable));
     }
 
@@ -33,7 +34,10 @@ public class NotificationController {
     @Operation(summary = "Nombre de notifications non lues")
     public ResponseEntity<Map<String, Long>> countUnread() {
         String userId = SecurityUtils.getCurrentUtilisateurId()
-                .orElseThrow(() -> new RuntimeException("Non authentifié"));
+                .orElse(null);
+        if (userId == null) {
+            return ResponseEntity.ok(Map.of("count", 0L));
+        }
         long count = notificationService.countUnread(userId);
         return ResponseEntity.ok(Map.of("count", count));
     }
@@ -49,7 +53,7 @@ public class NotificationController {
     @Operation(summary = "Marquer toutes les notifications comme lues")
     public ResponseEntity<Void> markAllAsRead() {
         String userId = SecurityUtils.getCurrentUtilisateurId()
-                .orElseThrow(() -> new RuntimeException("Non authentifié"));
+                .orElseThrow(() -> new UnauthorizedException("Utilisateur non authentifié"));
         notificationService.markAllAsRead(userId);
         return ResponseEntity.noContent().build();
     }

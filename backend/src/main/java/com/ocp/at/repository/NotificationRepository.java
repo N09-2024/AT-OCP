@@ -12,12 +12,17 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, String> {
 
-    List<Notification> findByUtilisateurIdOrderByDateCreationDesc(String utilisateurId);
+    @Query("SELECT n FROM Notification n LEFT JOIN FETCH n.utilisateur u " +
+           "WHERE u.id = :utilisateurId OR u.email = :utilisateurId " +
+           "ORDER BY n.dateCreation DESC")
+    List<Notification> findByUtilisateurIdOrderByDateCreationDesc(@Param("utilisateurId") String utilisateurId);
 
-    long countByUtilisateurIdAndLuFalse(String utilisateurId);
+    @Query("SELECT COUNT(n) FROM Notification n " +
+           "WHERE (n.utilisateur.id = :utilisateurId OR n.utilisateur.email = :utilisateurId) AND n.lu = false")
+    long countByUtilisateurIdAndLuFalse(@Param("utilisateurId") String utilisateurId);
 
     @Modifying
     @Query("UPDATE Notification n SET n.lu = true, n.dateLecture = CURRENT_TIMESTAMP " +
-           "WHERE n.utilisateur.id = :utilisateurId AND n.lu = false")
+           "WHERE (n.utilisateur.id = :utilisateurId OR n.utilisateur.email = :utilisateurId) AND n.lu = false")
     int markAllReadByUtilisateurId(@Param("utilisateurId") String utilisateurId);
 }

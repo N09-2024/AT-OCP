@@ -57,7 +57,8 @@ public class VisaServiceImpl implements VisaService {
 
         String currentUserId = SecurityUtils.getCurrentUtilisateurId()
                 .orElseThrow(() -> new BusinessException("Non authentifié"));
-        Utilisateur currentUser = utilisateurRepository.findByEmail(currentUserId)
+        Utilisateur currentUser = utilisateurRepository.findById(currentUserId)
+                .or(() -> utilisateurRepository.findByEmail(currentUserId))
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
         Visa visa = Visa.builder()
@@ -89,7 +90,8 @@ public class VisaServiceImpl implements VisaService {
 
         String currentUserId = SecurityUtils.getCurrentUtilisateurId()
                 .orElseThrow(() -> new BusinessException("Non authentifié"));
-        Utilisateur currentUser = utilisateurRepository.findByEmail(currentUserId)
+        Utilisateur currentUser = utilisateurRepository.findById(currentUserId)
+                .or(() -> utilisateurRepository.findByEmail(currentUserId))
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
         if (!visa.getUtilisateur().getId().equals(currentUser.getId())) {
             throw new BusinessException("Vous n'êtes pas autorisé à signer ce visa");
@@ -108,7 +110,9 @@ public class VisaServiceImpl implements VisaService {
         List<Visa> existingVisas = visaRepository.findByAutorisationTravailId(at.getId());
 
         boolean ceepSigned = isRoleSigned(existingVisas, "CEEP") || (at.getStatut() != null && at.getStatut() != com.ocp.at.entity.enums.StatutAT.BROUILLON);
-        boolean ceeeSigned = isRoleSigned(existingVisas, "CEEE");
+        boolean ceeeSigned = isRoleSigned(existingVisas, "CEEE")
+                || (at.getDateReceptionCeee() != null)
+                || (at.getStatut() != null && at.getStatut() != com.ocp.at.entity.enums.StatutAT.BROUILLON && at.getStatut() != com.ocp.at.entity.enums.StatutAT.SOUMISE && at.getStatut() != com.ocp.at.entity.enums.StatutAT.DEMANDE_CREEE);
         boolean hcepSigned = isRoleSigned(existingVisas, "HCEP");
         boolean hceeSigned = isRoleSigned(existingVisas, "HCEE");
         boolean hmepSigned = isRoleSigned(existingVisas, "HMEP");
@@ -128,9 +132,6 @@ public class VisaServiceImpl implements VisaService {
                     if (!ceepSigned) {
                         throw new BusinessException("Le CEEP doit d'abord signer l'AT (Étape 1) avant la signature du CEEE (Étape 2).");
                     }
-                    if (at.getDateReceptionCeee() == null) {
-                        throw new BusinessException("Le CEEE doit d'abord accuser réception de l'AT avant de pouvoir la signer.");
-                    }
                     break;
                 case "HCEP":
                     // 2. Le HCEP doit signer APRÈS CEEP et CEEE
@@ -140,9 +141,6 @@ public class VisaServiceImpl implements VisaService {
                     break;
                 case "HCEE":
                     // 3. Le HCEE doit signer APRÈS le HCEP
-                    if (!ceepSigned || !ceeeSigned) {
-                        throw new BusinessException("Le CEEP et le CEEE doivent d'abord signer l'AT avant la signature des Hors Cadre.");
-                    }
                     if (!hcepSigned) {
                         throw new BusinessException("Le Hors Cadre Émetteur (HCEP) doit d'abord signer l'AT (Étape 3) avant la signature du Hors Cadre Exécutant (HCEE, Étape 4).");
                     }
@@ -426,11 +424,29 @@ public class VisaServiceImpl implements VisaService {
                 return false;
             }
             String comment = v.getCommentaire() != null ? v.getCommentaire().toUpperCase() : "";
+            if ("HCEE".equalsIgnoreCase(roleCode)) {
+                return comment.contains("HCEE");
+            }
+            if ("HCEP".equalsIgnoreCase(roleCode)) {
+                return comment.contains("HCEP");
+            }
+            if ("HMEE".equalsIgnoreCase(roleCode)) {
+                return comment.contains("HMEE");
+            }
+            if ("HMEP".equalsIgnoreCase(roleCode)) {
+                return comment.contains("HMEP");
+            }
+            if ("CEEE".equalsIgnoreCase(roleCode)) {
+                return comment.contains("CEEE") || comment.contains("G1VISACEEE");
+            }
+            if ("CEEP".equalsIgnoreCase(roleCode)) {
+                return comment.contains("CEEP") || comment.contains("G1VISACEEP");
+            }
             if (comment.contains(roleCode.toUpperCase())) return true;
-            if ("CEEP".equalsIgnoreCase(roleCode) && comment.contains("G1VISACEEP")) return true;
-            if ("CEEE".equalsIgnoreCase(roleCode) && comment.contains("G1VISACEEE")) return true;
             Utilisateur u = v.getUtilisateur();
-            if (u != null && RoleUtils.userHasRolePattern(u, roleCode)) return true;
+            if (u != null && u.getRoles() != null) {
+                return u.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().equalsIgnoreCase(roleCode));
+            }
             return false;
         });
     }

@@ -1,6 +1,10 @@
 package com.ocp.at.controller;
 
+import com.ocp.at.dto.request.AnalyzeAtRequest;
+import com.ocp.at.dto.request.ChatRequest;
 import com.ocp.at.dto.response.AnalyseInterventionIAResponse;
+import com.ocp.at.dto.response.AnalyzeAtResponse;
+import com.ocp.at.dto.response.ChatResponse;
 import com.ocp.at.service.AssistanceIAService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -12,27 +16,41 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Endpoints d'assistance IA (suggestions + contrôle).
- * Ne délivrent aucun visa et ne changent aucun statut AT.
+ * Endpoints d'assistance IA (CrewAI / LangChain / RAG).
+ * Rôle strictement consultatif : ne délivre aucun visa et ne modifie aucun statut AT.
  */
 @RestController
-@RequestMapping("/api/ia")
+@RequestMapping
 @RequiredArgsConstructor
-@Tag(name = "Assistance IA", description = "LangChain/CrewAI/Mock - aide au formulaire F-HSE-SEC-31-04")
+@Tag(name = "Assistance IA", description = "Endpoints IA pour l'analyse d'AT et le chat conversationnel RAG")
 @SecurityRequirement(name = "bearerAuth")
 public class AssistanceIAController {
 
     private final AssistanceIAService assistanceIAService;
 
-    @PostMapping("/analyser-intervention")
-    @Operation(summary = "Suggestions risques / EPI / mesures / permis à partir de la description")
+    @PostMapping({"/api/ai/analyze-at", "/api/ia/analyze-at"})
+    @Operation(summary = "Analyse complète d'une AT par l'orchestration multi-agents (CrewAI + LangChain + RAG)")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AnalyzeAtResponse> analyzeAt(@RequestBody AnalyzeAtRequest request) {
+        return ResponseEntity.ok(assistanceIAService.analyzeAt(request));
+    }
+
+    @PostMapping({"/api/ai/chat", "/api/ia/chat"})
+    @Operation(summary = "Assistant conversationnel s'appuyant sur le RAG et les connaissances OCP")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ChatResponse> chat(@RequestBody ChatRequest request) {
+        return ResponseEntity.ok(assistanceIAService.chat(request));
+    }
+
+    @PostMapping("/api/ia/analyser-intervention")
+    @Operation(summary = "Suggestions risques / EPI / mesures / permis à partir de la description (Rétrocompatible)")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AnalyseInterventionIAResponse> analyser(@RequestBody AnalyseRequest body) {
         return ResponseEntity.ok(assistanceIAService.analyserIntervention(body.getDescription()));
     }
 
-    @PostMapping("/controler-dossier")
-    @Operation(summary = "Contrôle de complétude avant soumission CEEP (agents CrewAI)")
+    @PostMapping("/api/ia/controler-dossier")
+    @Operation(summary = "Contrôle de complétude avant soumission CEEP (Rétrocompatible)")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AnalyseInterventionIAResponse> controler(@RequestBody ControleRequest body) {
         return ResponseEntity.ok(assistanceIAService.controlerDossier(
