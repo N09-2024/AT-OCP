@@ -1,88 +1,98 @@
 # OCP AT System - Système de Gestion des Autorisations de Travail
 
-![Java](https://img.shields.io/badge/Java-17-blue?logo=openjdk)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen?logo=springboot)
+![Java](https://img.shields.io/badge/Java-21-blue?logo=openjdk)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.x-brightgreen?logo=springboot)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite)
 ![MUI](https://img.shields.io/badge/MUI-v9-007FFF?logo=mui)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-> Application industrielle complète de gestion des Autorisations de Travail (AT) développée pour **OCP Group**.  
-> Backend Spring Boot **✅ terminé** - Frontend React **🚧 en développement actif**.
+> Plateforme industrielle intégrée de gestion et de numérisation du cycle de vie complet des **Autorisations de Travail (AT)** et des **Permis Associés**, strictement conforme au **Standard OCP S-HSE-SEC-31 v1.0**.
 
 ---
 
 ## 📋 Table des Matières
 
-- [Description](#-description)
+- [Aperçu & Fonctionnalités Clés](#-aperçu--fonctionnalités-clés)
 - [Stack Technique](#-stack-technique)
 - [Architecture du Projet](#-architecture-du-projet)
+- [Standard OCP S-HSE-SEC-31 & Chaîne de Signatures](#-standard-ocp-s-hse-sec-31--chaîne-de-signatures)
 - [Prérequis](#-prérequis)
 - [Installation & Démarrage](#-installation--démarrage)
-  - [Backend (Spring Boot)](#backend-spring-boot)
-  - [Frontend (React)](#frontend-react)
-  - [Avec Docker](#avec-docker)
-- [API REST](#-api-rest)
-- [Modules Implémentés](#-modules-implémentés)
-- [Contribution](#-contribution)
-- [Licence](#-licence)
+  - [Option 1 : Démarrage Local (Recommandé & Rapide)](#option-1--démarrage-local-recommandé--rapide)
+  - [Option 2 : Démarrage avec Docker Compose](#option-2--démarrage-avec-docker-compose)
+- [Modules & Fonctionnalités](#-modules--fonctionnalités)
+- [API REST Principale](#-api-rest-principale)
+- [Comptes de Démonstration](#-comptes-de-démonstration)
+- [Licence & Équipe](#-licence--équipe)
 
 ---
 
-## 📝 Description
+## 🌟 Aperçu & Fonctionnalités Clés
 
-**OCP AT System** est un système full-stack de gestion du cycle de vie complet des Autorisations de Travail :
+**OCP AT System** numérise de bout en bout la gestion des autorisations et permis de travail sur les sites industriels OCP :
 
-- 📄 Création et gestion des **Demandes d'Intervention (DI / OT / BT)**
-- 🔄 **Workflow de validation multi-niveaux** (Brouillon → Soumise → Analyse → Autorisation → En cours → Réception → Archivage)
-- ✍️ **Signatures manuscrites numériques** (via React Signature Canvas)
-- 🛡️ Gestion des **permis** (feu, fouille, espace confiné, travail en hauteur…)
-- 👁️ **Visites préalables** de site avec géolocalisation et photos
-- ⚠️ **Analyse des risques** (risques, mesures, EPI, moyens d'accès)
-- ✅ **Validation & Visas** multi-rôles avec audit trail
-- 👥 **Rôles métiers & Sécurité** conformes au **Standard OCP S-HSE-SEC-31 v1.0** (CEEP, CEEE, HCEP, HCEE, HMEP, HMEE, ADMIN, RESPONSABLE_ENTREPRISE)
-- 📍 **Résolution contextuelle P/E** (Propriétaire / Exécutant selon le territoire de l'intervention)
-- 📦 **Archivage PDF** avec QR Code et recherche avancée
-- 📊 **Tableaux de bord** adaptés par rôle
-- 🔔 **Notifications** temps réel
+1. **Cycle de Vie Complet Conforme au Standard OCP S-HSE-SEC-31** :
+   - Création depuis les documents sources : **Demande d'Intervention (DI)**, **Ordre de Travail (OT)**, ou **Bon de Travail (BT)** avec numérotation automatique.
+   - Classification des interventions (Niveau 1 sans AT / Niveau 2 avec AT obligatoire).
+   - Visite préalable de chantier (§8.2) avec géolocalisation GPS et capture photo.
+   - Analyse dynamique des risques, mesures de prévention, EPI et moyens d'accès.
+   - Reconduction de poste (§8.4) et déclaration d'incidents / changements de conditions.
+   - Réception conjointe des travaux (§8.5) avec contrôle des essais et remise en état.
+   - Clôture et archivage sécurisé (§8.6) avec traçabilité minimale d'un an.
+
+2. **Chaîne Séquentielle des Visas & Signatures Numériques** :
+   - Signatures manuscrites tactiles intégrées avec horodatage, hachage cryptographique **SHA-256**, adresse IP et User-Agent pour conformité légale et audit trail.
+   - Respect strict de l'ordre hiérarchique :
+     $$\text{CEEP (1)} \longrightarrow \text{CEEE (2)} \longrightarrow \text{HCEP (3)} \longrightarrow \text{HCEE (4)} \longrightarrow \text{HMEP (5)} \longrightarrow \text{HMEE (6)}$$
+
+3. **Assistant IA & Analyse Automatique des Permis (OCR)** :
+   - Microservice dédié en Python FastAPI exploitant l'OCR et l'analyse documentaire pour la conformité automatique des permis requis (feu, espace confiné, fouille, hauteur, électrique).
+   - Gating automatique empêchant la soumission si des permis obligatoires ne sont pas validés.
+
+4. **Filtrage Intelligent & Ségrégation des Rôles** :
+   - Confidentialité stricte des brouillons (visibles uniquement par le CEEP émetteur et l'Admin).
+   - Affectation et visibilité contextuelle selon le périmètre de la Zone Propriétaire (P) et de la Zone Exécutante (E).
+   - Recherche multicritère instantanée et filtres dynamiques par rôle.
+
+5. **Système de Notifications Temps Réel** :
+   - Notifications automatiques acheminées aux rôles concernés lors de chaque changement d'étape (signature, validation, refus, reconduction, incident, clôture).
+   - Polling temps réel (30s) avec badge interactif dans la barre supérieure et navigation directe vers l'AT concernée.
+
+6. **Génération PDF Officielle** :
+   - Moteur de rendu haute fidélité (Apache FOP & PDFBox) produisant le formulaire officiel OCP 2 pages avec QR Code de vérification d'authenticité.
 
 ---
 
 ## 🛠 Stack Technique
 
-### Backend
+### Backend (Spring Boot 3.4)
+- **Langage** : Java 21 (Eclipse Temurin)
+- **Framework** : Spring Boot 3.4.x (Web, Data JPA, Security, Validation)
+- **Sécurité** : Spring Security 6 + JWT (JSON Web Tokens) + RBAC multi-rôles
+- **Base de Données** : PostgreSQL 16 avec Flyway Migrations
+- **Moteur PDF** : Apache FOP 2.9, Apache PDFBox 2.0, Apache XML Graphics Batik (SVG)
+- **Mapping & DTOs** : MapStruct 1.5 & Lombok
+- **Documentation API** : OpenAPI 3 / Swagger UI
 
-| Composant | Technologie |
-|-----------|-------------|
-| Langage | Java 17 |
-| Framework | Spring Boot 3 |
-| Sécurité | Spring Security + JWT |
-| ORM | Spring Data JPA / Hibernate |
-| Base de données | PostgreSQL 16 |
-| Migration DB | Flyway |
-| Mapping | MapStruct |
-| Documentation API | Swagger / OpenAPI 3 |
-| Architecture | REST, RBAC |
-| Tests | JUnit 5, Mockito |
+### Microservice IA & OCR (FastAPI)
+- **Langage** : Python 3.11
+- **Framework** : FastAPI & Uvicorn
+- **Traitement & OCR** : PyMuPDF (Fitz), Pillow, Tesseract OCR
+- **Analyse Sémantique** : Intégration IA pour vérification de conformité des permis
 
-### Frontend
-
-| Composant | Technologie |
-|-----------|-------------|
-| Framework | React 19 + TypeScript |
-| Bundler | Vite |
-| UI Library | Material UI (MUI v9) |
-| Routage | React Router v7 |
-| Requêtes HTTP | Axios |
-| Data Fetching | TanStack React Query |
-| Formulaires | React Hook Form + Zod |
-| État global | Zustand |
-| Graphiques | Recharts |
-| Signatures | React Signature Canvas |
-| Visualisation PDF | React PDF Viewer |
-| Animations | Framer Motion |
-| Icônes | Heroicons |
+### Frontend (React 19)
+- **Framework** : React 19 + TypeScript 5
+- **Build Tool** : Vite 6
+- **UI Library** : Material UI (MUI v9) + Emotion
+- **Navigation & Routage** : React Router v7
+- **Gestion d'État** : Zustand
+- **Signatures Numériques** : React Signature Canvas
+- **Icônes & Thème** : Heroicons, Material Icons, Charte graphique officielle OCP Green (`#009A44`, `#1F4D3E`)
 
 ---
 
@@ -90,289 +100,214 @@
 
 ```
 ocp-at-system/
-├── backend/                      # Spring Boot 3 (Java 17)
-│   └── src/main/java/com/ocp/at/
-│       ├── controller/           # REST Controllers
-│       ├── service/              # Logique métier
-│       ├── repository/           # Spring Data JPA
-│       ├── entity/               # Entités JPA
-│       ├── dto/                  # Data Transfer Objects
-│       ├── mapper/               # MapStruct
-│       └── security/             # JWT, RBAC
+├── backend/                              # Backend Spring Boot (Java 21)
+│   ├── src/main/java/com/ocp/at/
+│   │   ├── controller/                   # Endpoints REST (AT, Visas, Permis, Notifications, Admin...)
+│   │   ├── service/                      # Logique métier & orchestration de workflow
+│   │   │   └── impl/                     # Implémentations (AutorisationTravail, Visa, Notification...)
+│   │   ├── repository/                   # Repositories Spring Data JPA optimisés
+│   │   ├── entity/                       # Entités JPA (AutorisationTravail, Visa, Notification, Zone...)
+│   │   ├── security/                     # Filtres JWT, SecurityUtils, RoleUtils, ATContextService
+│   │   ├── pdf/                          # Générateur PDF officiel Apache FOP / XSL-FO
+│   │   └── mapper/                       # Mappers MapStruct
+│   └── pom.xml
 │
-├── frontend/                     # React 19 + TypeScript
-│   └── src/
-│       ├── app/                  # Providers (ThemeProvider, QueryClient…)
-│       ├── assets/               # Images, logos
-│       ├── components/           # Composants génériques réutilisables
-│       │   ├── layout/           #   Sidebar, Topbar
-│       │   └── dashboard/        #   StatCard, AtTable, Charts…
-│       ├── constants/            # Constantes applicatives
-│       ├── hooks/                # Hooks personnalisés
-│       ├── layouts/              # MainLayout, AuthLayout
-│       ├── modules/              # Modules métier (1 dossier = 1 domaine)
-│       │   ├── auth/             #   Connexion, profil
-│       │   ├── dashboard/        #   Tableaux de bord par rôle
-│       │   ├── administration/   #   Utilisateurs, rôles, permissions
-│       │   ├── referentiels/     #   Zones, installations, équipements…
-│       │   ├── documents/        #   DI, OT, BT
-│       │   ├── visites/          #   Visites préalables
-│       │   ├── analyses/         #   Analyse des risques
-│       │   ├── autorisations/    #   AT (workflow complet)
-│       │   ├── permis/           #   Gestion des permis
-│       │   ├── visas/            #   Validations & signatures
-│       │   ├── receptions/       #   Réceptions des travaux
-│       │   ├── archives/         #   Archivage & rapports
-│       │   └── rapports/         #   Statistiques & exports
-│       ├── routes/               # Routage & routes protégées (RBAC)
-│       ├── services/             # Clients API (AuthService, ATService…)
-│       ├── store/                # Zustand (authStore, uiStore…)
-│       ├── theme/                # Thème MUI (couleurs OCP, typographie)
-│       ├── types/                # Interfaces TypeScript
-│       └── utils/                # Fonctions utilitaires
+├── ai-service/                           # Microservice IA / OCR (Python FastAPI)
+│   ├── app/
+│   │   ├── main.py                       # Application FastAPI
+│   │   ├── routes/                       # Endpoints d'analyse OCR des permis
+│   │   └── services/                     # Analyse d'images et extraction de conformité
+│   └── requirements.txt
 │
-├── docs/                         # Documentation API
-├── docker-compose.yml
+├── frontend/                             # Frontend React 19 + TypeScript + Vite
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── common/                   # FormulaireOCPInteractive, FormulaireOCPViewer, SignaturePad...
+│   │   │   └── layout/                   # Topbar (avec polling notifs), Sidebar, Breadcrumbs...
+│   │   ├── modules/
+│   │   │   ├── autorisations/            # Liste, Détail, Formulaire, Signature CEEE, Actions de workflow
+│   │   │   ├── visas/                    # Validation des visas HC & HM
+│   │   │   ├── profile/                  # Profil utilisateur & NotificationsPage
+│   │   │   ├── dashboard/                # Tableaux de bord personnalisés par rôle
+│   │   │   └── administration/           # Gestion utilisateurs, rôles, permissions et référentiels
+│   │   ├── services/                     # Clients Axios (AT, Visas, Notifications, Documents...)
+│   │   ├── store/                        # Stores Zustand (AuthStore)
+│   │   └── theme/                        # Thème OCP
+│   └── package.json
+│
+├── docker-compose.yml                    # Déploiement multi-conteneurs
 └── README.md
+```
+
+---
+
+## 👥 Standard OCP S-HSE-SEC-31 & Chaîne de Signatures
+
+### Rôles Métiers Définis
+
+| Rôle | Désignation | Missions principales |
+|---|---|---|
+| **CEEP** | Chef d'Équipe Émetteur / Propriétaire (P) | Rédige l'AT, effectue la visite préalable, signe l'Étape 1, effectue la réception conjointe. |
+| **CEEE** | Chef d'Équipe Exécutant (E) | Accuse réception de l'AT, signe l'Étape 2, démarre les travaux, déclare la fin des travaux. |
+| **HCEP** | Hors Cadre Émetteur / Propriétaire (P) | Classifie les interventions, appose son visa (Étape 3), garant de la sécurité propriétaire. |
+| **HCEE** | Hors Cadre Exécutant (E) | Appose son visa (Étape 4), garant de la sécurité exécutante et de l'archivage. |
+| **HMEP** | Haute Maîtrise Émettrice / Propriétaire (P) | Garant terrain émetteur, appose son visa de garantie (Étape 5). |
+| **HMEE** | Haute Maîtrise Exécutante (E) | Garant terrain exécutant, appose son visa de garantie (Étape 6). |
+| **ADMIN** | Administrateur Système | Gestion des utilisateurs, rôles, services, zones et audits. |
+
+### Diagramme des 9 Étapes du Workflow
+
+```mermaid
+graph TD
+    E0[0. CLASSIFICATION_EFFECTUEE<br/>HCEP] --> E1[1. DEMANDE_CREEE / BROUILLON<br/>CEEP - DI / OT / BT]
+    E1 --> E2[2. VISITE_REALISEE<br/>CEEP + GPS/Photo]
+    E2 --> E3[3. AT_REDIGEE & SIGNÉE<br/>1. CEEP → 2. CEEE → 3. HCEP → 4. HCEE → 5. HMEP → 6. HMEE]
+    E3 --> E4[4. INTERVENTION_EN_COURS<br/>CEEE]
+    E4 -->|Début de nouveau poste| E5[5. AT_RECONDUITE<br/>CEEP / CEEE]
+    E5 --> E4
+    E4 -->|Incident / Changement condition| E2
+    E4 --> E6[6. FIN_TRAVAUX_DECLAREE<br/>CEEE]
+    E6 --> E7[7. TRAVAUX_RECEPTIONES<br/>Réception conjointe CEEP + CEEE]
+    E7 --> E8[8. ARCHIVEE<br/>Archivage officiel PDF + QR Code]
 ```
 
 ---
 
 ## 📦 Prérequis
 
-| Outil | Version |
-|-------|---------|
-| Java | 17+ |
-| Maven | 3.9+ |
-| Node.js | 20+ |
-| npm | 10+ |
-| PostgreSQL | 16+ |
-| Docker (optionnel) | 20.10+ |
+- **Java JDK** : Version 21 (Eclipse Temurin ou OpenJDK 21)
+- **Maven** : Version 3.9+
+- **Node.js** : Version 20+ avec **npm**
+- **Python** : Version 3.10 ou 3.11 (pour le service IA)
+- **PostgreSQL** : Version 15 ou 16
 
 ---
 
 ## 🚀 Installation & Démarrage
 
-### Backend (Spring Boot)
+### Option 1 : Démarrage Local (Recommandé & Rapide)
 
+#### 1. Démarrer la Base de Données PostgreSQL
+Si vous n'avez pas PostgreSQL installé en local, vous pouvez lancer uniquement la base avec Docker en 2 secondes :
 ```bash
-# 1. Créer la base de données PostgreSQL
-psql -U postgres -c "CREATE DATABASE at_ocp_db;"
-psql -U postgres -c "CREATE USER at_ocp_user WITH PASSWORD 'your_password';"
-psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE at_ocp_db TO at_ocp_user;"
+docker run --name postgres-ocp -e POSTGRES_DB=at_ocp_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16-alpine
+```
 
-# 2. Configurer les variables d'environnement (ou application.yml)
-export DB_HOST=localhost
-export DB_PORT=5432
-export DB_NAME=at_ocp_db
-export DB_USERNAME=at_ocp_user
-export DB_PASSWORD=your_password
-export JWT_SECRET=your-very-secret-key
-
-# 3. Lancer le backend
+#### 2. Démarrer le Backend (Spring Boot)
+Ouvrez un terminal :
+```bash
 cd backend
 mvn spring-boot:run
 ```
+- **API REST** : `http://localhost:8080/api`
+- **Documentation Swagger UI** : `http://localhost:8080/swagger-ui.html`
 
-> API disponible sur `http://localhost:8080`  
-> Swagger UI : `http://localhost:8080/swagger-ui.html`
-
----
-
-### Frontend (React)
-
+#### 3. Démarrer le Frontend (React / Vite)
+Ouvrez un second terminal :
 ```bash
-# 1. Accéder au dossier frontend
 cd frontend
-
-# 2. Installer les dépendances
 npm install
-
-# 3. Lancer le serveur de développement
 npm run dev
 ```
+- **Application Web** : `http://localhost:5173` (ou `http://localhost:3000`)
 
-> Application disponible sur `http://localhost:5173`
-
+#### 4. Démarrer le Service IA (FastAPI - Optionnel)
+Ouvrez un troisième terminal :
 ```bash
-# Build de production
-npm run build
+cd ai-service
+# Créer et activer l'environnement virtuel
+python -m venv venv
+# Windows :
+.\venv\Scripts\activate
+# Linux/Mac :
+source venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+- **Service IA** : `http://localhost:8000`
 
 ---
 
-### Avec Docker
+### Option 2 : Démarrage avec Docker Compose
+
+Pour démarrer l'ensemble des conteneurs (PostgreSQL + Backend + Frontend + Service IA) :
 
 ```bash
-# Copier et configurer les variables d'environnement
-cp .env.example .env
-# Éditer .env avec vos valeurs
-
-# Démarrer tous les services (Backend + DB)
+# Lancement en arrière-plan
 docker-compose up -d
 
-# Voir les logs
-docker-compose logs -f backend
-
-# Arrêter
-docker-compose down
+# Visualiser les logs
+docker-compose logs -f
 ```
 
 ---
 
-## 📡 API REST
+## 📦 Modules & Fonctionnalités
 
-### Endpoints principaux
+| Module | Description | Backend | Frontend |
+|---|---|:---:|:---:|
+| **Authentification & Sécurité** | Connexion JWT, gestion des sessions, refresh tokens et RBAC complet | ✅ | ✅ |
+| **Formulaire Interactif OCP** | Formulaire officiel S-HSE-SEC-31 sections A à J avec auto-save | ✅ | ✅ |
+| **Documents Sources** | Gestion et génération des Demandes d'Intervention (DI), OT et BT | ✅ | ✅ |
+| **Visite Préalable** | Enregistrement terrain avec coordonnées GPS et photos | ✅ | ✅ |
+| **Analyse des Risques & EPI** | Référentiels complets des risques OCP, mesures, EPI et moyens d'accès | ✅ | ✅ |
+| **Vérification IA des Permis** | Analyse automatique OCR des permis scannés | ✅ | ✅ |
+| **Chaîne des Visas & Signatures** | Signature manuscrite horodatée SHA-256 (CEEP $\rightarrow$ HMEE) | ✅ | ✅ |
+| **Cycle de Vie & Transitions** | Démarrage, reconduction, signalement d'incident, fin de travaux | ✅ | ✅ |
+| **Réception Conjointe** | Contrôle des essais, remise en état et clôture officielle | ✅ | ✅ |
+| **Notifications Temps Réel** | Acheminement par rôle avec polling 30s et navigation directe | ✅ | ✅ |
+| **Génération PDF & QR Code** | Exportation du formulaire officiel 2 pages avec QR Code d'authenticité | ✅ | ✅ |
+| **Administration & Référentiels** | Gestion des utilisateurs, zones, services, installations et habilitations | ✅ | ✅ |
+
+---
+
+## 📡 API REST Principale
 
 | Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `POST` | `/api/auth/login` | Authentification (JWT) |
-| `GET` | `/api/auth/me` | Profil utilisateur connecté |
-| `GET` | `/api/autorisations-travail` | Liste paginée des AT |
-| `POST` | `/api/autorisations-travail` | Créer une AT |
-| `GET` | `/api/autorisations-travail/{id}` | Détails d'une AT |
-| `PUT` | `/api/autorisations-travail/{id}` | Modifier une AT |
-| `POST` | `/api/at/{id}/submit` | Soumettre une AT |
-| `POST` | `/api/at/{id}/validate` | Valider une AT |
-| `POST` | `/api/at/{id}/reject` | Rejeter une AT |
-| `GET` | `/api/statistiques/dashboard` | KPI du tableau de bord |
-
-### Authentification
-
-```bash
-# Connexion
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@ocp.ma","password":"password123"}'
-
-# Utiliser le token retourné
-curl http://localhost:8080/api/autorisations-travail \
-  -H "Authorization: Bearer <token>"
-```
+|---|---|---|
+| `POST` | `/api/auth/login` | Authentification utilisateur et émission du token JWT |
+| `GET` | `/api/auth/me` | Profil et permissions de l'utilisateur connecté |
+| `GET` | `/api/autorisations-travail` | Liste paginée avec recherche (`search`) et filtre de statut (`statut`) |
+| `POST` | `/api/autorisations-travail` | Création d'une nouvelle AT depuis un document source |
+| `GET` | `/api/autorisations-travail/{id}` | Consultation détaillée de l'autorisation de travail |
+| `PUT` | `/api/autorisations-travail/{id}/auto-save` | Sauvegarde automatique des sections du formulaire |
+| `POST` | `/api/autorisations-travail/{id}/soumettre` | Soumission de l'AT avec validation des permis IA |
+| `POST` | `/api/autorisations-travail/{id}/accuser-reception-ceee` | Accusé de réception par le Chef d'Équipe Exécutant |
+| `POST` | `/api/visas/create-and-sign` | Création et signature d'un visa avec image manuscrite |
+| `GET` | `/api/visas/autorisation/{atId}` | Liste chronologique des visas et signatures d'une AT |
+| `POST` | `/api/autorisations-travail/{id}/demarrer` | Démarrage officiel des travaux sur site |
+| `POST` | `/api/autorisations-travail/{id}/reconduire` | Reconduction de l'autorisation pour un nouveau poste |
+| `POST` | `/api/autorisations-travail/{id}/declarer-fin` | Déclaration de fin d'intervention par le CEEE |
+| `POST` | `/api/autorisations-travail/{id}/receptionner` | Validation conjointe de la réception des travaux |
+| `GET` | `/api/pdf/at/{id}` | Téléchargement du formulaire officiel PDF certifié |
+| `GET` | `/api/notifications` | Liste paginée des notifications de l'utilisateur |
+| `GET` | `/api/notifications/count-unread` | Compteur instantané des notifications non lues |
+| `PUT` | `/api/notifications/read-all` | Marquer toutes les notifications comme lues |
 
 ---
 
-## 📦 Modules Implémentés
+## 🔐 Comptes de Démonstration
 
-| # | Module | Backend | Frontend |
-|---|--------|---------|----------|
-| 1 | Authentification & Sécurité (JWT, RBAC) | ✅ | ✅ |
-| 2 | Référentiels (Zones, Installations, EPI…) | ✅ | 🚧 |
-| 3 | Documents d'Intervention (DI / OT / BT) | ✅ | 🚧 |
-| 4 | Visites Préalables | ✅ | 🚧 |
-| 5 | Analyse des Risques | ✅ | 🚧 |
-| 6 | Autorisations de Travail (Workflow) | ✅ | 🚧 |
-| 7 | Gestion des Permis (PDF, IA) | ✅ | 🚧 |
-| 8 | Validations & Visas (Signature manuscrite) | ✅ | 🚧 |
-| 9 | Réceptions des Travaux | ✅ | 🚧 |
-| 10 | Archives & Rapports (QR Code, PDF) | ✅ | 🚧 |
+Pour tester les différents rôles du workflow S-HSE-SEC-31 :
 
-> ✅ Terminé &nbsp;|&nbsp; 🚧 En développement &nbsp;|&nbsp; ⬜ À venir
+| Rôle | Email | Mot de passe | Périmètre |
+|---|---|---|---|
+| **Admin** | `admin@ocp.ma` | `Admin123!` | Accès complet système et gestion |
+| **CEEP** | `ceep@ocp.ma` | `Password123!` | Émetteur / Propriétaire (Rédaction, Visite, Clôture) |
+| **CEEE** | `ceee@ocp.ma` | `Password123!` | Exécutant (Accusé, Signature, Travaux, Fin) |
+| **HCEP** | `hcep@ocp.ma` | `Password123!` | Hors Cadre Émetteur (Classification, Visa Étape 3) |
+| **HCEE** | `hcee@ocp.ma` | `Password123!` | Hors Cadre Exécutant (Visa Étape 4, Archivage) |
+| **HMEP** | `hmep@ocp.ma` | `Password123!` | Haute Maîtrise Émettrice (Garantie Visa Étape 5) |
+| **HMEE** | `hmee@ocp.ma` | `Password123!` | Haute Maîtrise Exécutante (Garantie Visa Étape 6) |
 
 ---
 
-## 👥 Rôles & Workflow - Standard OCP S-HSE-SEC-31 v1.0
+## 📄 Licence & Équipe
 
-Le système implémente les 8 rôles opérationnels et les 9 étapes du workflow du **Standard OCP S-HSE-SEC-31 v1.0** :
-
-### Rôles Opérationnels
-
-| Rôle | Nom complet | Définition & Rôle dans le workflow |
-|------|-------------|-----------------------------------|
-| **CEEP** | Chef d'Équipe Entité Propriétaire | Opérationnel terrain P. Rédige l'AT (§8.3), réalise la visite (§8.2), réceptionne (§8.5). |
-| **CEEE** | Chef d'Équipe Entité Exécutante | Opérationnel terrain E. Démarre les travaux (§4), déclare la fin des travaux (§8.5). |
-| **HCEP** | Hors Cadre Entité Propriétaire | Cadre hiérarchique P. Classifie Niveau 1/2 (Étape 0), garant archivage (§8.6), habilitations (§9). |
-| **HCEE** | Hors Cadre Entité Exécutante | Cadre hiérarchique E. Garant de la visite (§8.2) et de l'AT (§8.3), exécute l'archivage (§8.6). |
-| **HMEP** | Haute Maîtrise Entité Propriétaire | Maîtrise P. Garant de la visite chantier (§8.2) et du démarrage d'intervention (§4). |
-| **HMEE** | Haute Maîtrise Entité Exécutante | Maîtrise E. Position fail-closed en lecture seule. |
-| **ADMIN** | Administrateur Système | Gestion globale du système et des référentiels. |
-| **RESPONSABLE_ENTREPRISE** | Responsable Entreprise Externe | Sous-traitant externe. Gestion des Bons de Travaux (BT) et des permis associés. |
-
-### Workflow des 9 Étapes (`statutWorkflow`)
-
-```
-[0. CLASSIFICATION_EFFECTUEE] (HCEP)
-             ↓
-[1. DEMANDE_CREEE]            (CEEP - DI/OT/BT)
-             ↓
-[2. VISITE_REALISEE]          (CEEP E, HCEE/HMEP G)
-             ↓
-[3. AT_REDIGEE]               (CEEP E, HCEE G, CEEE P)
-             ↓
-[4. INTERVENTION_EN_COURS]    (CEEE E)
-             ↓
-[5b. AT_RECONDUITE]           (Si dépassement poste ; retour Visite si > 24h)
-             ↓
-[6. FIN_TRAVAUX_DECLAREE]     (CEEE E)
-             ↓
-[7. TRAVAUX_RECEPTIONES]      (CEEP E, CEEE P)
-             ↓
-[8. ARCHIVEE]                 (HCEE E, HCEP G - min. 1 an)
-```
-
-> Pour plus de détails sur la procédure de migration et la matrice des permissions, consulter [MIGRATION_ROLES.md](MIGRATION_ROLES.md).
-
----
-
-## 🎨 Design System
-
-Le frontend respecte la **charte graphique OCP** :
-
-| Token | Valeur |
-|-------|--------|
-| Primary | `#009A44` (OCP Green) |
-| Dark Green | `#006B3C` |
-| Light Green | `#EAF7EF` |
-| Background | `#F7F9FB` |
-| Warning | `#F59E0B` |
-| Danger | `#DC2626` |
-| Typographie | Inter (Google Fonts) |
-| Border Radius | 16px |
-
----
-
-## 🤝 Contribution
-
-1. Fork le projet
-2. Créer une branche (`git checkout -b feature/ma-fonctionnalite`)
-3. Commit (`git commit -m 'feat: ajout de ma fonctionnalité'`)
-4. Push (`git push origin feature/ma-fonctionnalite`)
-5. Ouvrir une **Pull Request**
-
-### Conventions
-
-- **Backend** : Google Java Style Guide, commits sémantiques
-- **Frontend** : ESLint + Prettier, TypeScript strict mode
-- Ajouter des tests pour toute nouvelle fonctionnalité
-- Documenter les nouveaux endpoints dans `docs/API.md`
-
----
-
-## 📚 Documentation
-
-- [docs/API.md](docs/API.md) - Documentation des endpoints REST
-- [DOCKER.md](DOCKER.md) - Guide de déploiement Docker
-- [AUDIT_REPORT.md](AUDIT_REPORT.md) - Rapport d'audit technique
-- [CHANGELOG.md](CHANGELOG.md) - Historique des versions
-- Swagger UI : `http://localhost:8080/swagger-ui.html`
-
----
-
-## 📄 Licence
-
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
----
-
-## 👥 Équipe
-
-- **Maintainers** : OCP Dev Team
-- **Contact** : dev@ocp.ma
-
----
+Ce projet est sous licence propriétaire développé pour **OCP Group**.
 
 <p align="center">
-  Développé avec ❤️ pour <strong>OCP Group</strong>
-  <br/>
-  <img src="https://img.shields.io/badge/OCP-Successful%20Together-009A44?style=for-the-badge" alt="OCP Successful Together"/>
+  <strong>OCP Group · Direction Sécurité & Santé au Travail (HSE)</strong><br/>
+  Conforme à la directive <em>S-HSE-SEC-31</em>
 </p>
