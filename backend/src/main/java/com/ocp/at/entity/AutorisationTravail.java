@@ -138,7 +138,7 @@ public class AutorisationTravail {
     private ReceptionTravaux receptionTravaux;
 
     /**
-     * Zone/Service Propriétaire (P) — l'entité responsable de l'installation où se déroule l'intervention.
+     * Zone/Service Propriétaire (P) - l'entité responsable de l'installation où se déroule l'intervention.
      * Référence la même table Zone que zoneExecutante (P et E sont le même type d'objet,
      * des rôles différents sur la même AT).
      */
@@ -148,7 +148,7 @@ public class AutorisationTravail {
     private Zone zoneProprietaire;
 
     /**
-     * Zone/Service Exécutant (E) — l'entité qui intervient dans le périmètre de P.
+     * Zone/Service Exécutant (E) - l'entité qui intervient dans le périmètre de P.
      * Peut être le même Service/Zone que zoneProprietaire sur une autre AT (relation P/E contextuelle).
      */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -161,7 +161,7 @@ public class AutorisationTravail {
     private String entreprisesIntervenantes;
     private String mesuresSecuriteExecutant;
 
-    /** Cases cochées formulaire F-HSE (JSON array d'IDs) — indépendant des ManyToMany */
+    /** Cases cochées formulaire F-HSE (JSON array d'IDs) - indépendant des ManyToMany */
     @Column(name = "form_risques_ids", columnDefinition = "TEXT")
     private String formRisquesIds;
 

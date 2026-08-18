@@ -16,19 +16,19 @@ public enum StatutAT {
     // Statuts standard S-HSE-SEC-31 §7 (workflow principal)
     // =========================================================================
 
-    /** Étape 0 — HCEP a classifié l'intervention en Niveau 2 → AT obligatoire. */
+    /** Étape 0 - HCEP a classifié l'intervention en Niveau 2 → AT obligatoire. */
     CLASSIFICATION_EFFECTUEE,
 
-    /** Étape 1 — CEEP a créé la demande (DI/BT/OT) : zone, date, durée définis. */
+    /** Étape 1 - CEEP a créé la demande (DI/BT/OT) : zone, date, durée définis. */
     DEMANDE_CREEE,
 
-    /** Étape 2+3 — Co-action conjointe CEEP+CEEE : Visite & Rédaction terrain (garants HCEE + HMEP). */
+    /** Étape 2+3 - Co-action conjointe CEEP+CEEE : Visite & Rédaction terrain (garants HCEE + HMEP). */
     EN_VISITE_REDACTION,
 
-    /** Étape 2 — Visite chantier réalisée. */
+    /** Étape 2 - Visite chantier réalisée. */
     VISITE_REALISEE,
 
-    /** Étape 3 — AT rédigée. */
+    /** Étape 3 - AT rédigée. */
     AT_REDIGEE,
 
     /** AT validée et prête pour démarrage. */
@@ -38,19 +38,19 @@ public enum StatutAT {
     EN_COURS,
     INTERVENTION_EN_COURS,
 
-    /** Étape 5b — AT reconduite (dépassement d'un poste). */
+    /** Étape 5b - AT reconduite (dépassement d'un poste). */
     EN_RECONDUCTION,
     AT_RECONDUITE,
 
-    /** Étape 6 — Fin des travaux déclarée par CEEE (E). CEEP informé (I). */
+    /** Étape 6 - Fin des travaux déclarée par CEEE (E). CEEP informé (I). */
     DECLAREE_TERMINEE,
     FIN_TRAVAUX_DECLAREE,
 
-    /** Étape 7 — Réception conjointe CEEP (E) + CEEE (P). Clôture permis de feu 2h après fin. */
+    /** Étape 7 - Réception conjointe CEEP (E) + CEEE (P). Clôture permis de feu 2h après fin. */
     RECEPTIONEES,
     TRAVAUX_RECEPTIONES,
 
-    /** Étape 8 — Documents archivés par HMEP (E) + HCEP (G). */
+    /** Étape 8 - Documents archivés par HMEP (E) + HCEP (G). */
     ARCHIVEE,
 
     // =========================================================================
@@ -64,7 +64,7 @@ public enum StatutAT {
     ANNULEE,
 
     // =========================================================================
-    // Statuts legacy (conservés pour compatibilité historique — ne pas utiliser
+    // Statuts legacy (conservés pour compatibilité historique - ne pas utiliser
     // pour les nouvelles AT ; utiliser le champ `statutWorkflow` à la place)
     // =========================================================================
 

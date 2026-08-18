@@ -19,6 +19,8 @@ public interface AutorisationTravailService {
 
     Page<AutorisationTravailResponse> findAll(Pageable pageable);
 
+    Page<AutorisationTravailResponse> findAll(String statut, String search, Pageable pageable);
+
     AutorisationTravailResponse findById(String id);
     
     AutorisationTravailResponse accuserReceptionCeee(String id);

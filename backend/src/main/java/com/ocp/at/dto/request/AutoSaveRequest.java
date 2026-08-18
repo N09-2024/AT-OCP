@@ -37,11 +37,20 @@ public class AutoSaveRequest {
     @Schema(description = "Services intervenants (libellé)")
     private String servicesIntervenants;
 
-    @Schema(description = "ID du service intervenant (E) — fixe zoneExecutante pour CEEE")
+    @Schema(description = "ID du service intervenant (E) - fixe zoneExecutante pour CEEE")
     private String serviceIntervenantId;
 
     @Schema(description = "ID zone propriétaire (P) optionnel")
     private String zoneProprietaireId;
+
+    @Schema(description = "Nom zone propriétaire (P)")
+    private String zoneProprietaireNom;
+
+    @Schema(description = "ID zone exécutante (E)")
+    private String zoneExecutanteId;
+
+    @Schema(description = "Nom zone exécutante (E) / Lieu des travaux")
+    private String zoneExecutanteNom;
 
     @Schema(description = "Entreprises intervenantes")
     private String entreprisesIntervenantes;

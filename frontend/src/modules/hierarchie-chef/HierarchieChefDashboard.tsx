@@ -127,9 +127,9 @@ export const HierarchieChefDashboard: React.FC = () => {
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {user?.prenom} {user?.nom} — {user?.service?.nomService || 'Service HC'}
+              {user?.prenom} {user?.nom} - {user?.service?.nomService || 'Service HC'}
             </Typography>
-            <Chip size="small" label="Niveau 2 — Hors Cadre Responsable" color="primary" variant="outlined" sx={{ fontWeight: 700 }} />
+            <Chip size="small" label="Niveau 2 - Hors Cadre Responsable" color="primary" variant="outlined" sx={{ fontWeight: 700 }} />
           </Stack>
         </Box>
       </Stack>
@@ -138,9 +138,9 @@ export const HierarchieChefDashboard: React.FC = () => {
         <strong>Standard OCP S-HSE-SEC-31 (§5 & §7) :</strong> Le rôle Hors Cadre agit comme <strong>Garant (G)</strong> sur la visite/rédaction et le démarrage (HCEE Exécutant), et comme <strong>Garant d'archivage (HCEP Propriétaire)</strong>.
       </Alert>
 
-      {renderSection('Position Exécutante (HCEE — Garant Visite & Démarrage)', '#3C7A5C', cardsExecutant)}
+      {renderSection('Position Exécutante (HCEE - Garant Visite & Démarrage)', '#3C7A5C', cardsExecutant)}
       <Divider sx={{ my: 3 }} />
-      {renderSection('Position Propriétaire (HCEP — Garant Archivage §8.6)', '#3C7A5C', cardsProprietaire)}
+      {renderSection('Position Propriétaire (HCEP - Garant Archivage §8.6)', '#3C7A5C', cardsProprietaire)}
     </Box>
   );
 };

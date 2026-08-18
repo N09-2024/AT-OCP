@@ -40,7 +40,7 @@ public class DemandeInterventionController {
     @PostMapping
     @Operation(summary = "Créer une nouvelle DI",
                description = "Conforme §8.1 Standard S-HSE-SEC-31 : le CEEP exécute la demande d'intervention.")
-    @PreAuthorize("hasAuthority('CREATE_AT')") // §8.1 — CEEP exécute la demande d'intervention
+    @PreAuthorize("hasAuthority('CREATE_AT')") // §8.1 - CEEP exécute la demande d'intervention
     public ResponseEntity<DemandeInterventionResponse> create(
             @Valid @RequestBody DemandeInterventionRequest request,
             Authentication authentication) {

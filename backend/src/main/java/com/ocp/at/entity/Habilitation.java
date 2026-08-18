@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 /**
  * Entité représentant l'habilitation officielle d'un agent à délivrer des Autorisations de Travail.
- * Formulaire F-HSE-SEC-31-02 — Standard OCP S-HSE-SEC-31 §9.
+ * Formulaire F-HSE-SEC-31-02 - Standard OCP S-HSE-SEC-31 §9.
  */
 @Entity
 @Table(name = "habilitations")
@@ -29,7 +29,7 @@ public class Habilitation {
     @JoinColumn(name = "utilisateur_id", nullable = false)
     private Utilisateur utilisateur;
 
-    /** HCEP qui a signé la désignation (§9 — responsable propriétaire) */
+    /** HCEP qui a signé la désignation (§9 - responsable propriétaire) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "designe_par_id")
     private Utilisateur designePar;

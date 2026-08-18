@@ -74,23 +74,32 @@ export default function ValidationOCPPage() {
     setSubmitting(true);
     try {
       // Déterminer le rôle contextuel (HCEP, HCEE, HMEP, HMEE)
-      const userRoles = _user?.roles?.map((r: any) => r.nom) || [];
+      const userRoles: string[] = (_user?.roles || []).map((r: any) => (r.nom || r || '').toString());
       const searchParams = new URLSearchParams(window.location.search);
       const urlRole = searchParams.get('role');
 
-      let targetRoleTag = urlRole || 'HCEE';
-      if (!urlRole) {
-        if (userRoles.includes('HCEP')) targetRoleTag = 'HCEP';
-        else if (userRoles.includes('HCEE')) targetRoleTag = 'HCEE';
-        else if (userRoles.includes('HMEP')) targetRoleTag = 'HMEP';
-        else if (userRoles.includes('HMEE')) targetRoleTag = 'HMEE';
-        else if (userRoles.includes('HC')) targetRoleTag = 'HCEE';
-        else if (userRoles.includes('HM')) targetRoleTag = 'HMEP';
+      let targetRoleTag = urlRole || '';
+      if (!targetRoleTag) {
+        const hasRole = (roleStr: string) => userRoles.some((r: string) => r.toUpperCase().includes(roleStr.toUpperCase()));
+        const isHcepSigned = visas.some(v => v.statut === 'VALIDE' && (v.commentaire || '').toUpperCase().includes('HCEP'));
+        const isHmepSigned = visas.some(v => v.statut === 'VALIDE' && (v.commentaire || '').toUpperCase().includes('HMEP'));
+
+        if (hasRole('HCEP') && !hasRole('HCEE')) targetRoleTag = 'HCEP';
+        else if (hasRole('HCEE') && !hasRole('HCEP')) targetRoleTag = 'HCEE';
+        else if (hasRole('HMEP') && !hasRole('HMEE')) targetRoleTag = 'HMEP';
+        else if (hasRole('HMEE') && !hasRole('HMEP')) targetRoleTag = 'HMEE';
+        else if (hasRole('HC')) {
+          targetRoleTag = !isHcepSigned ? 'HCEP' : 'HCEE';
+        } else if (hasRole('HM')) {
+          targetRoleTag = !isHmepSigned ? 'HMEP' : 'HMEE';
+        } else {
+          targetRoleTag = 'HCEP';
+        }
       }
 
       const finalCommentaire = commentaire
-        ? `Visa ${targetRoleTag} — ${commentaire}`
-        : `Visa ${targetRoleTag} — Signature officielle`;
+        ? `Visa ${targetRoleTag} - ${commentaire}`
+        : `Visa ${targetRoleTag} - Signature officielle`;
 
       // 1. Signer le visa avec l'étiquette de rôle
       await visaApi.createAndSignVisa(id, signatureBlob, finalCommentaire, 2);

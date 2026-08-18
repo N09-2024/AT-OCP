@@ -1,4 +1,4 @@
-# Interfaces par rôle applicatif — AT-OCP
+# Interfaces par rôle applicatif - AT-OCP
 ## Standard S-HSE-SEC-31 v1.0
 
 > Rôles applicatifs : **CE · HM · HC · ADMIN · RESPONSABLE_EXTERIEUR**  
@@ -45,7 +45,7 @@ Après login :
 | AT à reconduire | position P ou E + dépassement poste | Viser reconduction |
 
 ### Boutons globaux
-- **Nouvelle demande d’intervention** (crée DI/OT/BT ou AT directe) — réservé position P possible
+- **Nouvelle demande d’intervention** (crée DI/OT/BT ou AT directe) - réservé position P possible
 - Voir toutes mes AT (P + E)
 
 ### Actions autorisées (backend + UI)
@@ -72,7 +72,7 @@ Après login :
 | Consultation périmètre | toutes AT de ma zone | Lecture seule |
 
 ### Règle fail-closed
-- Position **E** (HMEE) : **aucune action d’écriture** — lecture seule uniquement.
+- Position **E** (HMEE) : **aucune action d’écriture** - lecture seule uniquement.
 
 ---
 
@@ -82,10 +82,10 @@ Après login :
 | Carte | Filtre | Action |
 |-------|--------|--------|
 | Interventions à classifier | nouvelles demandes non classées | Classifier Niv 1 / Niv 2 |
-| AT en attente de garantie | position E (HCEE) — visite / rédaction / démarrage / visa | Garantir / valider / rejeter |
+| AT en attente de garantie | position E (HCEE) - visite / rédaction / démarrage / visa | Garantir / valider / rejeter |
 | AT à archiver | statut = TRAVAUX_RECEPTIONES | Archiver (garant P / exécute E) |
-| Agents habilités | — | Gérer liste F-HSE-SEC-31-02 |
-| Registre Niveau 1 | — | Gérer F-HSE-SEC-31-01 |
+| Agents habilités | - | Gérer liste F-HSE-SEC-31-02 |
+| Registre Niveau 1 | - | Gérer F-HSE-SEC-31-01 |
 
 ### Actions
 | Action | Condition |

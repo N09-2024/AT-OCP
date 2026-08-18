@@ -163,9 +163,9 @@ export const ChefEquipeDashboard: React.FC = () => {
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {user?.prenom} {user?.nom} — {user?.service?.nomService || 'Service CE'}
+              {user?.prenom} {user?.nom} - {user?.service?.nomService || 'Service CE'}
             </Typography>
-            <Chip size="small" label="Niveau 1 — Chef d'Équipe" color="success" variant="outlined" sx={{ fontWeight: 700 }} />
+            <Chip size="small" label="Niveau 1 - Chef d'Équipe" color="success" variant="outlined" sx={{ fontWeight: 700 }} />
           </Stack>
         </Box>
 
@@ -183,9 +183,9 @@ export const ChefEquipeDashboard: React.FC = () => {
         <strong>Standard OCP S-HSE-SEC-31 (§5 & §7) :</strong> Vos droits (CEEP ou CEEE) sont résolus dynamiquement par AT en fonction du service propriétaire et du service exécutant d'intervention.
       </Alert>
 
-      {renderSection('Mes AT — Position Propriétaire (CEEP)', '#1F4D3E', cardsProprietaire)}
+      {renderSection('Mes AT - Position Propriétaire (CEEP)', '#1F4D3E', cardsProprietaire)}
       <Divider sx={{ my: 3 }} />
-      {renderSection('Mes AT — Position Exécutant (CEEE)', '#3C7A5C', cardsExecutant)}
+      {renderSection('Mes AT - Position Exécutant (CEEE)', '#3C7A5C', cardsExecutant)}
     </Box>
   );
 };

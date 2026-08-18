@@ -107,45 +107,61 @@ public class VisaServiceImpl implements VisaService {
         AutorisationTravail at = visa.getAutorisationTravail();
         List<Visa> existingVisas = visaRepository.findByAutorisationTravailId(at.getId());
 
-        boolean isSigningCeee = RoleUtils.userHasRolePattern(currentUser, "CEEE")
-                || (commentaire != null && commentaire.toUpperCase().contains("CEEE"));
-
-        boolean isSigningHc = RoleUtils.userHasRolePattern(currentUser, "HCEP")
-                || RoleUtils.userHasRolePattern(currentUser, "HCEE")
-                || RoleUtils.userHasRolePattern(currentUser, "HC")
-                || (commentaire != null && (commentaire.toUpperCase().contains("HCEP") || commentaire.toUpperCase().contains("HCEE")));
-
-        boolean isSigningHm = RoleUtils.userHasRolePattern(currentUser, "HMEP")
-                || RoleUtils.userHasRolePattern(currentUser, "HMEE")
-                || RoleUtils.userHasRolePattern(currentUser, "HM")
-                || (commentaire != null && (commentaire.toUpperCase().contains("HMEP") || commentaire.toUpperCase().contains("HMEE")));
-
-        boolean ceepSigned = isRoleSigned(existingVisas, "CEEP");
+        boolean ceepSigned = isRoleSigned(existingVisas, "CEEP") || (at.getStatut() != null && at.getStatut() != com.ocp.at.entity.enums.StatutAT.BROUILLON);
         boolean ceeeSigned = isRoleSigned(existingVisas, "CEEE");
         boolean hcepSigned = isRoleSigned(existingVisas, "HCEP");
         boolean hceeSigned = isRoleSigned(existingVisas, "HCEE");
+        boolean hmepSigned = isRoleSigned(existingVisas, "HMEP");
 
-        // 1. CEEE doit signer APRÈS CEEP
-        if (isSigningCeee && !RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
-            if (at.getDateReceptionCeee() == null) {
-                throw new BusinessException("Le CEEE doit d'abord accuser réception de l'AT avant de pouvoir la signer.");
-            }
-            if (!ceepSigned) {
-                throw new BusinessException("Le CEEP doit d'abord signer l'AT (Étape 1) avant la signature du CEEE (Étape 2).");
-            }
-        }
+        String targetRole = resolveSigningRole(visa, commentaire, currentUser, hcepSigned, hmepSigned);
+        boolean isAdmin = RoleUtils.userHasRolePattern(currentUser, "ADMIN");
 
-        // 2. HC (HCEP / HCEE) doivent signer APRÈS CEEP et CEEE
-        if (isSigningHc && !RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
-            if (!ceepSigned || !ceeeSigned) {
-                throw new BusinessException("Le CEEP et le CEEE doivent d'abord signer l'AT avant la signature des Hors Cadre (HCEP / HCEE).");
-            }
-        }
-
-        // 3. HM (HMEP / HMEE) doivent signer APRÈS HCEP et HCEE
-        if (isSigningHm && !RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
-            if (!hcepSigned || !hceeSigned) {
-                throw new BusinessException("Le HCEP et le HCEE doivent d'abord signer l'AT avant la signature de la Haute Maîtrise (HMEP / HMEE).");
+        // Ordre strict selon le standard OCP S-HSE-SEC-31 :
+        // 1. CEEP -> 2. CEEE -> 3. HCEP -> 4. HCEE -> 5. HMEP -> 6. HMEE
+        if (!isAdmin) {
+            switch (targetRole) {
+                case "CEEP":
+                    // Le CEEP est le premier à signer (Étape 1 lors de la création/transmission)
+                    break;
+                case "CEEE":
+                    // 1. Le CEEE doit signer APRÈS le CEEP
+                    if (!ceepSigned) {
+                        throw new BusinessException("Le CEEP doit d'abord signer l'AT (Étape 1) avant la signature du CEEE (Étape 2).");
+                    }
+                    if (at.getDateReceptionCeee() == null) {
+                        throw new BusinessException("Le CEEE doit d'abord accuser réception de l'AT avant de pouvoir la signer.");
+                    }
+                    break;
+                case "HCEP":
+                    // 2. Le HCEP doit signer APRÈS CEEP et CEEE
+                    if (!ceepSigned || !ceeeSigned) {
+                        throw new BusinessException("Le CEEP et le CEEE doivent d'abord signer l'AT avant la signature du Hors Cadre Émetteur / Propriétaire (HCEP, Étape 3).");
+                    }
+                    break;
+                case "HCEE":
+                    // 3. Le HCEE doit signer APRÈS le HCEP
+                    if (!ceepSigned || !ceeeSigned) {
+                        throw new BusinessException("Le CEEP et le CEEE doivent d'abord signer l'AT avant la signature des Hors Cadre.");
+                    }
+                    if (!hcepSigned) {
+                        throw new BusinessException("Le Hors Cadre Émetteur (HCEP) doit d'abord signer l'AT (Étape 3) avant la signature du Hors Cadre Exécutant (HCEE, Étape 4).");
+                    }
+                    break;
+                case "HMEP":
+                    // 4. Le HMEP doit signer APRÈS les Hors Cadre (HCEP et HCEE)
+                    if (!hcepSigned || !hceeSigned) {
+                        throw new BusinessException("Les Hors Cadre (HCEP et HCEE) doivent d'abord signer l'AT avant la signature de la Haute Maîtrise Émetteur / Propriétaire (HMEP, Étape 5).");
+                    }
+                    break;
+                case "HMEE":
+                    // 5. Le HMEE doit signer APRÈS le HMEP
+                    if (!hmepSigned) {
+                        throw new BusinessException("La Haute Maîtrise Émetteur (HMEP) doit d'abord signer l'AT (Étape 5) avant la signature de la Haute Maîtrise Exécutante (HMEE, Étape 6).");
+                    }
+                    break;
+                default:
+                    // Rôle générique ou inconnu : autoriser si les premières étapes sont respectées
+                    break;
             }
         }
 
@@ -160,7 +176,7 @@ public class VisaServiceImpl implements VisaService {
             throw new BusinessException("Seules les images PNG sont acceptées pour la signature");
         }
 
-        // Read once — MultipartFile stream cannot be consumed twice
+        // Read once - MultipartFile stream cannot be consumed twice
         final byte[] signatureBytes;
         try {
             signatureBytes = signature.getBytes();
@@ -201,7 +217,124 @@ public class VisaServiceImpl implements VisaService {
         auditService.logAction("SIGN_VISA", "SUCCES", visa.getUtilisateur(), req.getRemoteAddr(),
                 req.getHeader("User-Agent"));
 
+        // --- Notifications post-signature selon le rôle signataire ---
+        try {
+            envoyerNotificationsPostSignature(at, targetRole, visa);
+        } catch (Exception e) {
+            log.warn("Notification post-signature non bloquante: {}", e.getMessage());
+        }
+
         return visaMapper.toResponse(visa);
+    }
+
+    /**
+     * Envoie les notifications contextuelle après une signature, selon le rôle du signataire.
+     * Respecte la chaîne standard OCP S-HSE-SEC-31 :
+     *   CEEP (1) -> CEEE (2) -> HCEP (3) -> HCEE (4) -> HMEP (5) -> HMEE (6)
+     */
+    private void envoyerNotificationsPostSignature(AutorisationTravail at, String roleSignataire, Visa visa) {
+        String atNumero = at.getNumero();
+        String lienAt = "/autorisations/" + at.getId();
+
+        switch (roleSignataire) {
+            case "CEEP":
+                // Après visa CEEP : notifier le CEEE du service exécutant pour accuser réception + signer
+                if (at.getServicesIntervenants() != null) {
+                    utilisateurRepository.findAll().stream()
+                        .filter(u -> u.getRoles() != null && u.getRoles().stream()
+                                .anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("CEEE"))
+                                && u.getService() != null
+                                && at.getServicesIntervenants().equalsIgnoreCase(u.getService().getNomService()))
+                        .forEach(ceee -> notificationService.createNotification(
+                                ceee,
+                                "AT " + atNumero + " - Signature CEEE requise",
+                                "Le CEEP a signé l'AT " + atNumero + ". Vous devez accuser réception puis apposer votre visa CEEE (Étape 2).",
+                                "ACTION",
+                                lienAt
+                        ));
+                }
+                // Fallback : envoyer à tous les CEEE
+                if (at.getZoneExecutante() != null) {
+                    utilisateurRepository.findChefsEquipeByZoneId(at.getZoneExecutante().getId())
+                        .stream()
+                        .filter(u -> u.getRoles() != null && u.getRoles().stream()
+                                .anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("CEEE")))
+                        .forEach(ceee -> notificationService.createNotification(
+                                ceee,
+                                "AT " + atNumero + " - Signature CEEE requise",
+                                "Le CEEP a signé l'AT " + atNumero + ". Vous devez accuser réception et signer (Étape 2).",
+                                "ACTION",
+                                lienAt
+                        ));
+                }
+                break;
+
+            case "CEEE":
+                // Après visa CEEE : notifier HCEP et HCEE pour signature Hors Cadre (Étapes 3 & 4)
+                notificationService.sendNotificationToRole("HCEP",
+                        "AT " + atNumero + " - Visa HCEP requis (Étape 3)",
+                        "Le CEEP et CEEE ont signé l'AT " + atNumero + ". Vous devez apposer votre visa Hors Cadre Émetteur (HCEP, Étape 3).",
+                        "ACTION", lienAt);
+                notificationService.sendNotificationToRole("HCEE",
+                        "AT " + atNumero + " - Visa HCEE requis (Étape 4)",
+                        "Le CEEP et CEEE ont signé l'AT " + atNumero + ". Vous devez apposer votre visa Hors Cadre Exécutant (HCEE, Étape 4) après le HCEP.",
+                        "INFO", lienAt);
+                // Informer aussi le CEEP que le CEEE a signé
+                if (at.getProprietaireBrouillon() != null) {
+                    notificationService.createNotification(
+                            at.getProprietaireBrouillon(),
+                            "AT " + atNumero + " - Visa CEEE reçu",
+                            "Le CEEE a apposé son visa sur l'AT " + atNumero + ". L'AT attend maintenant la signature des Hors Cadre.",
+                            "INFO", lienAt);
+                }
+                break;
+
+            case "HCEP":
+                // Après visa HCEP : notifier HCEE pour sa signature (Étape 4)
+                notificationService.sendNotificationToRole("HCEE",
+                        "AT " + atNumero + " - Visa HCEE requis (Étape 4)",
+                        "Le HCEP a signé l'AT " + atNumero + ". Votre visa Hors Cadre Exécutant est maintenant requis (Étape 4).",
+                        "ACTION", lienAt);
+                break;
+
+            case "HCEE":
+                // Après visa HCEE : notifier HMEP et HMEE pour signature Haute Maîtrise (Étapes 5 & 6)
+                notificationService.sendNotificationToRole("HMEP",
+                        "AT " + atNumero + " - Visa HMEP requis (Étape 5)",
+                        "Les Hors Cadre ont signé l'AT " + atNumero + ". Votre visa Haute Maîtrise Émetteur (HMEP, Étape 5) est requis.",
+                        "ACTION", lienAt);
+                notificationService.sendNotificationToRole("HMEE",
+                        "AT " + atNumero + " - Visa HMEE requis (Étape 6)",
+                        "Les Hors Cadre ont signé l'AT " + atNumero + ". Votre visa Haute Maîtrise Exécutant (HMEE, Étape 6) sera requis après le HMEP.",
+                        "INFO", lienAt);
+                break;
+
+            case "HMEP":
+                // Après visa HMEP : notifier HMEE pour sa signature (Étape 6)
+                notificationService.sendNotificationToRole("HMEE",
+                        "AT " + atNumero + " - Visa HMEE requis (Étape 6)",
+                        "Le HMEP a signé l'AT " + atNumero + ". Votre visa Haute Maîtrise Exécutant est maintenant requis (Étape 6).",
+                        "ACTION", lienAt);
+                break;
+
+            case "HMEE":
+                // Après visa HMEE : AT entièrement visée, notifier CEEP + CEEE que l'AT peut démarrer
+                if (at.getProprietaireBrouillon() != null) {
+                    notificationService.createNotification(
+                            at.getProprietaireBrouillon(),
+                            "AT " + atNumero + " - Toutes signatures obtenues",
+                            "L'AT " + atNumero + " a été visée par toutes les parties (CEEP, CEEE, HCEP, HCEE, HMEP, HMEE). L'intervention peut démarrer.",
+                            "SUCCESS", lienAt);
+                }
+                notificationService.sendNotificationToRole("CEEE",
+                        "AT " + atNumero + " - Prête au démarrage",
+                        "L'AT " + atNumero + " a reçu l'ensemble des visas requis. L'intervention peut maintenant démarrer.",
+                        "SUCCESS", lienAt);
+                break;
+
+            default:
+                log.debug("Aucune notification spécifique pour le rôle signataire: {}", roleSignataire);
+        }
     }
 
     @Override
@@ -229,14 +362,73 @@ public class VisaServiceImpl implements VisaService {
         return hexString.toString();
     }
 
+    private String resolveSigningRole(Visa visa, String commentaire, Utilisateur user, boolean hcepSigned, boolean hmepSigned) {
+        String comm = ((commentaire != null ? commentaire : "") + " " + (visa.getCommentaire() != null ? visa.getCommentaire() : "")).toUpperCase();
+        if (comm.contains("CEEP") || comm.contains("G1VISACEEP")) {
+            return "CEEP";
+        }
+        if (comm.contains("CEEE") || comm.contains("G1VISACEEE")) {
+            return "CEEE";
+        }
+        if (comm.contains("HCEP")) {
+            return "HCEP";
+        }
+        if (comm.contains("HCEE")) {
+            return "HCEE";
+        }
+        if (comm.contains("HMEP")) {
+            return "HMEP";
+        }
+        if (comm.contains("HMEE")) {
+            return "HMEE";
+        }
+
+        // Vérification explicite des rôles précis en base (sans équivalence générique)
+        boolean hasExactHcep = user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("HCEP"));
+        boolean hasExactHcee = user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("HCEE"));
+        boolean hasExactHmep = user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("HMEP"));
+        boolean hasExactHmee = user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("HMEE"));
+        boolean hasExactCeee = user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("CEEE"));
+        boolean hasExactCeep = user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("CEEP"));
+
+        if (hasExactHcep && !hasExactHcee) return "HCEP";
+        if (hasExactHcee && !hasExactHcep) return "HCEE";
+        if (hasExactHmep && !hasExactHmee) return "HMEP";
+        if (hasExactHmee && !hasExactHmep) return "HMEE";
+        if (hasExactCeee) return "CEEE";
+        if (hasExactCeep) return "CEEP";
+
+        // Déduction pour les rôles polyvalents ou génériques HC / HM / CE :
+        if (RoleUtils.userHasRolePattern(user, "HC")) {
+            return !hcepSigned ? "HCEP" : "HCEE";
+        }
+        if (RoleUtils.userHasRolePattern(user, "HM")) {
+            return !hmepSigned ? "HMEP" : "HMEE";
+        }
+        if (RoleUtils.userHasRolePattern(user, "CE")) {
+            return "CEEP";
+        }
+
+        return "UNKNOWN";
+    }
+
     private boolean isRoleSigned(List<Visa> visas, String roleCode) {
         if (visas == null || visas.isEmpty()) return false;
         return visas.stream().anyMatch(v -> {
-            if (v.getStatut() == null || v.getStatut() == StatutVisa.REFUS || v.getStatut() == StatutVisa.REFUSE) {
+            // Seuls les visas validés/signés avec une signature effective sont considérés comme signés
+            if (v.getStatut() == null
+                    || v.getStatut() == StatutVisa.EN_ATTENTE
+                    || v.getStatut() == StatutVisa.REFUS
+                    || v.getStatut() == StatutVisa.REFUSE) {
+                return false;
+            }
+            if (v.getSignaturePath() == null || v.getSignaturePath().isBlank()) {
                 return false;
             }
             String comment = v.getCommentaire() != null ? v.getCommentaire().toUpperCase() : "";
             if (comment.contains(roleCode.toUpperCase())) return true;
+            if ("CEEP".equalsIgnoreCase(roleCode) && comment.contains("G1VISACEEP")) return true;
+            if ("CEEE".equalsIgnoreCase(roleCode) && comment.contains("G1VISACEEE")) return true;
             Utilisateur u = v.getUtilisateur();
             if (u != null && RoleUtils.userHasRolePattern(u, roleCode)) return true;
             return false;

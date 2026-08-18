@@ -22,25 +22,25 @@ import { AdminService } from '../../../services/AdminService';
 import type { Service } from '../../../services/AdminService';
 
 // -------------------------------------------------------
-// Rôles standard OCP S-HSE-SEC-31 — l'admin choisit le niveau d'habilitation
+// Rôles standard OCP S-HSE-SEC-31 - l'admin choisit le niveau d'habilitation
 // -------------------------------------------------------
 const FIXED_ROLES = [
   {
     nom: 'CE',
     label: "Chef d'Équipe (CE)",
-    description: "Chef d'Équipe terrain — position CEEP (Propriétaire) ou CEEE (Exécutant) résolue dynamiquement par le service",
+    description: "Chef d'Équipe terrain - position CEEP (Propriétaire) ou CEEE (Exécutant) résolue dynamiquement par le service",
     color: '#3C7A5C',
   },
   {
     nom: 'HM',
     label: "Haute Maîtrise (HM)",
-    description: "Superviseur / Agent de Maîtrise — position HMEP (Propriétaire) ou HMEE (Exécutant - lecture seule)",
+    description: "Superviseur / Agent de Maîtrise - position HMEP (Propriétaire) ou HMEE (Exécutant - lecture seule)",
     color: '#3C7A5C',
   },
   {
     nom: 'HC',
     label: "Hors Cadre (HC)",
-    description: "Cadre Responsable — position HCEP (Classification/Archivage) ou HCEE (Garant/Validation)",
+    description: "Cadre Responsable - position HCEP (Classification/Archivage) ou HCEE (Garant/Validation)",
     color: '#3C7A5C',
   },
   {
@@ -336,7 +336,7 @@ export default function UserFormPage() {
               )}
               {servicesList.map((svc) => (
                 <MenuItem key={svc.id} value={svc.id}>
-                  {svc.nomService} ({svc.codeService}) {svc.zone ? `— Zone: ${svc.zone.nomZone}` : ''}
+                  {svc.nomService} ({svc.codeService}) {svc.zone ? `- Zone: ${svc.zone.nomZone}` : ''}
                 </MenuItem>
               ))}
             </Select>
@@ -346,12 +346,12 @@ export default function UserFormPage() {
               {form.roleNom === 'ADMIN'
                 ? "L'administrateur système n'est pas rattaché à un service opérationnel."
                 : !form.serviceId && form.roleNom
-                ? "⚠ Obligatoire — sans service, la position P/E ne pourra pas être résolue sur les AT."
+                ? "⚠ Obligatoire - sans service, la position P/E ne pourra pas être résolue sur les AT."
                 : "Le service détermine la zone de rattachement pour la résolution dynamique P / E lors des AT."}
             </FormHelperText>
           </FormControl>
 
-          {/* Rôle — Fonction RH / Niveau d'habilitation */}
+          {/* Rôle - Fonction RH / Niveau d'habilitation */}
           <FormControl fullWidth size="small" required>
             <InputLabel id="role-label">Habilitation / Rôle de l'utilisateur</InputLabel>
             <Select
@@ -378,7 +378,7 @@ export default function UserFormPage() {
             </Select>
             {selectedRoleMeta && (
               <FormHelperText sx={{ color: selectedRoleMeta.color, fontWeight: 500 }}>
-                ✓ {selectedRoleMeta.label} — {selectedRoleMeta.description}
+                ✓ {selectedRoleMeta.label} - {selectedRoleMeta.description}
               </FormHelperText>
             )}
           </FormControl>

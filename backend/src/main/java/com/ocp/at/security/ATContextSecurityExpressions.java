@@ -12,23 +12,23 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <h2>Usage dans les controllers</h2>
  * <pre>{@code
- * // Étape 2 — Valider une visite (HCEE G ou HMEP G)
+ * // Étape 2 - Valider une visite (HCEE G ou HMEP G)
  * @PreAuthorize("hasAuthority('VALIDATE_VISITE')")
  *
- * // Étape 3 — Rédiger une AT (CEEP côté P uniquement)
+ * // Étape 3 - Rédiger une AT (CEEP côté P uniquement)
  * @PreAuthorize("hasAuthority('EDIT_AT') and @atSec.estCeepProprietaire(#atId)")
  *
- * // Étape 4 — Démarrer une intervention (CEEE côté E uniquement)
+ * // Étape 4 - Démarrer une intervention (CEEE côté E uniquement)
  * @PreAuthorize("hasAuthority('START_INTERVENTION') and @atSec.estCeeeExecutant(#atId)")
  *
- * // Étape 8 — Archiver (HCEE uniquement, quel que soit P/E)
+ * // Étape 8 - Archiver (HCEE uniquement, quel que soit P/E)
  * @PreAuthorize("hasAuthority('ARCHIVE_AT')")
  * }</pre>
  *
  * <h2>Design</h2>
  * <p>La plupart des actions de workflow sont contrôlées uniquement par les permissions
  * (déjà assignées par rôle dans DataInitializer), car un CEEP n'a RECEIVE_AT que si
- * son service est propriétaire sur une AT — la position P/E est déjà encodée dans le
+ * son service est propriétaire sur une AT - la position P/E est déjà encodée dans le
  * fait d'avoir le bon rôle.</p>
  *
  * <p>Les méthodes {@code estCeepProprietaire}, {@code estCeeeExecutant}, etc. sont fournies
@@ -143,7 +143,7 @@ public class ATContextSecurityExpressions {
     }
 
     // =========================================================================
-    // Méthode privée — vérification de rôle
+    // Méthode privée - vérification de rôle
     // =========================================================================
 
     private boolean aRoleContenant(String roleNom) {

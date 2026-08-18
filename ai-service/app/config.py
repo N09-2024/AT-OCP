@@ -16,4 +16,4 @@ if GOOGLE_API_KEY:
 else:
     # Ne bloque pas le démarrage : permet d'exécuter /health et les routes
     # en mode dégradé (Spring Boot basculera automatiquement sur MockAIProvider).
-    print("[WARN] GOOGLE_API_KEY non défini — les appels Gemini réels échoueront.")
+    print("[WARN] GOOGLE_API_KEY non défini - les appels Gemini réels échoueront.")

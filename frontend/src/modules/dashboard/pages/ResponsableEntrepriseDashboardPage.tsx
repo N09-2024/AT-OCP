@@ -32,7 +32,7 @@ export default function ResponsableEntrepriseDashboardPage() {
     },
     {
       title: 'Consulter les résultats',
-      description: 'Visualisez les résultats d\'analyse IA — conformité, informations extraites, taux de confiance',
+      description: 'Visualisez les résultats d\'analyse IA - conformité, informations extraites, taux de confiance',
       icon: <MagnifyingGlassCircleIcon width={32} color="#3C7A5C" />,
       color: '#3C7A5C',
       bgcolor: '#3C7A5C18',

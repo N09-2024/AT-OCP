@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/ia")
 @RequiredArgsConstructor
-@Tag(name = "Assistance IA", description = "LangChain/CrewAI/Mock — aide au formulaire F-HSE-SEC-31-04")
+@Tag(name = "Assistance IA", description = "LangChain/CrewAI/Mock - aide au formulaire F-HSE-SEC-31-04")
 @SecurityRequirement(name = "bearerAuth")
 public class AssistanceIAController {
 

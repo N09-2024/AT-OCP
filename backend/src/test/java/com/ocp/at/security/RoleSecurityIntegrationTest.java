@@ -86,7 +86,7 @@ class RoleSecurityIntegrationTest {
     }
 
     // =========================================================================
-    // Test 2 : HMEE (Fail-closed — lecture seule)
+    // Test 2 : HMEE (Fail-closed - lecture seule)
     // =========================================================================
     @Nested
     @DisplayName("Tests du rôle HMEE (Fail-closed)")
@@ -186,7 +186,7 @@ class RoleSecurityIntegrationTest {
 
         @Test
         @WithMockUser(username = "hcep@ocp.ma", authorities = {"READ_AT", "VIEW_ARCHIVE"})
-        @DisplayName("Test 5b: HCEP ne peut PAS archiver directement (Garant §8.6 — pas Exécutant -> 403)")
+        @DisplayName("Test 5b: HCEP ne peut PAS archiver directement (Garant §8.6 - pas Exécutant -> 403)")
         void hcep_cannotArchiveDirectly() throws Exception {
             mockMvc.perform(post("/api/archives/archive/at-123"))
                     .andExpect(status().isForbidden());

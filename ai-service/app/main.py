@@ -7,7 +7,7 @@ from app.schemas import (
 from app.crew import run_crew_analyse_intervention, run_crew_controler_dossier
 from app.langchain_direct import langchain_analyser_intervention, langchain_controler_dossier
 
-app = FastAPI(title="AT-OCP — Microservice IA", version="1.0.0")
+app = FastAPI(title="AT-OCP - Microservice IA", version="1.0.0")
 
 
 @app.get("/health")

@@ -1,5 +1,5 @@
 
-# gen_form.py — génère formulaire-at-ocp.html
+# gen_form.py - génère formulaire-at-ocp.html
 import os
 
 OUT = os.path.join(os.path.dirname(__file__), "formulaire-at-ocp.html")

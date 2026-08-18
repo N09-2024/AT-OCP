@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * API de gestion des Habilitations AT — Formulaire F-HSE-SEC-31-02
+ * API de gestion des Habilitations AT - Formulaire F-HSE-SEC-31-02
  * Standard OCP S-HSE-SEC-31 §9
  */
 @RestController

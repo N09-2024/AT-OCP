@@ -17,14 +17,17 @@ export default function Topbar() {
   const nom = user?.nom ?? '';
   const role = user?.roles?.[0]?.nom ?? 'Utilisateur';
 
-  // Load unread notification count
+  // Load unread notification count with 30s real-time polling
   useEffect(() => {
-    NotificationService.getMyNotifications(0, 100)
-      .then((page) => {
-        const unread = page.content.filter((n) => !n.lu).length;
-        setUnreadCount(unread);
-      })
-      .catch(() => setUnreadCount(0));
+    const fetchUnread = () => {
+      NotificationService.countUnread()
+        .then((count) => setUnreadCount(count))
+        .catch(() => setUnreadCount(0));
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
   }, [location.pathname]);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {

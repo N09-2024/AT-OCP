@@ -128,7 +128,7 @@ export default function StatistiquesPage() {
           Statistiques Globales
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Analyse de l'activité de la plateforme — données en temps réel
+          Analyse de l'activité de la plateforme - données en temps réel
         </Typography>
       </Box>
 

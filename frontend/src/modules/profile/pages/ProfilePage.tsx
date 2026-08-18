@@ -60,12 +60,12 @@ export default function ProfilePage() {
 
   const roleConfig: Record<string, { color: string; bg: string; label: string }> = {
     ADMIN:                  { color: '#3C7A5C', bg: '#EDF2EE', label: 'Administrateur' },
-    CEEP:                   { color: '#3C7A5C', bg: '#EDF2EE', label: 'CEEP — Chef Équipe Propriétaire' },
-    CEEE:                   { color: '#3C7A5C', bg: '#E2F0E8', label: 'CEEE — Chef Équipe Exécutant' },
-    HCEP:                   { color: '#3C7A5C', bg: '#EDF2EE', label: 'HCEP — Hors Cadre Propriétaire' },
-    HCEE:                   { color: '#2E624A', bg: '#E2F0E8', label: 'HCEE — Hors Cadre Exécutant' },
-    HMEP:                   { color: '#3C7A5C', bg: '#EDF2EE', label: 'HMEP — Haute Maîtrise Propriétaire' },
-    HMEE:                   { color: '#2E624A', bg: '#EDF2EE', label: 'HMEE — Haute Maîtrise Exécutante' },
+    CEEP:                   { color: '#3C7A5C', bg: '#EDF2EE', label: 'CEEP - Chef Équipe Propriétaire' },
+    CEEE:                   { color: '#3C7A5C', bg: '#E2F0E8', label: 'CEEE - Chef Équipe Exécutant' },
+    HCEP:                   { color: '#3C7A5C', bg: '#EDF2EE', label: 'HCEP - Hors Cadre Propriétaire' },
+    HCEE:                   { color: '#2E624A', bg: '#E2F0E8', label: 'HCEE - Hors Cadre Exécutant' },
+    HMEP:                   { color: '#3C7A5C', bg: '#EDF2EE', label: 'HMEP - Haute Maîtrise Propriétaire' },
+    HMEE:                   { color: '#2E624A', bg: '#EDF2EE', label: 'HMEE - Haute Maîtrise Exécutante' },
     RESPONSABLE_ENTREPRISE: { color: '#2E624A', bg: '#EDF2EE', label: 'Responsable Entreprise Externe' },
   };
   const _roleInfo = roleConfig[primaryRole] ?? { color: '#5C6E67', bg: '#F7FAF8', label: primaryRole };
@@ -152,8 +152,8 @@ export default function ProfilePage() {
       {/* ── STATS ROW ── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { icon: <IdentificationIcon width={20} />, label: 'Matricule', value: user.matricule ?? '—' },
-          { icon: <BuildingOfficeIcon width={20} />, label: 'Service', value: (user as any).serviceNom ?? '—' },
+          { icon: <IdentificationIcon width={20} />, label: 'Matricule', value: user.matricule ?? '-' },
+          { icon: <BuildingOfficeIcon width={20} />, label: 'Service', value: (user as any).serviceNom ?? '-' },
           { icon: <EnvelopeIcon width={20} />, label: 'Email', value: user.email },
           { icon: <CheckCircleIcon width={20} />, label: 'Statut', value: (user as any).actif !== false ? 'Actif' : 'Inactif' },
         ].map((stat) => (
@@ -227,9 +227,9 @@ export default function ProfilePage() {
                   { label: 'Prénom', value: user.prenom },
                   { label: 'Nom', value: user.nom },
                   { label: 'Email', value: user.email },
-                  { label: 'Matricule', value: user.matricule ?? '—' },
-                  { label: 'Service', value: (user as any).serviceNom ?? '—' },
-                  { label: 'Rôle(s)', value: user.roles?.map((r) => r.nom.replace(/_/g, ' ')).join(', ') ?? '—' },
+                  { label: 'Matricule', value: user.matricule ?? '-' },
+                  { label: 'Service', value: (user as any).serviceNom ?? '-' },
+                  { label: 'Rôle(s)', value: user.roles?.map((r) => r.nom.replace(/_/g, ' ')).join(', ') ?? '-' },
                 ].map((field) => (
                   <Grid key={field.label} size={{ xs: 12, sm: 6 }}>
                     <Box

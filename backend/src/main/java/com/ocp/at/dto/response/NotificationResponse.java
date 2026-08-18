@@ -19,5 +19,7 @@ public class NotificationResponse {
     private LocalDateTime dateCreation;
     private LocalDateTime dateLecture;
     private boolean lu;
+    private String type;
+    private String lien;
     private String utilisateurId;
 }

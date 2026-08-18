@@ -104,7 +104,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, WebRequest request) {
         logger.error("Internal Server Error: {}", ex.getMessage(), ex);
-        // Exposer la cause réelle pour diagnostiquer (dev) — évite le message opaque
+        // Exposer la cause réelle pour diagnostiquer (dev) - évite le message opaque
         String detail = ex.getClass().getSimpleName() + ": " +
                 (ex.getMessage() != null ? ex.getMessage() : "sans message");
         if (ex.getCause() != null && ex.getCause().getMessage() != null) {

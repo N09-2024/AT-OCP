@@ -39,7 +39,7 @@ index 2b23370..8597d3f 100644
            await AdminService.assignRole(id!, resolvedRoleId);
          }
  
-+        // PUT /users/{id} ignores the actif field on the backend — the
++        // PUT /users/{id} ignores the actif field on the backend - the
 +        // active/inactive state has to go through its own endpoints.
 +        if (form.actived !== originalActived) {
 +          if (form.actived) {

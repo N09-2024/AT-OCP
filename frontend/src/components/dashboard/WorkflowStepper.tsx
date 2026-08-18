@@ -5,14 +5,14 @@ import type { StatutAT } from '../../types';
 
 /** Étapes du logigramme S-HSE-SEC-31 §7 */
 const STEPS: { id: number; key: StatutAT | StatutAT[]; label: string; sublabel: string }[] = [
-  { id: 0, key: 'CLASSIFICATION_EFFECTUEE', label: 'Classification', sublabel: 'Niveau 1/2 — HCEP' },
-  { id: 1, key: 'DEMANDE_CREEE', label: 'Demande d\'intervention', sublabel: 'DI / OT / BT — CEEP' },
-  { id: 2, key: 'VISITE_REALISEE', label: 'Visite chantier', sublabel: 'Analyse risques — CEEP + HCEE/HMEP' },
-  { id: 3, key: 'AT_REDIGEE', label: 'Rédaction AT + Permis', sublabel: 'Sur le terrain — CEEP / HCEE / CEEE' },
+  { id: 0, key: 'CLASSIFICATION_EFFECTUEE', label: 'Classification', sublabel: 'Niveau 1/2 - HCEP' },
+  { id: 1, key: 'DEMANDE_CREEE', label: 'Demande d\'intervention', sublabel: 'DI / OT / BT - CEEP' },
+  { id: 2, key: 'VISITE_REALISEE', label: 'Visite chantier', sublabel: 'Analyse risques - CEEP + HCEE/HMEP' },
+  { id: 3, key: 'AT_REDIGEE', label: 'Rédaction AT + Permis', sublabel: 'Sur le terrain - CEEP / HCEE / CEEE' },
   { id: 4, key: ['INTERVENTION_EN_COURS', 'AT_RECONDUITE'], label: 'Intervention', sublabel: 'Travaux + reconduction poste' },
   { id: 5, key: 'FIN_TRAVAUX_DECLAREE', label: 'Fin des travaux', sublabel: 'Déclaration CEEE' },
-  { id: 6, key: 'TRAVAUX_RECEPTIONES', label: 'Réception', sublabel: 'Essais + clôture — CEEP + CEEE' },
-  { id: 7, key: 'ARCHIVEE', label: 'Archivage', sublabel: '≥ 1 an — entité propriétaire' },
+  { id: 6, key: 'TRAVAUX_RECEPTIONES', label: 'Réception', sublabel: 'Essais + clôture - CEEP + CEEE' },
+  { id: 7, key: 'ARCHIVEE', label: 'Archivage', sublabel: '≥ 1 an - entité propriétaire' },
 ];
 
 const ORDER: StatutAT[] = [
@@ -57,7 +57,7 @@ export default function WorkflowStepper({ statut, statutWorkflow }: Props) {
         Workflow S-HSE-SEC-31
       </Typography>
       <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
-        Logigramme officiel §7 — Autorisation de travail
+        Logigramme officiel §7 - Autorisation de travail
       </Typography>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>

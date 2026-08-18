@@ -11,6 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
@@ -27,11 +29,28 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.getUserNotifications(userId, pageable));
     }
 
+    @GetMapping("/count-unread")
+    @Operation(summary = "Nombre de notifications non lues")
+    public ResponseEntity<Map<String, Long>> countUnread() {
+        String userId = SecurityUtils.getCurrentUtilisateurId()
+                .orElseThrow(() -> new RuntimeException("Non authentifié"));
+        long count = notificationService.countUnread(userId);
+        return ResponseEntity.ok(Map.of("count", count));
+    }
+
     @PutMapping("/{id}/read")
     @Operation(summary = "Marquer une notification comme lue")
     public ResponseEntity<Void> markAsRead(@PathVariable String id) {
         notificationService.markAsRead(id);
         return ResponseEntity.noContent().build();
     }
-}
 
+    @PutMapping("/read-all")
+    @Operation(summary = "Marquer toutes les notifications comme lues")
+    public ResponseEntity<Void> markAllAsRead() {
+        String userId = SecurityUtils.getCurrentUtilisateurId()
+                .orElseThrow(() -> new RuntimeException("Non authentifié"));
+        notificationService.markAllAsRead(userId);
+        return ResponseEntity.noContent().build();
+    }
+}

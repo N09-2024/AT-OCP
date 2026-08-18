@@ -94,7 +94,7 @@ export default function AutorisationDetailPage() {
     }
   };
 
-  // Étape 4 — Démarrer l'intervention (CEEE Exécutant)
+  // Étape 4 - Démarrer l'intervention (CEEE Exécutant)
   const handleDemarrerIntervention = async () => {
     if (!id) return;
     setActionLoading(true);
@@ -109,7 +109,7 @@ export default function AutorisationDetailPage() {
     }
   };
 
-  // Étape 5b — Reconduire l'AT (CEEP / CEEE / HCEE)
+  // Étape 5b - Reconduire l'AT (CEEP / CEEE / HCEE)
   const handleReconduire = async () => {
     if (!id) return;
     setActionLoading(true);
@@ -124,7 +124,7 @@ export default function AutorisationDetailPage() {
     }
   };
 
-  // Étape 6 — Déclarer la fin des travaux (CEEE Exécutant)
+  // Étape 6 - Déclarer la fin des travaux (CEEE Exécutant)
   const handleDeclarerFin = async () => {
     if (!id) return;
     setActionLoading(true);
@@ -158,33 +158,106 @@ export default function AutorisationDetailPage() {
     );
   }
 
-  // Rôles ayant des droits de validation/garantie sur l'AT (HCEE, HCEP, ADMIN)
+  // ═══════════════════════════════════════════════════════════════════════
+  // LOGIQUE STRICTE : Rôle de l'utilisateur connecté
+  // ═══════════════════════════════════════════════════════════════════════
   const roles = user?.roles?.map((r: any) => r.nom) || [];
-  // HC = HCEP/HCEE | HM = HMEP/HMEE | CE = CEEP/CEEE (standard S-HSE-SEC-31)
-  const isHc = roles.some((n: string) => ['HCEE', 'HCEP', 'ADMIN'].includes(n));
-  const isHm = roles.some((n: string) => ['HMEP', 'HMEE', 'ADMIN'].includes(n));
-  const isCe = roles.some((n: string) => ['CEEE', 'CEEP'].includes(n));
-  const hasValidationRights = isHc; // validation formelle souvent HCEE
-  const isCeee = roles.includes('CEEE') || roles.includes('ADMIN');
-  // Garantir une AT soumise : HC ou HM ; viser case CEEE : CEEE
-  const canGarantirSoumise = isHc || isHm;
-  const canViserSoumise = canGarantirSoumise || isCeee;
+  const isAdmin  = roles.includes('ADMIN');
+  const isCeep   = roles.includes('CEEP') || isAdmin;
+  const isCeee   = roles.includes('CEEE') || isAdmin;
+  const isCe     = isCeep || isCeee;
+  const isHcep   = roles.includes('HCEP') || isAdmin;
+  const isHcee   = roles.includes('HCEE') || isAdmin;
+  const isHmep   = roles.includes('HMEP') || isAdmin;
+  const isHmee   = roles.includes('HMEE') || isAdmin;
+  const isHc     = isHcep || isHcee;
+  const isHm     = isHmep || isHmee;
 
-  // Le bouton PDF officiel n'est disponible qu'après les deux visas HM : HMEP + HMEE.
-  const isPositiveVisa = (v: Visa) => v.statut === 'VALIDE' || v.statut === 'VALIDATION' || v.statut === 'SIGNATURE';
-  const hasHmepVisa = visas.some((v) =>
-    isPositiveVisa(v) && (
-      v.commentaire?.toUpperCase().includes('HMEP') ||
-      (v as any).utilisateurNomComplet?.toUpperCase?.().includes('HMEP')
-    )
-  );
-  const hasHmeeVisa = visas.some((v) =>
-    isPositiveVisa(v) && (
-      v.commentaire?.toUpperCase().includes('HMEE') ||
-      (v as any).utilisateurNomComplet?.toUpperCase?.().includes('HMEE')
-    )
-  );
-  const hmSignaturesComplete = hasHmepVisa && hasHmeeVisa;
+  // Raccourcis de statut
+  const statut = at.statut as string;
+
+  // Détection des visas déjà apposés (par rôle du signataire)
+  const isPositiveVisa = (v: Visa) =>
+    v.statut === 'VALIDE' || v.statut === 'VALIDATION' || v.statut === 'SIGNATURE';
+
+  const detectVisa = (roleKeyword: string) =>
+    visas.some(v =>
+      isPositiveVisa(v) && (
+        v.commentaire?.toUpperCase().includes(roleKeyword) ||
+        (v as any).role?.toUpperCase().includes(roleKeyword) ||
+        (v as any).utilisateurRole?.toUpperCase().includes(roleKeyword)
+      )
+    );
+
+  const hasCeeeVisa = detectVisa('CEEE');
+  const hasHcepVisa = detectVisa('HCEP');
+  const hasHceeVisa = detectVisa('HCEE');
+  const hasHmepVisa = detectVisa('HMEP');
+  const hasHmeeVisa = detectVisa('HMEE');
+
+  // Toutes les signatures requises avant PDF
+  const allSignaturesComplete = hasCeeeVisa && hasHcepVisa && hasHceeVisa && hasHmepVisa && hasHmeeVisa;
+  const hmSignaturesComplete  = hasHmepVisa && hasHmeeVisa;
+
+  // Validation globale des droits pour certaines actions
+  const hasValidationRights = isHc;
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Règles strictes d'affichage des boutons
+  // Standard S-HSE-SEC-31 - Cycle de vie séquentiel
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // Étape 0 - Reprendre le brouillon (CEEP uniquement, AT en BROUILLON)
+  const showEditDraft = statut === 'BROUILLON' && isCeep;
+
+  // Étape 3b - Visa CEEE (CEEE uniquement, AT en SOUMISE/AT_REDIGEE)
+  const showSignCeee =
+    (statut === 'SOUMISE' || statut === 'AT_REDIGEE') &&
+    isCeee && !hasCeeeVisa;
+
+  // Étape 3c - Visa HCEP (HCEP uniquement, après visa CEEE, AT non encore validée HCEP)
+  const showSignHcep =
+    (statut === 'SOUMISE' || statut === 'AT_REDIGEE' || statut === 'EN_ATTENTE_VALIDATION') &&
+    isHcep && hasCeeeVisa && !hasHcepVisa;
+
+  // Étape 3d - Visa HCEE (HCEE uniquement, après visa HCEP)
+  const showSignHcee =
+    (statut === 'SOUMISE' || statut === 'AT_REDIGEE' || statut === 'EN_ATTENTE_VALIDATION') &&
+    isHcee && hasHcepVisa && !hasHceeVisa;
+
+  // Étape 3e - Visa HMEP (HMEP uniquement, après visa HCEE)
+  const showSignHmep =
+    (statut === 'SOUMISE' || statut === 'AT_REDIGEE' || statut === 'EN_ATTENTE_VALIDATION') &&
+    isHmep && hasHceeVisa && !hasHmepVisa;
+
+  // Étape 3f - Visa HMEE (HMEE uniquement, après visa HMEP)
+  const showSignHmee =
+    (statut === 'SOUMISE' || statut === 'AT_REDIGEE' || statut === 'EN_ATTENTE_VALIDATION') &&
+    isHmee && hasHmepVisa && !hasHmeeVisa;
+
+  // Étape 4 - Démarrer l'intervention (CEEE uniquement, AT VALIDEE)
+  const showDemarrer =
+    (statut === 'VALIDEE' || statut === 'AT_VALIDEE') && isCeee;
+
+  // Étape 5b - Reconduire (CEEP ou CEEE, AT EN COURS)
+  const showReconduire =
+    (statut === 'INTERVENTION_EN_COURS' || statut === 'AT_RECONDUITE') && isCe;
+
+  // Étape 6 - Déclarer la fin (CEEE uniquement, AT EN COURS)
+  const showDeclarerFin =
+    (statut === 'INTERVENTION_EN_COURS' || statut === 'AT_RECONDUITE') && isCeee;
+
+  // Étape 7 - Réception conjointe (CEEP ou CEEE, AT FIN_TRAVAUX_DECLAREE)
+  const showReceptionner =
+    statut === 'FIN_TRAVAUX_DECLAREE' && isCe;
+
+  // PDF officiel - disponible après toutes signatures HM, pour tout rôle qui a signé
+  const showPdf = hmSignaturesComplete || allSignaturesComplete ||
+    (statut === 'CLOTUREE') || (statut === 'TRAVAUX_RECEPTIONES');
+
+  // Étape 8 - Archivage officiel (HCEP ou HCEE uniquement, AT CLOTUREE)
+  const showArchiver =
+    (statut === 'CLOTUREE' || statut === 'TRAVAUX_RECEPTIONES') && hasValidationRights;
 
   return (
     <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
@@ -195,7 +268,8 @@ export default function AutorisationDetailPage() {
         </Button>
 
         <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', gap: 1 }}>
-          {at.statut === 'BROUILLON' && (
+          {/* Étape 0 - Reprendre brouillon (CEEP) */}
+          {showEditDraft && (
             <Button
               variant="contained"
               startIcon={<EditIcon />}
@@ -206,97 +280,83 @@ export default function AutorisationDetailPage() {
             </Button>
           )}
 
-          {/* Actions de signatures adaptées CEEP -> CEEE -> HC (HCEP, HCEE) -> HM (HMEP, HMEE) */}
-          {(() => {
-            const hasCeep = at.statut !== 'BROUILLON';
-            const hasCeee = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('CEEE') || (v as any).utilisateurNomComplet?.includes('CEEE')));
-            const hasHcep = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('HCEP') || (v as any).utilisateurNomComplet?.includes('HCEP')));
-            const hasHcee = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('HCEE') || (v as any).utilisateurNomComplet?.includes('HCEE')));
-            const hasHmep = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('HMEP') || (v as any).utilisateurNomComplet?.includes('HMEP')));
-            const hasHmee = visas.some(v => (v.statut === 'VALIDE' || v.statut === 'VALIDATION') && (v.commentaire?.toUpperCase().includes('HMEE') || (v as any).utilisateurNomComplet?.includes('HMEE')));
+          {/* Étape 3b - Visa CEEE */}
+          {showSignCeee && (
+            <Tooltip title="Accuser réception et apposer votre visa CEEE">
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => navigate(`/autorisations/${at.id}/signature-ceee`)}
+                sx={{ fontWeight: 700 }}
+              >
+                Signer l'AT (Visa CEEE)
+              </Button>
+            </Tooltip>
+          )}
 
-            const isHcepUser = roles.includes('HCEP') || roles.includes('ADMIN');
-            const isHceeUser = roles.includes('HCEE') || roles.includes('HC') || roles.includes('ADMIN');
-            const isHmepUser = roles.includes('HMEP') || roles.includes('HM') || roles.includes('ADMIN');
-            const isHmeeUser = roles.includes('HMEE') || roles.includes('HM') || roles.includes('ADMIN');
+          {/* Étape 3c - Visa HCEP */}
+          {showSignHcep && (
+            <Tooltip title="Apposer votre visa en tant que Hors Cadre Propriétaire (HCEP)">
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => navigate(`/visas/validation/${at.id}?role=HCEP`)}
+                sx={{ fontWeight: 700 }}
+              >
+                Signer l'AT (Visa HCEP)
+              </Button>
+            </Tooltip>
+          )}
 
-            const ceepCeeeComplete = hasCeep && (hasCeee || at.statut === 'AT_REDIGEE' || at.statut === 'VALIDEE');
-            const hcepHceeComplete = hasHcep && hasHcee;
+          {/* Étape 3d - Visa HCEE */}
+          {showSignHcee && (
+            <Tooltip title="Apposer votre visa en tant que Hors Cadre Exécutant (HCEE)">
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => navigate(`/visas/validation/${at.id}?role=HCEE`)}
+                sx={{ fontWeight: 700 }}
+              >
+                Signer l'AT (Visa HCEE)
+              </Button>
+            </Tooltip>
+          )}
 
-            return (
-              <>
-                {!hasHcep && (isHcepUser || roles.includes('HC')) && (
-                  <Tooltip title={!ceepCeeeComplete ? "CEEP et CEEE doivent signer d'abord" : "Signer l'AT en tant que HCEP"}>
-                    <span>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<CheckCircleIcon />}
-                        disabled={!ceepCeeeComplete && !roles.includes('ADMIN')}
-                        onClick={() => navigate(`/visas/validation/${at.id}?role=HCEP`)}
-                        sx={{ fontWeight: 700 }}
-                      >
-                        Signer AT (HCEP — Hors Cadre Propriétaire)
-                      </Button>
-                    </span>
-                  </Tooltip>
-                )}
+          {/* Étape 3e - Visa HMEP */}
+          {showSignHmep && (
+            <Tooltip title="Apposer votre visa en tant que Haute Maîtrise Propriétaire (HMEP)">
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => navigate(`/visas/validation/${at.id}?role=HMEP`)}
+                sx={{ fontWeight: 700 }}
+              >
+                Signer l'AT (Visa HMEP)
+              </Button>
+            </Tooltip>
+          )}
 
-                {!hasHcee && (isHceeUser || roles.includes('HC')) && (
-                  <Tooltip title={!ceepCeeeComplete ? "CEEP et CEEE doivent signer d'abord" : "Signer l'AT en tant que HCEE"}>
-                    <span>
-                      <Button
-                        variant="contained"
-                        color="info"
-                        startIcon={<CheckCircleIcon />}
-                        disabled={!ceepCeeeComplete && !roles.includes('ADMIN')}
-                        onClick={() => navigate(`/visas/validation/${at.id}?role=HCEE`)}
-                        sx={{ fontWeight: 700 }}
-                      >
-                        Signer AT (HCEE — Hors Cadre Exécutant)
-                      </Button>
-                    </span>
-                  </Tooltip>
-                )}
+          {/* Étape 3f - Visa HMEE */}
+          {showSignHmee && (
+            <Tooltip title="Apposer votre visa en tant que Haute Maîtrise Exécutante (HMEE)">
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => navigate(`/visas/validation/${at.id}?role=HMEE`)}
+                sx={{ fontWeight: 700 }}
+              >
+                Signer l'AT (Visa HMEE)
+              </Button>
+            </Tooltip>
+          )}
 
-                {!hasHmep && (isHmepUser || roles.includes('HM')) && (
-                  <Tooltip title={!hcepHceeComplete ? "HCEP et HCEE doivent signer d'abord" : "Signer l'AT en tant que HMEP"}>
-                    <span>
-                      <Button
-                        variant="contained"
-                        color="secondary"
-                        startIcon={<CheckCircleIcon />}
-                        disabled={!hcepHceeComplete && !roles.includes('ADMIN')}
-                        onClick={() => navigate(`/visas/validation/${at.id}?role=HMEP`)}
-                        sx={{ fontWeight: 700 }}
-                      >
-                        Signer AT (HMEP — Haute Maîtrise Propriétaire)
-                      </Button>
-                    </span>
-                  </Tooltip>
-                )}
-
-                {!hasHmee && (isHmeeUser || roles.includes('HM')) && (
-                  <Tooltip title={!hcepHceeComplete ? "HCEP et HCEE doivent signer d'abord" : "Signer l'AT en tant que HMEE"}>
-                    <span>
-                      <Button
-                        variant="contained"
-                        color="success"
-                        startIcon={<CheckCircleIcon />}
-                        disabled={!hcepHceeComplete && !roles.includes('ADMIN')}
-                        onClick={() => navigate(`/visas/validation/${at.id}?role=HMEE`)}
-                        sx={{ fontWeight: 700 }}
-                      >
-                        Signer AT (HMEE — Haute Maîtrise Exécutant)
-                      </Button>
-                    </span>
-                  </Tooltip>
-                )}
-              </>
-            );
-          })()}
-
-          {(at.statut === 'VALIDEE' || at.statut === 'AT_REDIGEE') && (
+          {/* Étape 4 - Démarrer l'intervention (CEEE) */}
+          {showDemarrer && (
             <Button
               variant="contained"
               color="success"
@@ -305,37 +365,40 @@ export default function AutorisationDetailPage() {
               disabled={actionLoading}
               sx={{ fontWeight: 700 }}
             >
-              Étape 4 : Démarrer l'intervention (CEEE)
+              Démarrer l'intervention
             </Button>
           )}
 
-          {(at.statut === 'INTERVENTION_EN_COURS' || at.statut === 'AT_RECONDUITE') && (
-            <>
-              <Button
-                variant="outlined"
-                color="warning"
-                startIcon={<AutorenewIcon />}
-                onClick={handleReconduire}
-                disabled={actionLoading}
-                sx={{ fontWeight: 700 }}
-              >
-                Étape 5b : Visa de Reconduction
-              </Button>
-
-              <Button
-                variant="contained"
-                color="info"
-                startIcon={<TaskAltIcon />}
-                onClick={handleDeclarerFin}
-                disabled={actionLoading}
-                sx={{ fontWeight: 700 }}
-              >
-                Étape 6 : Déclarer la fin des travaux (CEEE)
-              </Button>
-            </>
+          {/* Étape 5b - Reconduire l'AT (CEEP / CEEE) */}
+          {showReconduire && (
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<AutorenewIcon />}
+              onClick={handleReconduire}
+              disabled={actionLoading}
+              sx={{ fontWeight: 700 }}
+            >
+              Reconduire l'AT (2ème / 3ème poste)
+            </Button>
           )}
 
-          {(at.statut === 'FIN_TRAVAUX_DECLAREE' || at.statut === 'VALIDEE') && (
+          {/* Étape 6 - Déclarer la fin des travaux (CEEE) */}
+          {showDeclarerFin && (
+            <Button
+              variant="contained"
+              color="info"
+              startIcon={<TaskAltIcon />}
+              onClick={handleDeclarerFin}
+              disabled={actionLoading}
+              sx={{ fontWeight: 700 }}
+            >
+              Déclarer la fin des travaux
+            </Button>
+          )}
+
+          {/* Étape 7 - Réception conjointe (CEEP + CEEE) */}
+          {showReceptionner && (
             <Button
               variant="contained"
               color="primary"
@@ -343,14 +406,15 @@ export default function AutorisationDetailPage() {
               onClick={() => navigate(`/receptions?atId=${at.id}`)}
               sx={{ fontWeight: 700 }}
             >
-              Étape 7 : Réceptionner les travaux (CEEP + CEEE)
+              Réception conjointe & Clôture
             </Button>
           )}
 
-          {hmSignaturesComplete && (
+          {/* PDF Officiel */}
+          {showPdf && (
             <Button
-              variant="contained"
-              color="primary"
+              variant="outlined"
+              color="success"
               startIcon={pdfLoading ? <CircularProgress size={18} color="inherit" /> : <PictureAsPdfIcon />}
               onClick={handleExportPdf}
               disabled={pdfLoading}
@@ -360,7 +424,8 @@ export default function AutorisationDetailPage() {
             </Button>
           )}
 
-          {(at.statut === 'CLOTUREE' || at.statut === 'TRAVAUX_RECEPTIONES') && hasValidationRights && (
+          {/* Étape 8 - Archivage officiel (HCEP / HCEE) */}
+          {showArchiver && (
             <Button
               variant="outlined"
               color="secondary"
@@ -368,7 +433,7 @@ export default function AutorisationDetailPage() {
               onClick={handleArchiver}
               sx={{ fontWeight: 700 }}
             >
-              Étape 8 : Archiver officiellement (HCEP / HCEE)
+              Archiver officiellement (Étape 8)
             </Button>
           )}
         </Stack>

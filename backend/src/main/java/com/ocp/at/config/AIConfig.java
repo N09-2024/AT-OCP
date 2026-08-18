@@ -12,9 +12,9 @@ import org.springframework.context.annotation.Primary;
  * <p>
  * Valeurs acceptées :
  * <ul>
- *   <li>{@code MOCK} (défaut) — Mock déterministe, pas de réseau requis</li>
- *   <li>{@code LANG_CHAIN} — LangChain direct (1 appel Gemini via FastAPI)</li>
- *   <li>{@code CREW_AI}    — CrewAI multi-agents (Agent Risques → HSE → Contrôle)</li>
+ *   <li>{@code MOCK} (défaut) - Mock déterministe, pas de réseau requis</li>
+ *   <li>{@code LANG_CHAIN} - LangChain direct (1 appel Gemini via FastAPI)</li>
+ *   <li>{@code CREW_AI}    - CrewAI multi-agents (Agent Risques → HSE → Contrôle)</li>
  * </ul>
  * Si la propriété est absente ou inconnue, le Mock est utilisé pour que le
  * service reste opérationnel même sans microservice Python configuré.

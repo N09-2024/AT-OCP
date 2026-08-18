@@ -1,5 +1,5 @@
 -- ============================================================
--- V24 — Habilitations AT (F-HSE-SEC-31-02) + Classifications (§6)
+-- V24 - Habilitations AT (F-HSE-SEC-31-02) + Classifications (§6)
 -- Standard OCP S-HSE-SEC-31 v1.0
 -- ============================================================
 

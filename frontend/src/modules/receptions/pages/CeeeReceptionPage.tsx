@@ -27,7 +27,7 @@ import { useAuthStore } from '../../../store/authStore';
 import type { AutorisationTravail } from '../../../types';
 
 /**
- * CeeeReceptionPage — Interface dédiée au CEEE pour recevoir et viser les AT
+ * CeeeReceptionPage - Interface dédiée au CEEE pour recevoir et viser les AT
  * qui lui sont transmises par le CEEP, conformément au workflow S-HSE-SEC-31.
  *
  * Le CEEE NE signe JAMAIS depuis l'interface du CEEP.
@@ -48,10 +48,10 @@ export default function CeeeReceptionPage() {
       const res = await autorisationTravailApi.findAll(0, 100);
       // Filtre côté client : AT où le CEEE doit agir (visite, rédaction, visa)
       const STATUTS_A_TRAITER = [
-        'SOUMISE',          // legacy — AT soumise en attente de visa
+        'SOUMISE',          // legacy - AT soumise en attente de visa
         'AT_REDIGEE',       // AT rédigée, en attente signature CEEE
-        'EN_VISITE_REDACTION', // §8.2-8.3 — Co-action CEEP+CEEE en cours
-        'DEMANDE_CREEE',    // §8.1 — AT créée, CEEE notifié
+        'EN_VISITE_REDACTION', // §8.2-8.3 - Co-action CEEP+CEEE en cours
+        'DEMANDE_CREEE',    // §8.1 - AT créée, CEEE notifié
       ];
       const soumises = (res.content || []).filter(
         (at: AutorisationTravail) => STATUTS_A_TRAITER.includes(at.statut)
@@ -70,11 +70,11 @@ export default function CeeeReceptionPage() {
     switch (statut) {
       case 'SOUMISE':
       case 'AT_REDIGEE':
-        return <Chip label="✏️ AT Rédigée — à viser" color="warning" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="✏️ AT Rédigée - à viser" color="warning" size="small" sx={{ fontWeight: 700 }} />;
       case 'EN_VISITE_REDACTION':
         return <Chip label="🔍 Visite & Rédaction" color="info" size="small" sx={{ fontWeight: 700 }} />;
       case 'DEMANDE_CREEE':
-        return <Chip label="📋 Demande créée — notifié" color="primary" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="📋 Demande créée - notifié" color="primary" size="small" sx={{ fontWeight: 700 }} />;
       default:
         return <Chip label={statut} color="default" size="small" />;
     }
@@ -95,7 +95,7 @@ export default function CeeeReceptionPage() {
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {user?.prenom} {user?.nom} — {user?.service?.nomService || 'Service exécutant'}
+              {user?.prenom} {user?.nom} - {user?.service?.nomService || 'Service exécutant'}
             </Typography>
             <Chip
               size="small"
@@ -167,7 +167,7 @@ export default function CeeeReceptionPage() {
 
                   <TableCell>
                     <Typography variant="body2">
-                      {(at as any).zoneProprietaire?.nomZone || (at as any).site || '—'}
+                      {(at as any).zoneProprietaire?.nomZone || (at as any).site || '-'}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {(at as any).entite || ''}
@@ -176,10 +176,10 @@ export default function CeeeReceptionPage() {
 
                   <TableCell>
                     <Typography variant="body2">
-                      {at.dateDebut ? new Date(at.dateDebut).toLocaleDateString('fr-FR') : '—'}
+                      {at.dateDebut ? new Date(at.dateDebut).toLocaleDateString('fr-FR') : '-'}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {(at as any).heureDebut || ''} — {(at as any).heureFin || ''}
+                      {(at as any).heureDebut || ''} - {(at as any).heureFin || ''}
                     </Typography>
                   </TableCell>
 

@@ -30,7 +30,7 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, String
     Optional<Utilisateur> findByEmailAndIdNot(String email, String id);
     int countByRolesId(String roleId);
 
-    /** Chefs d'équipe (CE/CEEP/CEEE) rattachés à un service — pour affichage CEEE dans le formulaire AT. */
+    /** Chefs d'équipe (CE/CEEP/CEEE) rattachés à un service - pour affichage CEEE dans le formulaire AT. */
     @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.roles r JOIN u.service s " +
            "WHERE s.id = :serviceId AND UPPER(r.nom) IN ('CE','CEEP','CEEE') " +
            "AND (u.compteVerrouille = false OR u.compteVerrouille IS NULL)")
@@ -41,4 +41,14 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, String
            "WHERE z.id = :zoneId AND UPPER(r.nom) IN ('CE','CEEP','CEEE') " +
            "AND (u.compteVerrouille = false OR u.compteVerrouille IS NULL)")
     List<Utilisateur> findChefsEquipeByZoneId(@Param("zoneId") String zoneId);
+
+    /**
+     * Trouve tous les utilisateurs actifs ayant un rôle dont le nom contient le fragment donné.
+     * Utilisé par NotificationService.sendNotificationToRole() pour éviter un findAll() en mémoire.
+     */
+    @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.roles r " +
+           "WHERE UPPER(r.nom) LIKE UPPER(CONCAT('%', :roleFragment, '%')) " +
+           "AND (u.compteVerrouille = false OR u.compteVerrouille IS NULL) " +
+           "AND u.actif = true")
+    List<Utilisateur> findActiveByRoleFragment(@Param("roleFragment") String roleFragment);
 }

@@ -47,7 +47,7 @@ public class AutorisationTravailController {
     }
 
     @PostMapping("/documents/{type}/{id}/classifier")
-    @Operation(summary = "Étape 0 — Classifier l'intervention en Niveau 1 ou Niveau 2 (HCEP)")
+    @Operation(summary = "Étape 0 - Classifier l'intervention en Niveau 1 ou Niveau 2 (HCEP)")
     @PreAuthorize("hasAuthority('CLASSIFY_INTERVENTION')")
     public ResponseEntity<AutorisationTravailResponse> classifierIntervention(
             @PathVariable String type,
@@ -73,10 +73,13 @@ public class AutorisationTravailController {
     // --- CONSULTATION (tous les rôles avec READ_AT) ---
 
     @GetMapping("/autorisations-travail")
-    @Operation(summary = "Lister toutes les Autorisations de Travail")
+    @Operation(summary = "Lister toutes les Autorisations de Travail avec filtres et recherche")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<AutorisationTravailResponse>> findAll(Pageable pageable) {
-        return ResponseEntity.ok(atService.findAll(pageable));
+    public ResponseEntity<Page<AutorisationTravailResponse>> findAll(
+            @RequestParam(required = false) String statut,
+            @RequestParam(required = false) String search,
+            Pageable pageable) {
+        return ResponseEntity.ok(atService.findAll(statut, search, pageable));
     }
 
     @GetMapping("/autorisations-travail/{id}")
@@ -168,7 +171,7 @@ public class AutorisationTravailController {
 
     // Démarrage intervention: CEEE (E sur Étape 4)
     @PostMapping({"/autorisations-travail/{id}/demarrer-intervention", "/at/{id}/demarrer-intervention"})
-    @Operation(summary = "Étape 4 — Démarrer l'intervention (CEEE Exécutant)")
+    @Operation(summary = "Étape 4 - Démarrer l'intervention (CEEE Exécutant)")
     @PreAuthorize("hasAuthority('START_INTERVENTION')")
     public ResponseEntity<AutorisationTravailResponse> demarrerIntervention(@PathVariable String id) {
         return ResponseEntity.ok(atService.demarrerIntervention(id));
@@ -176,7 +179,7 @@ public class AutorisationTravailController {
 
     // Déclaration fin des travaux: CEEE (E sur 8.5)
     @PostMapping({"/autorisations-travail/{id}/declarer-fin", "/at/{id}/declarer-fin"})
-    @Operation(summary = "Étape 6 — Déclarer la fin des travaux (CEEE Exécutant)")
+    @Operation(summary = "Étape 6 - Déclarer la fin des travaux (CEEE Exécutant)")
     @PreAuthorize("hasAuthority('DECLARE_FIN_TRAVAUX')")
     public ResponseEntity<AutorisationTravailResponse> declarerFinTravaux(@PathVariable String id) {
         return ResponseEntity.ok(atService.declarerFinTravaux(id));
@@ -186,21 +189,21 @@ public class AutorisationTravailController {
 
 
     @PostMapping({"/autorisations-travail/{id}/visite", "/at/{id}/visite"})
-    @Operation(summary = "Étape 2 — Marquer la visite préalable du chantier (§8.2)")
+    @Operation(summary = "Étape 2 - Marquer la visite préalable du chantier (§8.2)")
     @PreAuthorize("hasAuthority('CREATE_VISITE') or hasAuthority('SIGN_AT')")
     public ResponseEntity<AutorisationTravailResponse> marquerVisite(@PathVariable String id) {
         return ResponseEntity.ok(atService.marquerVisiteRealisee(id));
     }
 
     @PostMapping({"/autorisations-travail/{id}/rediger", "/at/{id}/rediger"})
-    @Operation(summary = "Étape 3 — Rédaction AT et permis sur le terrain (§8.3)")
+    @Operation(summary = "Étape 3 - Rédaction AT et permis sur le terrain (§8.3)")
     @PreAuthorize("hasAuthority('SIGN_AT') or hasAuthority('VALIDATE_AT')")
     public ResponseEntity<AutorisationTravailResponse> rediger(@PathVariable String id) {
         return ResponseEntity.ok(atService.redigerAT(id));
     }
 
     @PostMapping({"/autorisations-travail/{id}/reconduire", "/at/{id}/reconduire"})
-    @Operation(summary = "Étape 5b — Reconduction AT (début de poste). Query depasse24h=true → nouvelle visite")
+    @Operation(summary = "Étape 5b - Reconduction AT (début de poste). Query depasse24h=true → nouvelle visite")
     @PreAuthorize("hasAuthority('RENEW_AT')")
     public ResponseEntity<AutorisationTravailResponse> reconduire(
             @PathVariable String id,
@@ -209,7 +212,7 @@ public class AutorisationTravailController {
     }
 
     @PostMapping({"/autorisations-travail/{id}/incident", "/at/{id}/incident"})
-    @Operation(summary = "§8.4 — Signalement incident/changement → retour visite")
+    @Operation(summary = "§8.4 - Signalement incident/changement → retour visite")
     @PreAuthorize("hasAuthority('SIGN_AT') or hasAuthority('CREATE_VISITE')")
     public ResponseEntity<AutorisationTravailResponse> incident(
             @PathVariable String id,
@@ -218,7 +221,7 @@ public class AutorisationTravailController {
     }
 
     @PostMapping({"/autorisations-travail/{id}/reception-standard", "/at/{id}/reception-standard"})
-    @Operation(summary = "Étape 7 — Réception conjointe et clôture (§8.5)")
+    @Operation(summary = "Étape 7 - Réception conjointe et clôture (§8.5)")
     @PreAuthorize("hasAuthority('RECEIVE_AT') or hasAuthority('CLOSE_AT')")
     public ResponseEntity<AutorisationTravailResponse> receptionStandard(@PathVariable String id) {
         return ResponseEntity.ok(atService.receptionnerTravauxStandard(id));

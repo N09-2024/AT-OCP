@@ -1,5 +1,5 @@
 -- ============================================================
--- V21 — Conformité Standard S-HSE-SEC-31 v1.0
+-- V21 - Conformité Standard S-HSE-SEC-31 v1.0
 -- Auteur : Migration automatique AT-OCP
 -- Date   : 2026
 -- ============================================================
@@ -70,42 +70,42 @@ CREATE INDEX IF NOT EXISTS idx_at_statut_workflow ON autorisations_travail(statu
 -- PARTIE 3 : Nouvelles permissions granulaires
 -- ============================================================
 
--- CLASSIFY_INTERVENTION : Étape 0 — HCEP classifie Niveau 1/2
+-- CLASSIFY_INTERVENTION : Étape 0 - HCEP classifie Niveau 1/2
 INSERT INTO permissions (id, nom, description)
 SELECT gen_random_uuid()::text, 'CLASSIFY_INTERVENTION', 'Classifier une intervention Niveau 1 ou Niveau 2 (HCEP)'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'CLASSIFY_INTERVENTION');
 
--- CREATE_VISITE : Étape 2 — CEEP crée la visite préalable du chantier
+-- CREATE_VISITE : Étape 2 - CEEP crée la visite préalable du chantier
 INSERT INTO permissions (id, nom, description)
 SELECT gen_random_uuid()::text, 'CREATE_VISITE', 'Créer et réaliser une visite préalable du chantier (CEEP)'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'CREATE_VISITE');
 
--- VALIDATE_VISITE : Étape 2 — HCEE et HMEP valident/garantissent la visite
+-- VALIDATE_VISITE : Étape 2 - HCEE et HMEP valident/garantissent la visite
 INSERT INTO permissions (id, nom, description)
 SELECT gen_random_uuid()::text, 'VALIDATE_VISITE', 'Valider/garantir une visite préalable du chantier (HCEE, HMEP)'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'VALIDATE_VISITE');
 
--- SIGN_AT : Étapes 3, 5b — Signer ou viser une AT ou un permis
+-- SIGN_AT : Étapes 3, 5b - Signer ou viser une AT ou un permis
 INSERT INTO permissions (id, nom, description)
 SELECT gen_random_uuid()::text, 'SIGN_AT', 'Signer ou viser une Autorisation de Travail ou un permis'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'SIGN_AT');
 
--- START_INTERVENTION : Étape 4 — CEEE démarre l'intervention
+-- START_INTERVENTION : Étape 4 - CEEE démarre l'intervention
 INSERT INTO permissions (id, nom, description)
-SELECT gen_random_uuid()::text, 'START_INTERVENTION', 'Démarrer une intervention (CEEE — Exécutant)'
+SELECT gen_random_uuid()::text, 'START_INTERVENTION', 'Démarrer une intervention (CEEE - Exécutant)'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'START_INTERVENTION');
 
--- DECLARE_FIN_TRAVAUX : Étape 6 — CEEE déclare la fin des travaux
+-- DECLARE_FIN_TRAVAUX : Étape 6 - CEEE déclare la fin des travaux
 INSERT INTO permissions (id, nom, description)
-SELECT gen_random_uuid()::text, 'DECLARE_FIN_TRAVAUX', 'Déclarer la fin des travaux (CEEE — Exécutant)'
+SELECT gen_random_uuid()::text, 'DECLARE_FIN_TRAVAUX', 'Déclarer la fin des travaux (CEEE - Exécutant)'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'DECLARE_FIN_TRAVAUX');
 
--- RECEIVE_AT : Étape 7 — CEEP réceptionne les travaux
+-- RECEIVE_AT : Étape 7 - CEEP réceptionne les travaux
 INSERT INTO permissions (id, nom, description)
-SELECT gen_random_uuid()::text, 'RECEIVE_AT', 'Réceptionner les travaux (CEEP — Propriétaire)'
+SELECT gen_random_uuid()::text, 'RECEIVE_AT', 'Réceptionner les travaux (CEEP - Propriétaire)'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'RECEIVE_AT');
 
--- RENEW_AT : Étape 5b — Reconduire/renouveler une AT (dépassement poste)
+-- RENEW_AT : Étape 5b - Reconduire/renouveler une AT (dépassement poste)
 INSERT INTO permissions (id, nom, description)
 SELECT gen_random_uuid()::text, 'RENEW_AT', 'Reconduire ou renouveler une AT en cas de dépassement de poste'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'RENEW_AT');
@@ -115,9 +115,9 @@ INSERT INTO permissions (id, nom, description)
 SELECT gen_random_uuid()::text, 'RECEIVE_NOTIFICATION', 'Recevoir des notifications système liées aux AT'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'RECEIVE_NOTIFICATION');
 
--- ARCHIVE_AT : Étape 8 — HCEE archive officiellement l'AT
+-- ARCHIVE_AT : Étape 8 - HCEE archive officiellement l'AT
 INSERT INTO permissions (id, nom, description)
-SELECT gen_random_uuid()::text, 'ARCHIVE_AT', 'Archiver officiellement une AT et ses documents (HCEE — Exécutant §8.6)'
+SELECT gen_random_uuid()::text, 'ARCHIVE_AT', 'Archiver officiellement une AT et ses documents (HCEE - Exécutant §8.6)'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'ARCHIVE_AT');
 
 -- VIEW_ARCHIVE : Consulter les archives (HCEP garant, HCEE exécutant)
@@ -125,7 +125,7 @@ INSERT INTO permissions (id, nom, description)
 SELECT gen_random_uuid()::text, 'VIEW_ARCHIVE', 'Consulter et télécharger les archives AT'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'VIEW_ARCHIVE');
 
--- MANAGE_HABILITATIONS : §9 — HCEP désigne les agents habilités AT
+-- MANAGE_HABILITATIONS : §9 - HCEP désigne les agents habilités AT
 INSERT INTO permissions (id, nom, description)
 SELECT gen_random_uuid()::text, 'MANAGE_HABILITATIONS', 'Désigner et gérer les agents habilités à délivrer une AT (HCEP §9)'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'MANAGE_HABILITATIONS');
@@ -182,7 +182,7 @@ WHERE r.nom = 'HCEP'
   AND p.nom IN (
       'CLASSIFY_INTERVENTION', -- Étape 0 classifie Niveau 1/2
       'MANAGE_HABILITATIONS',  -- §9 désigne les agents habilités AT
-      'VIEW_ARCHIVE',          -- §8.6 Garant — consulte/supervise les archives
+      'VIEW_ARCHIVE',          -- §8.6 Garant - consulte/supervise les archives
       'RECEIVE_NOTIFICATION'   -- Notifications système
       -- Note : HCEP n'archive PAS lui-même (G ≠ E sur §8.6)
       -- TODO: valider avec OCP si HCEP a une signature opérationnelle directe sur l'AT
@@ -209,7 +209,7 @@ WHERE r.nom = 'HCEE'
   );
 
 -- ---- HMEP (Haute Maîtrise Entité Propriétaire) ----
--- §8.2 G, §4 début G — rôle de garant à la visite et au démarrage uniquement
+-- §8.2 G, §4 début G - rôle de garant à la visite et au démarrage uniquement
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
@@ -224,7 +224,7 @@ WHERE r.nom = 'HMEP'
   );
 
 -- ---- HMEE (Haute Maîtrise Entité Exécutante) ----
--- TODO: à valider avec OCP — rôle non clarifié dans le logigramme standard
+-- TODO: à valider avec OCP - rôle non clarifié dans le logigramme standard
 -- Comportement fail-closed intentionnel : lecture + notification seules
 -- Aucune nouvelle permission d'écriture attribuée en attendant clarification OCP
 INSERT INTO role_permissions (role_id, permission_id)
@@ -237,7 +237,7 @@ WHERE r.nom = 'HMEE'
   );
 
 -- ---- RESPONSABLE_ENTREPRISE (Sous-traitant externe) ----
--- Hors logique P/E — uniquement Bon de Travail (BT) et permis liés
+-- Hors logique P/E - uniquement Bon de Travail (BT) et permis liés
 -- Ne participe PAS au workflow AT normal
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id

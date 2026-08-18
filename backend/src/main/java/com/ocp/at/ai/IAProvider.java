@@ -6,7 +6,7 @@ import com.ocp.at.entity.FichierJoint;
 import com.ocp.at.entity.Permis;
 
 /**
- * Couche IA — assistance uniquement (LangChain / CrewAI / Mock).
+ * Couche IA - assistance uniquement (LangChain / CrewAI / Mock).
  * Ne remplace jamais un visa CEEP/CEEE ni une décision du standard S-HSE-SEC-31.
  */
 public interface IAProvider {

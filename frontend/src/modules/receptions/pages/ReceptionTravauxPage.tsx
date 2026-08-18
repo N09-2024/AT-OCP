@@ -158,10 +158,10 @@ export default function ReceptionTravauxPage() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 800, color: '#1F4D3E' }}>
-              SECTION — Réception des Travaux & Clôture de l'AT
+              SECTION - Réception des Travaux & Clôture de l'AT
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Autorisation N° {at?.numero || atId} — {at?.objet || ''}
+              Autorisation N° {at?.numero || atId} - {at?.objet || ''}
             </Typography>
           </Box>
           <Chip label="Module 9" color="primary" size="small" />

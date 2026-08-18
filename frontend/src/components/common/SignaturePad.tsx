@@ -324,7 +324,7 @@ export default function SignaturePad({
         <DialogContent>
           <Box sx={{ p: 2, border: '1px solid #D6E3DC', borderRadius: 2, bgcolor: '#FFFFFF', textAlign: 'center', my: 1 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0E2A21' }}>
-              OCP Group — Visa Validé
+              OCP Group - Visa Validé
             </Typography>
             <Divider sx={{ my: 1 }} />
             <Typography variant="body2">

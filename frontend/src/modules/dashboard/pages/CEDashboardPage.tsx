@@ -24,7 +24,7 @@ import DrawIcon from '@mui/icons-material/Draw';
 import { useAuthStore } from '../../../store/authStore';
 
 /**
- * Dashboard CE — Chef d'Équipe
+ * Dashboard CE - Chef d'Équipe
  * Affiche des cartes différentes selon la position P (CEEP) ou E (CEEE).
  * Un CEEE ne voit PAS les actions réservées au CEEP et vice-versa.
  */
@@ -37,7 +37,7 @@ export default function CEDashboardPage() {
   const isCeee = roles.some((r: string) => r === 'CEEE');
   const isBoth = isCeep && isCeee;
 
-  // Cartes CEEP (Position P — Propriétaire)
+  // Cartes CEEP (Position P - Propriétaire)
   const cardsCeep = [
     {
       title: 'Créer une nouvelle AT',
@@ -65,7 +65,7 @@ export default function CEDashboardPage() {
     },
     {
       title: 'À réceptionner (P)',
-      subtitle: 'Fin déclarée — Lancer la réception conjointe',
+      subtitle: 'Fin déclarée - Lancer la réception conjointe',
       color: '#3C7A5C',
       icon: <FlagIcon />,
       path: '/autorisations?filtre=FIN_TRAVAUX_DECLAREE',
@@ -81,7 +81,7 @@ export default function CEDashboardPage() {
     },
   ];
 
-  // Cartes CEEE (Position E — Exécutant)
+  // Cartes CEEE (Position E - Exécutant)
   const cardsCeee = [
     {
       title: 'AT à réceptionner (E)',
@@ -102,7 +102,7 @@ export default function CEDashboardPage() {
     },
     {
       title: 'Interventions actives (E)',
-      subtitle: 'Interventions en cours — Déclarer fin ou incident',
+      subtitle: 'Interventions en cours - Déclarer fin ou incident',
       color: '#3C7A5C',
       icon: <PlayArrowIcon />,
       path: '/autorisations?filtre=VALIDEE',
@@ -123,7 +123,7 @@ export default function CEDashboardPage() {
       <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
         <Chip label={label} size="small" sx={{ bgcolor: color, color: 'white', fontWeight: 800, fontSize: 12, px: 1 }} />
         <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
-          {label === 'Position P — Propriétaire' ? "Actions réservées au CEEP" : "Actions réservées au CEEE"}
+          {label === 'Position P - Propriétaire' ? "Actions réservées au CEEP" : "Actions réservées au CEEE"}
         </Typography>
       </Stack>
       <Grid container spacing={2.5}>
@@ -183,16 +183,16 @@ export default function CEDashboardPage() {
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {user?.prenom} {user?.nom} — {user?.service?.nomService || 'Service CE'}
+              {user?.prenom} {user?.nom} - {user?.service?.nomService || 'Service CE'}
             </Typography>
             {isBoth && (
               <Chip size="small" label="CEEP + CEEE" color="warning" variant="outlined" sx={{ fontWeight: 700, fontSize: 11 }} />
             )}
             {isCeep && !isBoth && (
-              <Chip size="small" label="Position P — Propriétaire" color="success" variant="outlined" sx={{ fontWeight: 700, fontSize: 11 }} />
+              <Chip size="small" label="Position P - Propriétaire" color="success" variant="outlined" sx={{ fontWeight: 700, fontSize: 11 }} />
             )}
             {isCeee && !isBoth && (
-              <Chip size="small" label="Position E — Exécutant" color="primary" variant="outlined" sx={{ fontWeight: 700, fontSize: 11 }} />
+              <Chip size="small" label="Position E - Exécutant" color="primary" variant="outlined" sx={{ fontWeight: 700, fontSize: 11 }} />
             )}
           </Stack>
         </Box>
@@ -217,14 +217,14 @@ export default function CEDashboardPage() {
       )}
 
       {/* Section CEEP (Position P) */}
-      {isCeep && renderCards(cardsCeep, 'Position P — Propriétaire', '#1F4D3E')}
+      {isCeep && renderCards(cardsCeep, 'Position P - Propriétaire', '#1F4D3E')}
 
       {isBoth && <Divider sx={{ my: 2 }} />}
 
       {/* Section CEEE (Position E) */}
-      {isCeee && renderCards(cardsCeee, 'Position E — Exécutant', '#3C7A5C')}
+      {isCeee && renderCards(cardsCeee, 'Position E - Exécutant', '#3C7A5C')}
 
-      {/* Cas: rôle CE générique — afficher les deux sections */}
+      {/* Cas: rôle CE générique - afficher les deux sections */}
       {!isCeep && !isCeee && renderCards([...cardsCeep, ...cardsCeee], 'Chef d\'Équipe (CE)', '#5C6E67')}
     </Box>
   );

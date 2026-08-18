@@ -1,4 +1,4 @@
-# Migration des Rôles & Workflow — Standard OCP S-HSE-SEC-31 v1.0
+# Migration des Rôles & Workflow - Standard OCP S-HSE-SEC-31 v1.0
 
 ## Contexte & Principes Métier
 

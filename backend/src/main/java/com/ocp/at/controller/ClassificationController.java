@@ -124,7 +124,7 @@ public class ClassificationController {
                 .build();
 
         classification = classificationRepository.save(classification);
-        log.info("Classification enregistrée : {} — Niveau : {}", reference, niveau);
+        log.info("Classification enregistrée : {} - Niveau : {}", reference, niveau);
         return toResponse(classification);
     }
 

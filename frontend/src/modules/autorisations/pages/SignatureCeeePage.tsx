@@ -41,7 +41,7 @@ export default function SignatureCeeePage() {
   }, [id]);
 
   /**
-   * §8.1 S-HSE-SEC-31 — Le CEEP est uniquement le créateur/propriétaire de l'AT.
+   * §8.1 S-HSE-SEC-31 - Le CEEP est uniquement le créateur/propriétaire de l'AT.
    */
   const isOwnerCeep =
     at != null &&
@@ -109,17 +109,17 @@ export default function SignatureCeeePage() {
     <Box sx={{ maxWidth: 960, mx: 'auto', p: 3 }}>
       <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 800, color: '#16241E' }} gutterBottom>
-          Visa &amp; Signature CEEE — {at.numero}
+          Visa &amp; Signature CEEE - {at.numero}
         </Typography>
         <Typography color="text.secondary">
           {at.objet || 'Intervention OCP S-HSE-SEC-31'}
         </Typography>
         <Divider sx={{ my: 2 }} />
         <Typography variant="body2">
-          <strong>Zone Propriétaire :</strong> {at.zoneProprietaire?.nomZone || at.zoneProprietaireNom || '—'}
+          <strong>Zone Propriétaire :</strong> {at.zoneProprietaire?.nomZone || at.zoneProprietaireNom || '-'}
         </Typography>
         <Typography variant="body2">
-          <strong>Service Exécutant :</strong> {at.servicesIntervenants || at.zoneExecutante?.nomZone || '—'}
+          <strong>Service Exécutant :</strong> {at.servicesIntervenants || at.zoneExecutante?.nomZone || '-'}
         </Typography>
         <Typography variant="body2">
           <strong>Date prévue :</strong> {at.dateDebut} ({at.heureDebut} → {at.heureFin})
@@ -191,7 +191,7 @@ export default function SignatureCeeePage() {
               }}
             >
               <Typography variant="h6" sx={{ fontWeight: 800, color: '#2E624A', mb: 1 }}>
-                ✍️ Emplacement de Signature — Visa CEEE (Chef d'Équipe Exécutant)
+                ✍️ Emplacement de Signature - Visa CEEE (Chef d'Équipe Exécutant)
               </Typography>
               <Typography variant="body2" sx={{ color: '#2E624A', mb: 2 }}>
                 Tracez votre signature ci-dessous pour signer le visa CEEE (Section G) :

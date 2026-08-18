@@ -68,7 +68,7 @@ public class DataInitializer {
             new String[]{"MANAGE_DOCUMENTS",      "Gérer les documents source et visites (legacy)"},
 
             // ============================================================
-            // Nouvelles permissions granulaires — Standard S-HSE-SEC-31
+            // Nouvelles permissions granulaires - Standard S-HSE-SEC-31
             // ============================================================
             new String[]{"CLASSIFY_INTERVENTION", "Classifier une intervention Niveau 1/2 (HCEP Étape 0)"},
             new String[]{"CREATE_VISITE",         "Créer et réaliser une visite préalable du chantier (CEEP §8.2)"},
@@ -97,9 +97,9 @@ public class DataInitializer {
     private void initRoles() {
         List<String[]> roles = Arrays.asList(
             new String[]{"ADMIN", "Administrateur système"},
-            new String[]{"CE", "Chef d'Équipe — position CEEP ou CEEE selon le territoire de l'AT"},
-            new String[]{"HM", "Haute Maîtrise — position HMEP ou HMEE selon le territoire de l'AT"},
-            new String[]{"HC", "Hors Cadre — position HCEP ou HCEE selon le territoire de l'AT"},
+            new String[]{"CE", "Chef d'Équipe - position CEEP ou CEEE selon le territoire de l'AT"},
+            new String[]{"HM", "Haute Maîtrise - position HMEP ou HMEE selon le territoire de l'AT"},
+            new String[]{"HC", "Hors Cadre - position HCEP ou HCEE selon le territoire de l'AT"},
             new String[]{"RESPONSABLE_EXTERIEUR", "Responsable Entreprise Extérieure (BT + permis uniquement)"}
         );
 

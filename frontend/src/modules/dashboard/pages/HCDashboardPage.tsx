@@ -17,7 +17,7 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import { useAuthStore } from '../../../store/authStore';
 
 /**
- * Dashboard HC — Hors Cadre
+ * Dashboard HC - Hors Cadre
  * Position P (HCEP) : classification, archivage (garant), habilitations
  * Position E (HCEE) : garant visite / rédaction / démarrage / visa, exécute archivage
  */
@@ -28,7 +28,7 @@ export default function HCDashboardPage() {
   const cards = [
     {
       title: 'Classifier une intervention',
-      subtitle: 'Étape 0 — Niveau 1 ou Niveau 2 (§6)',
+      subtitle: 'Étape 0 - Niveau 1 ou Niveau 2 (§6)',
       icon: <CategoryIcon />,
       color: '#1F4D3E',
       path: '/autorisations',
@@ -36,14 +36,14 @@ export default function HCDashboardPage() {
     },
     {
       title: 'AT en attente de garantie',
-      subtitle: 'Position E — visite, rédaction, démarrage, visa',
+      subtitle: 'Position E - visite, rédaction, démarrage, visa',
       icon: <GavelIcon />,
       color: '#3C7A5C',
       path: '/autorisations?filtre=a-valider',
     },
     {
       title: 'AT à archiver',
-      subtitle: '§8.6 — garant (P) / exécute (E)',
+      subtitle: '§8.6 - garant (P) / exécute (E)',
       icon: <ArchiveIcon />,
       color: '#3C7A5C',
       path: '/archives',
@@ -57,7 +57,7 @@ export default function HCDashboardPage() {
     },
     {
       title: 'Registre Niveau 1',
-      subtitle: 'Interventions sans AT — F-HSE-SEC-31-01',
+      subtitle: 'Interventions sans AT - F-HSE-SEC-31-01',
       icon: <ListAltIcon />,
       color: '#5C6E67',
       path: '/habilitations',
@@ -70,7 +70,7 @@ export default function HCDashboardPage() {
         Espace Hors Cadre
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        {user?.prenom} {user?.nom} — HC (HCEP en position P · HCEE en position E)
+        {user?.prenom} {user?.nom} - HC (HCEP en position P · HCEE en position E)
       </Typography>
 
       <Grid container spacing={2.5}>

@@ -7,6 +7,8 @@ export interface NotificationItem {
   dateCreation: string;
   dateLecture: string | null;
   lu: boolean;
+  type?: string;
+  lien?: string;
   utilisateurId: string;
 }
 
@@ -30,11 +32,20 @@ export const NotificationService = {
     await apiClient.put(`/notifications/${id}/read`);
   },
 
+  markAllAsRead: async (): Promise<void> => {
+    await apiClient.put('/notifications/read-all');
+  },
+
   countUnread: async (): Promise<number> => {
-    // Fetch the first 100 notifications to count unread ones client-side
-    const all = await apiClient.get<Page<NotificationItem>>('/notifications', {
-      params: { page: 0, size: 100 },
-    });
-    return all.data.content.filter((n) => !n.lu).length;
+    try {
+      const res = await apiClient.get<{ count: number }>('/notifications/count-unread');
+      return res.data.count;
+    } catch {
+      // Fallback
+      const all = await apiClient.get<Page<NotificationItem>>('/notifications', {
+        params: { page: 0, size: 50 },
+      });
+      return all.data.content.filter((n) => !n.lu).length;
+    }
   },
 };

@@ -45,7 +45,7 @@ public class MockAIProvider implements IAProvider {
                 .modeleUtilise("MockModel-v1")
                 .versionModele("1.0")
                 .resultat("SUCCES")
-                .commentaireIA("Analyse permis simulée — à remplacer par LangChain/CrewAI.")
+                .commentaireIA("Analyse permis simulée - à remplacer par LangChain/CrewAI.")
                 .permis(permis)
                 .build();
     }
@@ -144,7 +144,7 @@ public class MockAIProvider implements IAProvider {
         }
         // permis : informatif seulement si risques élévés sans permis
         if (nbPermis == 0 && nbRisques > 2) {
-            alertes.add("Section E : aucun permis alors que plusieurs risques sont identifiés — vérifier §11");
+            alertes.add("Section E : aucun permis alors que plusieurs risques sont identifiés - vérifier §11");
         }
 
         AnalyseInterventionIAResponse suggestions = analyserIntervention(description);

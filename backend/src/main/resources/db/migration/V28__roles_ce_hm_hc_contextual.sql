@@ -94,15 +94,15 @@ WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE nom = 'MANAGE_USERS');
 -- 2. Créer les 5 rôles applicatifs
 -- ------------------------------------------------------------
 INSERT INTO roles (id, nom, description)
-SELECT gen_random_uuid()::text, 'CE', 'Chef d''Équipe — position CEEP ou CEEE selon le territoire de l''AT'
+SELECT gen_random_uuid()::text, 'CE', 'Chef d''Équipe - position CEEP ou CEEE selon le territoire de l''AT'
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nom = 'CE');
 
 INSERT INTO roles (id, nom, description)
-SELECT gen_random_uuid()::text, 'HM', 'Haute Maîtrise — position HMEP ou HMEE selon le territoire de l''AT'
+SELECT gen_random_uuid()::text, 'HM', 'Haute Maîtrise - position HMEP ou HMEE selon le territoire de l''AT'
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nom = 'HM');
 
 INSERT INTO roles (id, nom, description)
-SELECT gen_random_uuid()::text, 'HC', 'Hors Cadre — position HCEP ou HCEE selon le territoire de l''AT'
+SELECT gen_random_uuid()::text, 'HC', 'Hors Cadre - position HCEP ou HCEE selon le territoire de l''AT'
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nom = 'HC');
 
 INSERT INTO roles (id, nom, description)
@@ -219,7 +219,7 @@ SELECT
         ELSE NULL
     END,
     'EN_ATTENTE',
-    'Migration V28 — rôles contextuels CE/HM/HC'
+    'Migration V28 - rôles contextuels CE/HM/HC'
 FROM utilisateurs u
 JOIN utilisateur_roles ur ON ur.utilisateur_id = u.id
 JOIN roles r ON r.id = ur.role_id

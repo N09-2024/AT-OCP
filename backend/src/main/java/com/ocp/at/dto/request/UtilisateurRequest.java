@@ -9,7 +9,7 @@ import lombok.Data;
 @Data
 public class UtilisateurRequest {
 
-    // Matricule optionnel — auto-généré si non fourni
+    // Matricule optionnel - auto-généré si non fourni
     @Size(max = 20, message = "Le matricule ne doit pas dépasser 20 caractères")
     private String matricule;
 
@@ -33,6 +33,6 @@ public class UtilisateurRequest {
 
     private String serviceId;
 
-    // Rôle demandé — utilisé pour la validation métier (service obligatoire hors ADMIN)
+    // Rôle demandé - utilisé pour la validation métier (service obligatoire hors ADMIN)
     private String roleNom;
 }

@@ -267,7 +267,7 @@ export default function HabilitationsPage() {
             >
               {usersList.map((u) => (
                 <MenuItem key={u.id} value={u.id}>
-                  {u.prenom} {u.nom} ({u.email}) — Service: {u.service?.nomService || 'Non spécifié'}
+                  {u.prenom} {u.nom} ({u.email}) - Service: {u.service?.nomService || 'Non spécifié'}
                 </MenuItem>
               ))}
             </Select>

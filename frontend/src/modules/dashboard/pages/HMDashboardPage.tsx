@@ -6,7 +6,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useAuthStore } from '../../../store/authStore';
 
 /**
- * Dashboard HM — Haute Maîtrise
+ * Dashboard HM - Haute Maîtrise
  * Position P (HMEP) : garant visite + démarrage
  * Position E (HMEE) : lecture seule (fail-closed)
  */
@@ -20,7 +20,7 @@ export default function HMDashboardPage() {
         Espace Haute Maîtrise
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {user?.prenom} {user?.nom} — HM (HMEP en position P · lecture seule en position E)
+        {user?.prenom} {user?.nom} - HM (HMEP en position P · lecture seule en position E)
       </Typography>
 
       <Alert severity="info" sx={{ mb: 3 }}>
@@ -37,7 +37,7 @@ export default function HMDashboardPage() {
                 <Typography sx={{ fontWeight: 800 }}>Visites à garantir</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
-                Position P — garantir la visite préalable chantier (§8.2)
+                Position P - garantir la visite préalable chantier (§8.2)
               </Typography>
             </CardContent>
             <CardActions>
@@ -54,7 +54,7 @@ export default function HMDashboardPage() {
                 <Typography sx={{ fontWeight: 800 }}>Démarrages à cautionner</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
-                Position P — garantir le début d’intervention
+                Position P - garantir le début d’intervention
               </Typography>
             </CardContent>
             <CardActions>

@@ -92,9 +92,9 @@ export default function FormulaireOCPInteractive({
   const atStatut = initialData?.statut || initialData?.statutWorkflow || '';
   const isSubmittedOrTransmitted = Boolean(atStatut && atStatut !== 'BROUILLON' && atStatut !== 'DEMANDE_CREEE' && atStatut !== 'CLASSIFICATION_EFFECTUEE');
   const fieldsLocked = readOnly || signMode === 'ceee' || signMode === 'none' || isSubmittedOrTransmitted;
-  const canSignCeep = !readOnly && (signMode === 'all' || signMode === 'ceep');
+  const canSignCeep = !readOnly && (signMode === 'all' || signMode === 'ceep') && !isSubmittedOrTransmitted;
   // canSignCeee est indépendant de readOnly : le CEEE signe après que les champs sont verrouillés
-  const canSignCeee = signMode === 'ceee' || (!readOnly && signMode === 'all');
+  const canSignCeee = signMode === 'ceee' || (!readOnly && signMode === 'all' && !isSubmittedOrTransmitted);
 
   // Lists for dropdowns loaded from backend
   const [zonesList, setZonesList] = useState<any[]>([]);
@@ -123,25 +123,36 @@ export default function FormulaireOCPInteractive({
     risques: string[]; mesures: string[]; epis: string[]; permis: string[];
   }>({ risques: [], mesures: [], epis: [], permis: [] });
 
-  // Permis Documents — validation IA
+  // Permis Documents - validation IA
   const [permisDocuments, setPermisDocuments] = useState<PermisDocumentResponse[]>([]);
   const [permisUploading, setPermisUploading] = useState(false);
   const debounceInitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Form State
   const todayStr = new Date().toISOString().split('T')[0];
+  const initialDocType = initialData.typeDocumentSource || initialData.documentSourceType || 'DI';
+  const initialDocNum = initialData.documentSourceNumero || (initialData.numero ? `${initialDocType}-2026-${Math.floor(1000 + Math.random() * 9000)}` : `${initialDocType}-2026-4819`);
+
   const [formData, setFormData] = useState({
     numero: initialData.numero || '',
-    site: initialData.zoneProprietaire?.nomZone || currentUser?.service?.zone?.nomZone || '',
-    entite: initialData.servicesIntervenants || currentUser?.service?.nomService || '',
-    documentSourceType: initialData.typeDocumentSource || 'DI',
+    site: initialData.zoneProprietaireNom || initialData.zoneProprietaire?.nomZone || currentUser?.service?.zone?.nomZone || '',
+    zoneProprietaireId: initialData.zoneProprietaireId || initialData.zoneProprietaire?.id || currentUser?.service?.zone?.id || null,
+    zoneProprietaireNom: initialData.zoneProprietaireNom || initialData.zoneProprietaire?.nomZone || currentUser?.service?.zone?.nomZone || '',
+    entite: initialData.serviceDemandeur || initialData.entite || currentUser?.service?.nomService || '',
+    serviceDemandeur: initialData.serviceDemandeur || initialData.entite || currentUser?.service?.nomService || '',
+    serviceDemandeurId: initialData.serviceDemandeurId || null,
+    documentSourceType: initialDocType,
     documentSourceId: initialData.documentSourceId || '',
-    documentSourceNumero: initialData.documentSourceNumero || '',
-    di: initialData.typeDocumentSource === 'DI' ? initialData.documentSourceNumero || '' : '',
-    ot: initialData.typeDocumentSource === 'OT' ? initialData.documentSourceNumero || '' : '',
-    bt: initialData.typeDocumentSource === 'BT' ? initialData.documentSourceNumero || '' : '',
-    lieu: initialData.zoneProprietaire?.nomZone || '',
-    servicesIntervenants: initialData.servicesIntervenants || '',
+    documentSourceNumero: initialDocNum,
+    di: initialDocType === 'DI' ? initialDocNum : '',
+    ot: initialDocType === 'OT' ? initialDocNum : '',
+    bt: initialDocType === 'BT' ? initialDocNum : '',
+    zoneExecutanteId: initialData.zoneExecutanteId || initialData.zoneExecutante?.id || null,
+    zoneExecutanteNom: initialData.zoneExecutanteNom || initialData.zoneExecutante?.nomZone || '',
+    zoneExecutante: initialData.zoneExecutanteNom || initialData.zoneExecutante?.nomZone || '',
+    lieu: initialData.zoneExecutanteNom || initialData.zoneExecutante?.nomZone || initialData.lieu || '',
+    servicesIntervenants: initialData.servicesIntervenants || initialData.serviceIntervenant || '',
+    serviceIntervenant: initialData.servicesIntervenants || initialData.serviceIntervenant || '',
     serviceIntervenantId: initialData.serviceIntervenantId || null,
     entreprisesIntervenantes: initialData.entreprisesIntervenantes || '',
     description: initialData.description || initialData.descriptionTravaux || initialData.objet || '',
@@ -164,7 +175,6 @@ export default function FormulaireOCPInteractive({
     g1VisaCeep: initialData.g1VisaCeep || null,
     g1NomCeee: initialData.g1NomCeee || '',
     g1VisaCeee: initialData.g1VisaCeee || null,
-
   });
 
   // State Visite Préalable (§8.2 Standard OCP)
@@ -296,18 +306,25 @@ export default function FormulaireOCPInteractive({
       return {
         ...prev,
         numero: initialData.numero || prev.numero || '',
-        site: initialData.zoneProprietaire?.nomZone || initialData.site || prev.site || '',
-        entite: initialData.servicesIntervenants || prev.entite || '',
+        site: initialData.zoneProprietaire?.nomZone || initialData.zoneProprietaireNom || initialData.site || prev.site || '',
+        zoneProprietaireNom: initialData.zoneProprietaire?.nomZone || initialData.zoneProprietaireNom || initialData.site || prev.zoneProprietaireNom || '',
+        zoneProprietaireId: initialData.zoneProprietaire?.id || initialData.zoneProprietaireId || prev.zoneProprietaireId || '',
+        entite: initialData.serviceDemandeur || initialData.entite || prev.entite || '',
+        serviceDemandeur: initialData.serviceDemandeur || initialData.entite || prev.serviceDemandeur || '',
+        zoneExecutanteNom: initialData.zoneExecutante?.nomZone || initialData.zoneExecutanteNom || initialData.zoneExecutante || initialData.lieu || prev.zoneExecutanteNom || '',
+        zoneExecutante: initialData.zoneExecutante?.nomZone || initialData.zoneExecutanteNom || initialData.zoneExecutante || initialData.lieu || prev.zoneExecutante || '',
+        zoneExecutanteId: initialData.zoneExecutante?.id || initialData.zoneExecutanteId || prev.zoneExecutanteId || '',
+        lieu: initialData.zoneExecutante?.nomZone || initialData.zoneExecutanteNom || initialData.zoneExecutante || initialData.lieu || prev.lieu || '',
+        servicesIntervenants: initialData.servicesIntervenants || initialData.serviceIntervenant || prev.servicesIntervenants || '',
+        serviceIntervenant: initialData.servicesIntervenants || initialData.serviceIntervenant || prev.serviceIntervenant || '',
+        serviceIntervenantId: initialData.serviceIntervenantId || prev.serviceIntervenantId || null,
+        entreprisesIntervenantes: initialData.entreprisesIntervenantes || prev.entreprisesIntervenantes || '',
         documentSourceType: initialData.typeDocumentSource || prev.documentSourceType || 'DI',
         documentSourceId: initialData.documentSourceId || prev.documentSourceId || '',
         documentSourceNumero: initialData.documentSourceNumero || prev.documentSourceNumero || '',
         di: initialData.typeDocumentSource === 'DI' ? (initialData.documentSourceNumero ?? prev.di) : prev.di,
         ot: initialData.typeDocumentSource === 'OT' ? (initialData.documentSourceNumero ?? prev.ot) : prev.ot,
         bt: initialData.typeDocumentSource === 'BT' ? (initialData.documentSourceNumero ?? prev.bt) : prev.bt,
-        lieu: initialData.zoneProprietaire?.nomZone || prev.lieu || '',
-        servicesIntervenants: initialData.servicesIntervenants || prev.servicesIntervenants || '',
-        serviceIntervenantId: initialData.serviceIntervenantId || prev.serviceIntervenantId || null,
-        entreprisesIntervenantes: initialData.entreprisesIntervenantes || prev.entreprisesIntervenantes || '',
         description: initialData.description || initialData.descriptionTravaux || initialData.objet || prev.description || '',
         dateIntervention: initialData.dateIntervention || initialData.dateDebut || prev.dateIntervention,
         heureDebut: initialData.heureDebut || prev.heureDebut || '08:00',
@@ -454,7 +471,7 @@ export default function FormulaireOCPInteractive({
 
 
   // ------------------------------------------------------------------
-  // IA IMPLICITE — plus de bouton "Assistant IA". L'analyse se déclenche
+  // IA IMPLICITE - plus de bouton "Assistant IA". L'analyse se déclenche
   // automatiquement, en arrière-plan, dès que la description est assez
   // longue et n'a pas déjà été analysée. Découplée de l'autosave (800ms)
   // par un débounce plus long (2s) pour ne pas multiplier les appels au
@@ -497,7 +514,7 @@ export default function FormulaireOCPInteractive({
   }, [formData.description, readOnly, fieldsLocked]);
 
   // Applique une suggestion IA à un référentiel de cases à cocher (l'utilisateur
-  // choisit lui-même ce qu'il accepte — l'IA ne coche jamais à sa place).
+  // choisit lui-même ce qu'il accepte - l'IA ne coche jamais à sa place).
   const appliquerSuggestion = (
     field: 'risquesIds' | 'mesuresIds' | 'episIds' | 'permisIds',
     refList: any[],
@@ -562,7 +579,7 @@ export default function FormulaireOCPInteractive({
     }
   };
 
-  // Export PDF Serveur — seul export disponible. Le backend refuse (400)
+  // Export PDF Serveur - seul export disponible. Le backend refuse (400)
   // tant que les visas HM + HC ne sont pas positifs (voir
   // AutorisationTravailServiceImpl.verifierDroitExportPdf côté Spring).
   const exportPDFServer = async () => {
@@ -584,7 +601,7 @@ export default function FormulaireOCPInteractive({
   };
 
   const handleSignerEtTransmettre = async () => {
-    // §8.2 OCP S-HSE-SEC-31 — Visite Préalable Obligatoire
+    // §8.2 OCP S-HSE-SEC-31 - Visite Préalable Obligatoire
     if (!preventionEnPlace) {
       alert(
         '⛔ Visite Préalable obligatoire (§8.2)\n\n' +
@@ -669,7 +686,7 @@ export default function FormulaireOCPInteractive({
 
   return (
     <Box sx={{ pb: 6, maxWidth: 1120, mx: 'auto' }}>
-      {/* IA SUGGESTION BANNER — implicite, avec suggestions cliquables */}
+      {/* IA SUGGESTION BANNER - implicite, avec suggestions cliquables */}
       {(iaRapport || iaAlertes.length > 0) && (
         <Alert
           icon={<AutoAwesomeIcon />}
@@ -815,7 +832,7 @@ export default function FormulaireOCPInteractive({
                 { key: 'OT', label: "Ordre de Travail (OT)" },
                 { key: 'BT', label: "Bon de Travail (BT)" },
               ].map((item) => {
-                const selected = docSourceType === item.key;
+                const selected = (formData.documentSourceType || docSourceType) === item.key;
 
                 return (
                   <Grid key={item.key} size={{ xs: 12, sm: 4 }}>
@@ -824,7 +841,20 @@ export default function FormulaireOCPInteractive({
                       onClick={() => {
                         if (fieldsLocked) return;
                         setDocSourceType(item.key as any);
-                        updateTextValue('documentSourceType', item.key);
+                        const randomNum = `${item.key}-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+                        setFormData((prev: any) => {
+                          const updated = {
+                            ...prev,
+                            documentSourceType: item.key,
+                            documentSourceNumero: randomNum,
+                            di: item.key === 'DI' ? randomNum : '',
+                            ot: item.key === 'OT' ? randomNum : '',
+                            bt: item.key === 'BT' ? randomNum : '',
+                          };
+                          scheduleAutoSave(updated);
+                          onChange?.(updated);
+                          return updated;
+                        });
                       }}
                       sx={{
                         minHeight: 76,
@@ -868,6 +898,34 @@ export default function FormulaireOCPInteractive({
                 );
               })}
             </Grid>
+
+            {/* Champ de saisie / affichage du Numéro de Document Source (DI / OT / BT) */}
+            <Box sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label={`N° du document source (${formData.documentSourceType || docSourceType}) - affecté automatiquement`}
+                value={formData.documentSourceNumero || ''}
+                disabled={fieldsLocked}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const curType = formData.documentSourceType || docSourceType;
+                  setFormData((prev: any) => {
+                    const updated = {
+                      ...prev,
+                      documentSourceNumero: val,
+                      di: curType === 'DI' ? val : prev.di,
+                      ot: curType === 'OT' ? val : prev.ot,
+                      bt: curType === 'BT' ? val : prev.bt,
+                    };
+                    scheduleAutoSave(updated);
+                    onChange?.(updated);
+                    return updated;
+                  });
+                }}
+                helperText={`Ce numéro (${formData.documentSourceType || docSourceType}) sera automatiquement incrusté dans la case correspondante (N° DI / N° OT / N° BT) du formulaire et du PDF officiel.`}
+              />
+            </Box>
           </Box>
 
           <Divider sx={{ my: 2.5 }} />
@@ -899,12 +957,29 @@ export default function FormulaireOCPInteractive({
                 </Typography>
                 <FormControl fullWidth size="small" disabled={readOnly}>
                   <Select
-                    value={formData.site}
+                    value={formData.site || formData.zoneProprietaireNom || ''}
                     displayEmpty
-                    onChange={(e) => updateTextValue('site', e.target.value)}
+                    onChange={(e) => {
+                      const zoneNom = e.target.value;
+                      const foundZ = zonesList.find(z => z.nomZone === zoneNom || z.id === zoneNom);
+                      const zNom = foundZ?.nomZone || zoneNom;
+                      const zId = foundZ?.id || zoneNom;
+                      setFormData((prev: any) => {
+                        const updated = {
+                          ...prev,
+                          site: zNom,
+                          zoneProprietaireId: zId,
+                          zoneProprietaireNom: zNom,
+                          zoneProprietaire: zNom,
+                        };
+                        scheduleAutoSave(updated);
+                        onChange?.(updated);
+                        return updated;
+                      });
+                    }}
                   >
                     <MenuItem value="">
-                      <em>Sélectionner zone...</em>
+                      <em>-- Sélectionner zone propriétaire --</em>
                     </MenuItem>
                     {zonesList.map((z) => (
                       <MenuItem key={z.id} value={z.nomZone}>
@@ -925,12 +1000,28 @@ export default function FormulaireOCPInteractive({
                 </Typography>
                 <FormControl fullWidth size="small" disabled={readOnly}>
                   <Select
-                    value={formData.entite}
+                    value={formData.entite || formData.serviceDemandeur || ''}
                     displayEmpty
-                    onChange={(e) => updateTextValue('entite', e.target.value)}
+                    onChange={(e) => {
+                      const srvNom = e.target.value;
+                      const foundS = servicesList.find(s => s.nomService === srvNom || s.id === srvNom);
+                      const sNom = foundS?.nomService || srvNom;
+                      const sId = foundS?.id || srvNom;
+                      setFormData((prev: any) => {
+                        const updated = {
+                          ...prev,
+                          entite: sNom,
+                          serviceDemandeur: sNom,
+                          serviceDemandeurId: sId,
+                        };
+                        scheduleAutoSave(updated);
+                        onChange?.(updated);
+                        return updated;
+                      });
+                    }}
                   >
                     <MenuItem value="">
-                      <em>Sélectionner service...</em>
+                      <em>-- Sélectionner service demandeur --</em>
                     </MenuItem>
                     {servicesList.map((s) => (
                       <MenuItem key={s.id} value={s.nomService}>
@@ -962,8 +1053,51 @@ export default function FormulaireOCPInteractive({
             </Typography>
 
             <Grid container spacing={2}>
-              {/* Service Intervenant */}
-              <Grid size={{ xs: 12, md: 6 }}>
+              {/* Zone Exécutante / Lieu d'intervention */}
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}
+                >
+                  Zone Exécutante / Lieu d'intervention (E) *
+                </Typography>
+                <FormControl fullWidth size="small" disabled={fieldsLocked}>
+                  <Select
+                    value={formData.zoneExecutanteNom || formData.zoneExecutante || formData.lieu || ''}
+                    displayEmpty
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const foundZ = zonesList.find(z => z.nomZone === val || z.id === val);
+                      const zNom = foundZ?.nomZone || val;
+                      const zId = foundZ?.id || val;
+                      setFormData((prev: any) => {
+                        const updated = {
+                          ...prev,
+                          zoneExecutanteId: zId,
+                          zoneExecutanteNom: zNom,
+                          zoneExecutante: zNom,
+                          lieu: zNom,
+                        };
+                        scheduleAutoSave(updated);
+                        onChange?.(updated);
+                        return updated;
+                      });
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>-- Sélectionner zone exécutante --</em>
+                    </MenuItem>
+                    {zonesList.map((z) => (
+                      <MenuItem key={z.id} value={z.nomZone}>
+                        {z.nomZone}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Service Intervenant / Exécutant (CEEE) */}
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Typography
                   variant="caption"
                   sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}
@@ -972,15 +1106,31 @@ export default function FormulaireOCPInteractive({
                 </Typography>
                 <FormControl fullWidth size="small" disabled={fieldsLocked}>
                   <Select
-                    value={formData.serviceIntervenantId || formData.servicesIntervenants}
+                    value={formData.servicesIntervenants || formData.serviceIntervenant || ''}
                     displayEmpty
-                    onChange={(e) => handleSelectServiceIntervenant(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const foundS = servicesList.find(s => s.nomService === val || s.id === val);
+                      const sNom = foundS?.nomService || val;
+                      const sId = foundS?.id || val;
+                      setFormData((prev: any) => {
+                        const updated = {
+                          ...prev,
+                          serviceIntervenantId: sId,
+                          servicesIntervenants: sNom,
+                          serviceIntervenant: sNom,
+                        };
+                        scheduleAutoSave(updated);
+                        onChange?.(updated);
+                        return updated;
+                      });
+                    }}
                   >
                     <MenuItem value="">
-                      <em>-- Sélectionner le service exécutant (différent de P) --</em>
+                      <em>-- Sélectionner le service exécutant --</em>
                     </MenuItem>
                     {servicesList.map((s) => (
-                      <MenuItem key={s.id} value={s.id}>
+                      <MenuItem key={s.id} value={s.nomService}>
                         {s.nomService}
                       </MenuItem>
                     ))}
@@ -989,7 +1139,7 @@ export default function FormulaireOCPInteractive({
               </Grid>
 
               {/* Entreprise extérieure */}
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Typography
                   variant="caption"
                   sx={{ fontWeight: 700, color: '#5C6E67', mb: 0.5, display: 'block' }}
@@ -998,7 +1148,7 @@ export default function FormulaireOCPInteractive({
                 </Typography>
                 <FormControl fullWidth size="small" disabled={fieldsLocked}>
                   <Select
-                    value={formData.entreprisesIntervenantes}
+                    value={formData.entreprisesIntervenantes || ''}
                     displayEmpty
                     onChange={(e) => updateTextValue('entreprisesIntervenantes', e.target.value)}
                   >
@@ -1481,12 +1631,12 @@ export default function FormulaireOCPInteractive({
             })}
           </Grid>
 
-          {/* Zone d upload et validation IA — visible si permis cochés et mode édition */}
+          {/* Zone d upload et validation IA - visible si permis cochés et mode édition */}
           {!fieldsLocked && permisDocuments.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#7A5A27', mb: 1.5 }}>
-                📋 Documents de permis — Validation IA requise avant soumission
+                📋 Documents de permis - Validation IA requise avant soumission
               </Typography>
               {permisDocuments.map((doc) => (
                 <PermisUploadCard
@@ -1499,7 +1649,7 @@ export default function FormulaireOCPInteractive({
               ))}
               {soumissionBloquee && (
                 <Alert severity="warning" sx={{ mt: 1, fontWeight: 600 }}>
-                  ⚠ {permisEnAttente} permis en attente de validation — soumission bloquée jusqu'à validation complète
+                  ⚠ {permisEnAttente} permis en attente de validation - soumission bloquée jusqu'à validation complète
                 </Alert>
               )}
             </Box>
@@ -1565,7 +1715,7 @@ export default function FormulaireOCPInteractive({
                   boxShadow: canSignCeep && !formData.g1VisaCeep ? '0 0 0 2px #2E624A40' : 'none',
                 }}
               >
-                {formData.g1VisaCeep ? '✅ Visa CEEP signé — cliquer pour modifier' : '✍️ Signer l\'AT (Visa CEEP)'}
+                {formData.g1VisaCeep ? '✅ Visa CEEP signé - cliquer pour modifier' : '✍️ Signer l\'AT (Visa CEEP)'}
               </Button>
             </Stack>
           </CardContent>
@@ -1573,7 +1723,7 @@ export default function FormulaireOCPInteractive({
       </Box>
 
       {/* BARRE D'ACTIONS INFÉRIEURE */}
-      {(!readOnly || signMode === 'ceee') && (
+      {(!readOnly || signMode === 'ceee') && !isSubmittedOrTransmitted && (
         <Box sx={{ width: '100%', mb: 3 }}>
           <Paper
             elevation={3}

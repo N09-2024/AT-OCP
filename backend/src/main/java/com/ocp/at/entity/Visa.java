@@ -35,7 +35,7 @@ public class Visa {
     // Signature manuscrite électronique
     private String signaturePath;
 
-    /** SHA-256 du fichier PNG — jamais retourné en API publique */
+    /** SHA-256 du fichier PNG - jamais retourné en API publique */
     private String signatureHash;
 
     private String adresseIP;

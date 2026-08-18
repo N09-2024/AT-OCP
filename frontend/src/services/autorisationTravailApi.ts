@@ -31,9 +31,12 @@ export interface PageResponse<T> {
 }
 
 export const autorisationTravailApi = {
-  // Liste paginée des ATs
-  findAll: async (page = 0, size = 20): Promise<PageResponse<AutorisationTravail>> => {
-    const response = await apiClient.get<PageResponse<AutorisationTravail>>(`/autorisations-travail?page=${page}&size=${size}`);
+  // Liste paginée des ATs avec filtrage côté serveur
+  findAll: async (page = 0, size = 20, statut?: string, search?: string): Promise<PageResponse<AutorisationTravail>> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (statut) params.append('statut', statut);
+    if (search) params.append('search', search);
+    const response = await apiClient.get<PageResponse<AutorisationTravail>>(`/autorisations-travail?${params.toString()}`);
     return response.data;
   },
 

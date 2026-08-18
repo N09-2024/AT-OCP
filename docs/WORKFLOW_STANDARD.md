@@ -1,5 +1,5 @@
 # WORKFLOW_STANDARD.md
-## Workflow Logiciel — Extrait du Logigramme Officiel S-HSE-SEC-31
+## Workflow Logiciel - Extrait du Logigramme Officiel S-HSE-SEC-31
 
 > **Source :** Logigramme §7 + Règles de Gestion §8 du Standard OCP S-HSE-SEC-31 v1.0
 > **Implémentation :** `WorkflowATServiceImpl` + migration `V26__standard_workflow_transitions.sql`

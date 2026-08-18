@@ -7,7 +7,7 @@ import { useAuthStore } from '../../../store/authStore';
 
 /**
  * Dashboard RESPONSABLE_EXTERIEUR
- * BT + permis uniquement — pas d'accès au workflow AT principal.
+ * BT + permis uniquement - pas d'accès au workflow AT principal.
  */
 export default function ResponsableExterieurDashboardPage() {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ export default function ResponsableExterieurDashboardPage() {
         Espace Entreprise Extérieure
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {user?.prenom} {user?.nom} — Responsable Entreprise Extérieure
+        {user?.prenom} {user?.nom} - Responsable Entreprise Extérieure
       </Typography>
 
       <Alert severity="warning" sx={{ mb: 3 }}>

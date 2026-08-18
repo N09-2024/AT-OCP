@@ -321,7 +321,7 @@ export default function Sidebar() {
       {/* Footer */}
       <Box sx={{ p: 2, borderTop: '1px solid #E3ECE7' }}>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 10, textAlign: 'center' }}>
-          © 2026 OCP Group — Système AT Intelligente
+          © 2026 OCP Group - Système AT Intelligente
         </Typography>
       </Box>
     </Box>

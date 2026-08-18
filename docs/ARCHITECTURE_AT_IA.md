@@ -33,7 +33,7 @@ React formulaire
 
 ## Providers
 
-- `MockAIProvider` : mots-clés (hauteur, acide, feu…) — PFE offline
+- `MockAIProvider` : mots-clés (hauteur, acide, feu…) - PFE offline
 - `LangChainProvider` / `CrewAIProvider` : HTTP vers FastAPI si `ocp.ai.fastapi-url` défini
 
 ## Migrations utiles

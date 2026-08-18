@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -18,20 +18,21 @@ import {
   IconButton,
   Tooltip,
   TablePagination,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Alert,
+  Badge,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EditIcon from '@mui/icons-material/Edit';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { autorisationTravailApi } from '../../../services/autorisationTravailApi';
 import { apiClient } from '../../../services/apiClient';
@@ -40,9 +41,64 @@ import { useAuthStore } from '../../../store/authStore';
 
 export default function AutorisationListPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get('filtre');
   const user = useAuthStore((s) => s.user);
+
+  const roles = user?.roles?.map((r: any) => r.nom) || [];
+  const isAdmin = roles.includes('ADMIN');
+  const isCeep = roles.some((r: string) => r === 'CEEP' || r === 'DEMANDEUR');
+  const isCeee = roles.includes('CEEE');
+  const isHc = roles.some((r: string) => ['HCEP', 'HCEE', 'HC', 'RESPONSABLE_OCP'].includes(r));
+  const isHm = roles.some((r: string) => ['HMEP', 'HMEE', 'HM'].includes(r));
+  const isCeeeOnly = isCeee && !isCeep && !isAdmin;
+
+  // Filtres contextualisés selon le rôle et les étapes OCP (Standard S-HSE-SEC-31)
+  const statusFilters = useMemo(() => {
+    if (isCeeeOnly) {
+      // Vue Chef d'Équipe Exécutant (CEEE) - Étape 3b à 7
+      return [
+        { label: 'Toutes mes interventions', value: 'TOUS', color: '#5C6E67', bg: '#F0F5F2' },
+        { label: 'Étape 3 : À viser (Visa CEEE) ✏️', value: 'SOUMISE', color: '#6B4E11', bg: '#FDF3E3' },
+        { label: 'Étape 4 : Prêtes à démarrer ⚡', value: 'VALIDEE', color: '#2E624A', bg: '#E2F0E8' },
+        { label: 'Étape 5 : En cours 🔄', value: 'INTERVENTION_EN_COURS', color: '#E65100', bg: '#FFF3E0' },
+        { label: 'Étape 7 : À réceptionner 🏁', value: 'FIN_TRAVAUX_DECLAREE', color: '#1565C0', bg: '#E3F2FD' },
+        { label: 'Clôturées ✓', value: 'CLOTUREE', color: '#2E624A', bg: '#E2F0E8' },
+      ];
+    }
+    if (isCeep && !isCeee && !isAdmin) {
+      // Vue Chef d'Équipe Propriétaire (CEEP) - Étape 1 à 7
+      return [
+        { label: 'Toutes mes ATs', value: 'TOUS', color: '#5C6E67', bg: '#F0F5F2' },
+        { label: 'Étape 1 : Mes brouillons 📝', value: 'BROUILLON', color: '#8B6914', bg: '#FEF8E7' },
+        { label: 'Étape 3 : En validation ⏳', value: 'SOUMISE', color: '#6B4E11', bg: '#FDF3E3' },
+        { label: 'Étape 4 : Validées ✓', value: 'VALIDEE', color: '#2E624A', bg: '#E2F0E8' },
+        { label: 'Étape 5 : En cours ⚡', value: 'INTERVENTION_EN_COURS', color: '#E65100', bg: '#FFF3E0' },
+        { label: 'Étape 7 : À réceptionner 🏁', value: 'FIN_TRAVAUX_DECLAREE', color: '#1565C0', bg: '#E3F2FD' },
+        { label: 'Clôturées ✓', value: 'CLOTUREE', color: '#2E624A', bg: '#E2F0E8' },
+      ];
+    }
+    if (isHc && !isAdmin) {
+      // Vue Hors Cadre (HCEP / HCEE) - Étape 0, 3c, 3d, 8
+      return [
+        { label: 'Toutes les ATs du secteur', value: 'TOUS', color: '#5C6E67', bg: '#F0F5F2' },
+        { label: 'Étape 3 : À valider (Visas HC) ⏳', value: 'SOUMISE', color: '#6B4E11', bg: '#FDF3E3' },
+        { label: 'Validées ✓', value: 'VALIDEE', color: '#2E624A', bg: '#E2F0E8' },
+        { label: 'En cours ⚡', value: 'INTERVENTION_EN_COURS', color: '#E65100', bg: '#FFF3E0' },
+        { label: 'Étape 8 : À archiver 📦', value: 'CLOTUREE', color: '#2E624A', bg: '#E2F0E8' },
+      ];
+    }
+    // Vue Haute Maîtrise / CE Polyvalent / Admin
+    return [
+      { label: 'Toutes les ATs', value: 'TOUS', color: '#5C6E67', bg: '#F0F5F2' },
+      { label: 'Brouillons 📝', value: 'BROUILLON', color: '#8B6914', bg: '#FEF8E7' },
+      { label: 'En validation ⏳', value: 'SOUMISE', color: '#6B4E11', bg: '#FDF3E3' },
+      { label: 'Validées ✓', value: 'VALIDEE', color: '#2E624A', bg: '#E2F0E8' },
+      { label: 'En cours ⚡', value: 'INTERVENTION_EN_COURS', color: '#E65100', bg: '#FFF3E0' },
+      { label: 'Fin déclarée 🏁', value: 'FIN_TRAVAUX_DECLAREE', color: '#1565C0', bg: '#E3F2FD' },
+      { label: 'Clôturées ✓', value: 'CLOTUREE', color: '#2E624A', bg: '#E2F0E8' },
+    ];
+  }, [roles, isCeeeOnly, isCeep, isCeee, isHc, isAdmin]);
 
   const [loading, setLoading] = useState(true);
   const [ats, setAts] = useState<AutorisationTravail[]>([]);
@@ -50,6 +106,7 @@ export default function AutorisationListPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(filterParam || 'TOUS');
 
   // Sync filtre URL (?filtre=SOUMISE) → barre de filtres
@@ -57,33 +114,58 @@ export default function AutorisationListPage() {
     if (filterParam) setStatusFilter(filterParam);
   }, [filterParam]);
 
-  const loadData = async () => {
+  // Chargement côté serveur avec filtres actifs
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await autorisationTravailApi.findAll(page, pageSize);
+      // Construire les paramètres de recherche
+      const params: Record<string, any> = { page, size: pageSize };
+      if (statusFilter && statusFilter !== 'TOUS') params.statut = statusFilter;
+      if (searchTerm.trim()) params.search = searchTerm.trim();
+
+      const res = await autorisationTravailApi.findAll(page, pageSize, statusFilter !== 'TOUS' ? statusFilter : undefined, searchTerm.trim() || undefined);
       setAts(res.content || []);
       setTotal(res.totalElements || 0);
     } catch (err) {
       console.error(err);
+      setAts([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, statusFilter, searchTerm]);
 
   useEffect(() => {
     loadData();
-  }, [page, pageSize]);
+  }, [loadData]);
 
-  const filteredAts = ats.filter((item) => {
-    const matchesSearch =
-      (item.numero || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.objet || '').toLowerCase().includes(searchTerm.toLowerCase());
+  // Changer le filtre de statut et revenir à la page 0
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(0);
+    if (value !== 'TOUS') {
+      setSearchParams({ filtre: value });
+    } else {
+      setSearchParams({});
+    }
+  };
 
-    if (statusFilter === 'a-signer') return matchesSearch && (item.statut === 'BROUILLON' || item.statut === 'DEMANDE_CREEE');
-    if (statusFilter === 'a-valider') return matchesSearch && (item.statut === 'SOUMISE' || item.statut === 'EN_VISITE_REDACTION' || item.statut === 'AT_REDIGEE');
-    if (statusFilter !== 'TOUS') return matchesSearch && item.statut === statusFilter;
-    return matchesSearch;
-  });
+  // Lancer la recherche (sur Entrée ou bouton)
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+    setPage(0);
+  };
+
+  // Réinitialiser tous les filtres
+  const handleClearFilters = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setStatusFilter('TOUS');
+    setPage(0);
+    setSearchParams({});
+  };
+
+  const hasActiveFilters = statusFilter !== 'TOUS' || searchTerm.trim() !== '';
 
   const getStatusChip = (statut: string) => {
     switch (statut) {
@@ -91,30 +173,30 @@ export default function AutorisationListPage() {
         return <Chip label="Classifiée (Niv.2)" color="secondary" size="small" sx={{ fontWeight: 700 }} />;
       case 'DEMANDE_CREEE':
       case 'BROUILLON':
-        return <Chip label="Brouillon / Créée" color="default" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="Brouillon" color="default" size="small" sx={{ fontWeight: 700 }} />;
       case 'EN_VISITE_REDACTION':
         return <Chip label="Visite & Rédaction" color="info" size="small" sx={{ fontWeight: 700 }} />;
       case 'VISITE_REALISEE':
         return <Chip label="Visite réalisée" color="info" size="small" sx={{ fontWeight: 700 }} />;
       case 'AT_REDIGEE':
       case 'SOUMISE':
-        return <Chip label="AT Rédigée ✏️" color="warning" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="AT Rédigée ✏️" size="small" sx={{ fontWeight: 700, bgcolor: '#FEF3CD', color: '#7B5E00', border: '1px solid #F0D060' }} />;
       case 'AT_VALIDEE':
       case 'VALIDEE':
-        return <Chip label="AT Validée ✓" color="success" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="Validée ✓" size="small" sx={{ fontWeight: 700, bgcolor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC' }} />;
       case 'EN_COURS':
       case 'INTERVENTION_EN_COURS':
-        return <Chip label="En cours ⚡" color="warning" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="En cours ⚡" size="small" sx={{ fontWeight: 700, bgcolor: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D' }} />;
       case 'EN_RECONDUCTION':
       case 'AT_RECONDUITE':
-        return <Chip label="Reconduite 🔄" color="warning" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="Reconduite 🔄" size="small" sx={{ fontWeight: 700, bgcolor: '#EDE9FE', color: '#5B21B6', border: '1px solid #C4B5FD' }} />;
       case 'DECLAREE_TERMINEE':
       case 'FIN_TRAVAUX_DECLAREE':
-        return <Chip label="Fin déclarée 🏁" color="info" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="Fin déclarée 🏁" size="small" sx={{ fontWeight: 700, bgcolor: '#DBEAFE', color: '#1E40AF', border: '1px solid #93C5FD' }} />;
       case 'RECEPTIONEES':
       case 'TRAVAUX_RECEPTIONES':
       case 'CLOTUREE':
-        return <Chip label="Réceptionnée ✓" color="success" size="small" sx={{ fontWeight: 700 }} />;
+        return <Chip label="Clôturée ✓" size="small" sx={{ fontWeight: 700, bgcolor: '#D1FAE5', color: '#065F46', border: '1px solid #6EE7B7' }} />;
       case 'ARCHIVEE':
         return <Chip label="Archivée" color="secondary" size="small" sx={{ fontWeight: 700 }} />;
       case 'REJETEE':
@@ -131,22 +213,23 @@ export default function AutorisationListPage() {
   const [niveauSelectionne, setNiveauSelectionne] = useState<'NIVEAU_1' | 'NIVEAU_2'>('NIVEAU_2');
   const [isTiers, setIsTiers] = useState(false);
 
-  const isHCEP = user?.roles?.some((r) => r.nom === 'HCEP' || r.nom === 'HCEE' || r.nom === 'ADMIN');
-
   return (
     <Box sx={{ p: 3 }}>
+      {/* ─── En-tête ─────────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800, color: '#0E2A21' }}>
             Autorisations de Travail (AT)
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Gestion du cycle de vie des autorisations de travail OCP F-HSE-SEC-31-04
+            {isCeeeOnly
+              ? "Espace Chef d'Équipe Exécutant (CEEE) - Consultation, signature et suivi des interventions"
+              : "Gestion du cycle de vie des autorisations de travail OCP F-HSE-SEC-31-04"}
           </Typography>
         </Box>
 
         <Stack direction="row" spacing={1.5}>
-          {isHCEP && (
+          {(isHc || isAdmin) && (
             <Button
               variant="outlined"
               color="primary"
@@ -157,65 +240,158 @@ export default function AutorisationListPage() {
             </Button>
           )}
 
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/autorisations/nouvelle')}
-            sx={{ bgcolor: '#1F4D3E', '&:hover': { bgcolor: '#2E624A' }, borderRadius: 2, px: 3, py: 1.2, fontWeight: 700 }}
-          >
-            Nouvelle Autorisation
-          </Button>
+          {isCeep && !isCeeeOnly && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/autorisations/nouvelle')}
+              sx={{ bgcolor: '#1F4D3E', '&:hover': { bgcolor: '#2E624A' }, borderRadius: 2, px: 3, py: 1.2, fontWeight: 700 }}
+            >
+              Nouvelle Autorisation (CEEP)
+            </Button>
+          )}
         </Stack>
       </Box>
 
-      {/* Filter bar */}
-      <Paper sx={{ p: 2.5, mb: 3, borderRadius: 3, border: '1px solid #D6E3DC' }}>
-        <Grid container spacing={2} sx={{ alignItems: 'center' }}>
-          <Grid size={{ xs: 12, md: 5 }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Rechercher par N° AT ou Objet..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: '#5C6E67' }} />
-                    </InputAdornment>
-                  ),
+      {/* ─── Barre de Recherche & Filtres ────────────────────────────── */}
+      <Paper
+        elevation={0}
+        sx={{
+          mb: 3,
+          borderRadius: 3,
+          border: '1.5px solid #D6E3DC',
+          background: 'linear-gradient(135deg, #F7FAF8 0%, #FFFFFF 100%)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Ligne de recherche */}
+        <Box sx={{ p: 2, pb: 1.5, display: 'flex', gap: 1.5, alignItems: 'center' }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Rechercher par N° AT, objet, description…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                bgcolor: 'white',
+                '&:hover fieldset': { borderColor: '#1F4D3E' },
+                '&.Mui-focused fieldset': { borderColor: '#1F4D3E' },
+              },
+            }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#1F4D3E', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchInput ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => { setSearchInput(''); setSearchTerm(''); setPage(0); }}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              },
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={handleSearch}
+            sx={{
+              bgcolor: '#1F4D3E',
+              '&:hover': { bgcolor: '#2E624A' },
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              minWidth: 120,
+            }}
+          >
+            Rechercher
+          </Button>
+          {hasActiveFilters && (
+            <Button
+              variant="outlined"
+              onClick={handleClearFilters}
+              startIcon={<ClearIcon />}
+              sx={{ borderRadius: 2, borderColor: '#D6E3DC', color: '#5C6E67', fontWeight: 600, whiteSpace: 'nowrap' }}
+            >
+              Effacer
+            </Button>
+          )}
+        </Box>
+
+        {/* Ligne filtres par statut */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            borderTop: '1px solid #EEF4F0',
+            bgcolor: '#FAFCFA',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Typography variant="caption" sx={{ color: '#5C6E67', fontWeight: 700, mr: 0.5, whiteSpace: 'nowrap' }}>
+            Statut :
+          </Typography>
+          {statusFilters.map((f) => {
+            const isActive = statusFilter === f.value;
+            return (
+              <Chip
+                key={f.value}
+                label={f.label}
+                onClick={() => handleStatusChange(f.value)}
+                size="small"
+                sx={{
+                  cursor: 'pointer',
+                  fontWeight: isActive ? 800 : 600,
+                  fontSize: 12,
+                  bgcolor: isActive ? f.color : f.bg,
+                  color: isActive ? 'white' : f.color,
+                  border: `1.5px solid ${isActive ? f.color : 'transparent'}`,
+                  boxShadow: isActive ? `0 2px 8px ${f.color}44` : 'none',
+                  transition: 'all 0.18s ease',
+                  '&:hover': {
+                    bgcolor: f.color,
+                    color: 'white',
+                    boxShadow: `0 2px 8px ${f.color}55`,
+                  },
+                }}
+              />
+            );
+          })}
+
+          {/* Compteur de résultats */}
+          <Box sx={{ ml: 'auto' }}>
+            <Badge
+              badgeContent={total}
+              max={9999}
+              sx={{
+                '& .MuiBadge-badge': {
+                  bgcolor: '#1F4D3E',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: 11,
+                  minWidth: 24,
+                  height: 20,
+                  borderRadius: 10,
                 },
               }}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-              {[
-                { label: 'Toutes', value: 'TOUS' },
-                { label: 'Brouillon', value: 'DEMANDE_CREEE' },
-                { label: 'Visite & Rédaction', value: 'EN_VISITE_REDACTION' },
-                { label: 'AT Rédigée', value: 'AT_REDIGEE' },
-                { label: 'Validée', value: 'AT_VALIDEE' },
-                { label: 'En cours', value: 'EN_COURS' },
-                { label: 'Fin déclarée', value: 'DECLAREE_TERMINEE' },
-                { label: 'Réceptionnée', value: 'RECEPTIONEES' },
-                { label: 'Rejetée', value: 'REJETEE' },
-                { label: 'Annulée', value: 'ANNULEE' },
-              ].map((f) => (
-                <Chip
-                  key={f.value}
-                  label={f.label}
-                  onClick={() => setStatusFilter(f.value)}
-                  color={statusFilter === f.value ? 'primary' : 'default'}
-                  variant={statusFilter === f.value ? 'filled' : 'outlined'}
-                  sx={{ fontWeight: 600, cursor: 'pointer' }}
-                />
-              ))}
-            </Stack>
-          </Grid>
-        </Grid>
+            >
+              <Typography variant="caption" sx={{ color: '#5C6E67', pr: 1.5 }}>
+                résultats
+              </Typography>
+            </Badge>
+          </Box>
+        </Box>
       </Paper>
 
       {/* Main Table */}
@@ -238,7 +414,7 @@ export default function AutorisationListPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredAts.length === 0 ? (
+              {ats.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                     <Typography variant="body1" color="text.secondary">
@@ -247,7 +423,7 @@ export default function AutorisationListPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredAts.map((row) => (
+                ats.map((row: AutorisationTravail) => (
                   <TableRow key={row.id} hover>
                     <TableCell sx={{ fontWeight: 700, color: '#1F4D3E' }}>
                       {row.numero}
@@ -272,7 +448,7 @@ export default function AutorisationListPage() {
 
                     <TableCell>
                       <Typography variant="body2">
-                        {row.dateDebut ? new Date(row.dateDebut).toLocaleDateString('fr-FR') : '—'}
+                        {row.dateDebut ? new Date(row.dateDebut).toLocaleDateString('fr-FR') : '-'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {row.heureDebut || ''} - {row.heureFin || ''}
@@ -293,43 +469,16 @@ export default function AutorisationListPage() {
 
                     <TableCell align="right">
                       <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
-                        <Tooltip title="Consulter le document">
+                        {/* 1. Consulter le document (Disponible pour tous les rôles autorisés) */}
+                        <Tooltip title="Consulter l'AT">
                           <IconButton size="small" onClick={() => navigate(`/autorisations/${row.id}`)} color="primary">
                             <VisibilityIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
 
-                        {row.statut === 'SOUMISE' && (
-                          <Tooltip title="Viser cette AT (depuis votre interface dédiée)">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                const roles = user?.roles?.map((r: any) => r.nom) || [];
-                                const isCeee = roles.some((r: string) => r === 'CEEE' || r === 'CE');
-                                const isCeep = roles.some((r: string) => r === 'CEEP');
-                                const isHcee = roles.some((r: string) => ['HCEE', 'HCEP', 'HC', 'RESPONSABLE_OCP'].includes(r));
-                                const isHmee = roles.some((r: string) => ['HMEE', 'HMEP', 'HM'].includes(r));
-
-                                if (isHcee || isHmee) {
-                                  // HC et HM → page de validation officielle
-                                  navigate(`/visas/validation/${row.id}`);
-                                } else if (isCeee && !isCeep) {
-                                  // CEEE strict → SA propre page de signature (interface dédiée)
-                                  navigate(`/autorisations/${row.id}/signature-ceee`);
-                                } else {
-                                  // CEEP ou rôle générique CE → consulter l'AT
-                                  navigate(`/autorisations/${row.id}`);
-                                }
-                              }}
-                              sx={{ color: '#3C7A5C' }}
-                            >
-                              <CheckCircleIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-
-                        {row.statut === 'BROUILLON' && (
-                          <Tooltip title="Reprendre et compléter le brouillon">
+                        {/* 2. Reprendre le brouillon : STRICTEMENT CEEP émetteur / Admin (Étape 1) */}
+                        {row.statut === 'BROUILLON' && (isCeep || isAdmin) && (
+                          <Tooltip title="Reprendre et compléter le brouillon (CEEP)">
                             <IconButton
                               size="small"
                               onClick={() => navigate(`/autorisations/${row.id}/editer`)}
@@ -340,8 +489,30 @@ export default function AutorisationListPage() {
                           </Tooltip>
                         )}
 
-                        {(row.statut === 'VALIDEE' || row.statut === 'CLOTUREE' || row.statut === 'AT_REDIGEE' || row.statut === 'EN_COURS') && (
-                          <Tooltip title={row.exportPdfAutorise ? "Exporter le PDF officiel" : "PDF verrouillé : Signatures HCEP, HCEE, HMEP, HMEE requises"}>
+                        {/* 3. Viser / Signer : CEEE (Étape 3b) ou HC (3c/3d) ou HM (3e/3f) */}
+                        {(row.statut === 'SOUMISE' || row.statut === 'AT_REDIGEE') && (
+                          <Tooltip title={isCeeeOnly ? "Apposer le visa CEEE (Étape 3b)" : "Valider / Signer l'AT"}>
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                if (isHc || isHm) {
+                                  navigate(`/visas/validation/${row.id}`);
+                                } else if (isCeeeOnly) {
+                                  navigate(`/autorisations/${row.id}/signature-ceee`);
+                                } else {
+                                  navigate(`/autorisations/${row.id}`);
+                                }
+                              }}
+                              sx={{ color: '#3C7A5C' }}
+                            >
+                              <CheckCircleIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
+                        {/* 4. Télécharger le PDF officiel */}
+                        {(row.statut === 'VALIDEE' || row.statut === 'CLOTUREE' || row.statut === 'TRAVAUX_RECEPTIONES' || row.statut === 'INTERVENTION_EN_COURS') && (
+                          <Tooltip title={row.exportPdfAutorise ? "Exporter le PDF officiel" : "PDF officiel"}>
                             <span>
                               <IconButton
                                 size="small"
@@ -388,10 +559,10 @@ export default function AutorisationListPage() {
         />
       </TableContainer>
 
-      {/* Dialog Étape 0 — Classification de l'intervention (§6 & §7 Standard OCP) */}
+      {/* Dialog Étape 0 - Classification de l'intervention (§6 & §7 Standard OCP) */}
       <Dialog open={classifyOpen} onClose={() => setClassifyOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ fontWeight: 800, color: '#0E2A21' }}>
-          Étape 0 — Classification de l'Intervention (Standard S-HSE-SEC-31)
+          Étape 0 - Classification de l'Intervention (Standard S-HSE-SEC-31)
         </DialogTitle>
         <DialogContent dividers>
           <Alert severity="info" sx={{ mb: 3 }}>
@@ -438,7 +609,7 @@ export default function AutorisationListPage() {
               }}
             >
               <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2E624A' }}>
-                Niveau 1 — Intervention de Routine / Interne
+                Niveau 1 - Intervention de Routine / Interne
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Interventions de routine par ressources internes (conduite, maintenance d'atelier, nettoyage non industriel, DCI).
@@ -459,7 +630,7 @@ export default function AutorisationListPage() {
               }}
             >
               <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1F4D3E' }}>
-                Niveau 2 — Intervention à Risque Spécifique / Tiers
+                Niveau 2 - Intervention à Risque Spécifique / Tiers
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Toute intervention ne faisant pas partie du Niveau 1 OU intervention sollicitant un tiers.

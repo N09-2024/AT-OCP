@@ -18,11 +18,11 @@ import { Link } from 'react-router-dom';
 import { apiClient } from '../../../services/apiClient';
 
 /**
- * NOTE POLICES — à ajouter dans public/index.html (ou via @font-face) :
+ * NOTE POLICES - à ajouter dans public/index.html (ou via @font-face) :
  * <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
  */
 
-// --- Design tokens — palette verte, dégradés (identiques à LoginPage) ---
+// --- Design tokens - palette verte, dégradés (identiques à LoginPage) ---
 const DEEP = '#0E2A21';          // vert très profond, quasi noir (fond héro)
 const FOREST = '#1F4D3E';        // vert OCP, couleur de marque
 const MOSS = '#3C7A5C';          // vert intermédiaire, dégradés
@@ -163,7 +163,7 @@ export default function RegisterPage() {
               bgcolor: '#FFFFFF',
             }}
           >
-            {/* LEFT COLUMN: FORM — style souche de permis */}
+            {/* LEFT COLUMN: FORM - style souche de permis */}
             <Box
               sx={{
                 width: { xs: '100%', md: '48%' },
@@ -205,7 +205,7 @@ export default function RegisterPage() {
                   </Typography>
                   <Typography variant="body2" sx={{ color: SLATE, fontSize: '0.9rem', lineHeight: 1.6, mb: 4 }}>
                     Votre inscription a bien été transmise. Un administrateur doit valider votre compte avant
-                    votre première connexion — vous serez averti dès son activation.
+                    votre première connexion - vous serez averti dès son activation.
                   </Typography>
                   <Button
                     component={Link}
@@ -365,7 +365,7 @@ export default function RegisterPage() {
               )}
             </Box>
 
-            {/* RIGHT COLUMN: PANNEAU HÉRO — style plan technique, dégradé vert */}
+            {/* RIGHT COLUMN: PANNEAU HÉRO - style plan technique, dégradé vert */}
             <Box
               sx={{
                 width: { xs: '100%', md: '52%' },

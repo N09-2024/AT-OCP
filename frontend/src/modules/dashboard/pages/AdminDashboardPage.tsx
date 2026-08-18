@@ -55,7 +55,7 @@ export default function AdminDashboardPage() {
           <Chip label="Bypass guards métier" color="error" size="small" sx={{ fontWeight: 700, fontSize: 11 }} />
         </Stack>
         <Typography variant="body2" color="text.secondary">
-          {user?.prenom} {user?.nom} — Administrateur (Accès total sur les espaces et référentiels)
+          {user?.prenom} {user?.nom} - Administrateur (Accès total sur les espaces et référentiels)
         </Typography>
       </Box>
 

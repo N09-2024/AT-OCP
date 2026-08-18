@@ -178,7 +178,7 @@ public class ATContextService {
         }
     }
 
-    /** Classification Niveau 1/2 — HC (position P / HCEP) ou ADMIN */
+    /** Classification Niveau 1/2 - HC (position P / HCEP) ou ADMIN */
     public void requireClassifier() {
         if (isAdmin()) return;
         if (!isHC()) {
@@ -186,7 +186,7 @@ public class ATContextService {
         }
     }
 
-    /** Créer demande / AT — CE ou ADMIN */
+    /** Créer demande / AT - CE ou ADMIN */
     public void requireCreerDemande() {
         if (isAdmin()) return;
         if (!isCE()) {
@@ -194,21 +194,21 @@ public class ATContextService {
         }
     }
 
-    /** Visite chantier — CE (P exécute / E participe) ou HM/HC garant, ou ADMIN */
+    /** Visite chantier - CE (P exécute / E participe) ou HM/HC garant, ou ADMIN */
     public void requireVisite(String atId) {
         if (isAdmin()) return;
         if (isCE() || isHM() || isHC()) return;
         throw new BusinessException("Vous n'êtes pas habilité à intervenir sur la visite chantier.");
     }
 
-    /** Rédaction AT sur le terrain — CE position P (exécute) ou CE position E (participe) ou HC garant */
+    /** Rédaction AT sur le terrain - CE position P (exécute) ou CE position E (participe) ou HC garant */
     public void requireRedaction(String atId) {
         if (isAdmin()) return;
         if (isCE() || isHC()) return;
         throw new BusinessException("Vous n'êtes pas habilité à rédiger / participer à la rédaction de l'AT.");
     }
 
-    /** Signature / visa — CE, HM (P), HC, ADMIN */
+    /** Signature / visa - CE, HM (P), HC, ADMIN */
     public void requireSigner(String atId) {
         if (isAdmin()) return;
         if (isCE() || isHC()) return;
@@ -216,7 +216,7 @@ public class ATContextService {
         throw new BusinessException("Vous n'êtes pas habilité à signer / viser cette AT.");
     }
 
-    /** Démarrer intervention — CE position E (exécute) ; HM/HC garant */
+    /** Démarrer intervention - CE position E (exécute) ; HM/HC garant */
     public void requireDemarrer(String atId) {
         if (isAdmin()) return;
         if (isCE() && estExecutant(atId)) return;
@@ -227,7 +227,7 @@ public class ATContextService {
                         + "(HM/HC en garant).");
     }
 
-    /** Déclarer fin des travaux — CE position E */
+    /** Déclarer fin des travaux - CE position E */
     public void requireDeclarerFin(String atId) {
         if (isAdmin()) return;
         if (isCE() && estExecutant(atId)) return;
@@ -235,7 +235,7 @@ public class ATContextService {
                 "Seul le Chef d'Équipe Exécutant (CE en position E) peut déclarer la fin des travaux.");
     }
 
-    /** Réception — CE position P (exécute) ; CE position E participe */
+    /** Réception - CE position P (exécute) ; CE position E participe */
     public void requireReception(String atId) {
         if (isAdmin()) return;
         if (isCE() && (estProprietaire(atId) || estExecutant(atId))) return;
@@ -243,14 +243,14 @@ public class ATContextService {
                 "La réception est réservée aux Chefs d'Équipe (CE) du périmètre P ou E.");
     }
 
-    /** Reconduction / visa poste — CE (P exécute / E participe) ou HC garant */
+    /** Reconduction / visa poste - CE (P exécute / E participe) ou HC garant */
     public void requireReconduction(String atId) {
         if (isAdmin()) return;
         if (isCE() || isHC()) return;
         throw new BusinessException("Vous n'êtes pas habilité à reconduire / viser cette AT.");
     }
 
-    /** Archivage — HC (P garant / E exécute) ou ADMIN */
+    /** Archivage - HC (P garant / E exécute) ou ADMIN */
     public void requireArchiver() {
         if (isAdmin()) return;
         if (!isHC()) {

@@ -70,7 +70,7 @@ public class TestDataInitializer {
             new String[]{"MANAGE_DOCUMENTS",      "Gérer les documents source et visites (legacy)"},
 
             // ============================================================
-            // Nouvelles permissions granulaires — Standard S-HSE-SEC-31
+            // Nouvelles permissions granulaires - Standard S-HSE-SEC-31
             // ============================================================
             new String[]{"CLASSIFY_INTERVENTION", "Classifier une intervention Niveau 1/2 (HCEP Étape 0)"},
             new String[]{"CREATE_VISITE",         "Créer et réaliser une visite préalable du chantier (CEEP §8.2)"},

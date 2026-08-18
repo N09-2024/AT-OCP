@@ -1,5 +1,5 @@
 -- ============================================================
--- V22 — Création de la table system_settings
+-- V22 - Création de la table system_settings
 -- Requise par l'entité SystemSetting.java (hibernate validate)
 -- ============================================================
 

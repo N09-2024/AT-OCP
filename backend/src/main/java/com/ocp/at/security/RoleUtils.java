@@ -5,7 +5,7 @@ import com.ocp.at.entity.Utilisateur;
 public final class RoleUtils {
 
     private RoleUtils() {
-        // utilitaire — non instanciable
+        // utilitaire - non instanciable
     }
 
     /**
@@ -14,9 +14,9 @@ public final class RoleUtils {
      * Règles d'équivalence S-HSE-SEC-31 V28/V30 :
      * - Pattern "CE"   : matche CE, CEEP, CEEE, DEMANDEUR (Chef d'Équipe générique)
      * - Pattern "CEEP" : matche CEEP et CE uniquement (Chef d'Équipe Propriétaire)
-     *                    — NE MATCHE PAS CEEE (rôle exécutant distinct)
+     *                    - NE MATCHE PAS CEEE (rôle exécutant distinct)
      * - Pattern "CEEE" : matche CEEE et CE uniquement (Chef d'Équipe Exécutant)
-     *                    — NE MATCHE PAS CEEP (rôle propriétaire distinct)
+     *                    - NE MATCHE PAS CEEP (rôle propriétaire distinct)
      * - Pattern "HM"   : matche HM, HMEP, HMEE (Haute Maîtrise générique)
      * - Pattern "HC"   : matche HC, HCEP, HCEE, RESPONSABLE_OCP (Hors Cadre générique)
      * - Autres patterns : correspondance par sous-chaîne (nom.contains(pattern))
@@ -35,18 +35,18 @@ public final class RoleUtils {
                 return true;
             }
 
-            // Équivalences métier explicites — CEEP et CEEE sont des rôles DISTINCTS
+            // Équivalences métier explicites - CEEP et CEEE sont des rôles DISTINCTS
             switch (target) {
                 case "CE":
                     // CE générique : matche tout Chef d'Équipe (propriétaire ET exécutant)
                     return "CE".equals(nom) || "CEEP".equals(nom) || "CEEE".equals(nom) || "DEMANDEUR".equals(nom);
                 case "CEEP":
                     // Chef d'Équipe Propriétaire : matche CEEP et le rôle générique CE
-                    // NE matche PAS CEEE (rôle exécutant distinct — règle §8 OCP)
+                    // NE matche PAS CEEE (rôle exécutant distinct - règle §8 OCP)
                     return "CEEP".equals(nom) || "CE".equals(nom) || "DEMANDEUR".equals(nom);
                 case "CEEE":
                     // Chef d'Équipe Exécutant : matche CEEE et le rôle générique CE
-                    // NE matche PAS CEEP (rôle propriétaire distinct — règle §8 OCP)
+                    // NE matche PAS CEEP (rôle propriétaire distinct - règle §8 OCP)
                     return "CEEE".equals(nom) || "CE".equals(nom);
                 case "HM":
                     // Haute Maîtrise générique

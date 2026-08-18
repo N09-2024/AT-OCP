@@ -94,7 +94,7 @@ services:
     networks:
       - at-ocp-network
 
-  # AI Microservice (FastAPI — CrewAI / LangChain / Gemini)
+  # AI Microservice (FastAPI - CrewAI / LangChain / Gemini)
   ai-service:
     build: ./ai-service
     container_name: at-ocp-ai-service

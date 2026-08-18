@@ -1,5 +1,5 @@
 -- ============================================================
--- V23 — Insertion des référentiels officiels du Formulaire S-HSE-SEC-31-04
+-- V23 - Insertion des référentiels officiels du Formulaire S-HSE-SEC-31-04
 -- Source : Formulaire Autorisation de Travail (F-HSE-SEC-31-04 Edition 1.0)
 -- ============================================================
 

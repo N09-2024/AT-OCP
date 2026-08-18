@@ -14,4 +14,8 @@ public interface NotificationService {
     Page<NotificationResponse> getUserNotifications(String utilisateurId, Pageable pageable);
 
     void markAsRead(String notificationId);
+
+    void markAllAsRead(String utilisateurId);
+
+    long countUnread(String utilisateurId);
 }

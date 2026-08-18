@@ -168,7 +168,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
     }
 
     // ------------------------------------------------------------------ //
-    //  analyserPermisParIA — @Async
+    //  analyserPermisParIA - @Async
     // ------------------------------------------------------------------ //
 
     @Override
@@ -182,7 +182,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             return;
         }
         if (pd.getFilePath() == null) {
-            log.warn("PermisDocument {} sans filePath — analyse abandonnée", permisDocumentId);
+            log.warn("PermisDocument {} sans filePath - analyse abandonnée", permisDocumentId);
             pd.setStatut(StatutPermisDocument.REJETE);
             pd.setMotifRejet("Aucun fichier associé");
             permisDocumentRepository.save(pd);
@@ -246,7 +246,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
                     + "  \"motifRejet\": \"explication si estValide=false, sinon null\",\n"
                     + "  \"commentaire\": \"résumé 1-2 phrases\"\n"
                     + "}\n\n"
-                    + "Critères — estValide = false si l'un échoue :\n"
+                    + "Critères - estValide = false si l'un échoue :\n"
                     + "1. Le type du document correspond au type attendu : " + pd.getTypePermisAttendu() + "\n"
                     + "2. Le document est lisible et non tronqué\n"
                     + "3. Au moins une signature ou visa visible\n"
@@ -256,7 +256,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             // 3. Appel Gemini API (ou mock si clé absente)
             String jsonResponse;
             if (geminiApiKey == null || geminiApiKey.isBlank()) {
-                log.warn("GEMINI_API_KEY non configurée — fallback mock pour PermisDocument {}", permisDocumentId);
+                log.warn("GEMINI_API_KEY non configurée - fallback mock pour PermisDocument {}", permisDocumentId);
                 jsonResponse = buildMockResponse(pd.getTypePermisAttendu());
             } else {
                 jsonResponse = callGeminiVision(base64Image, imageMimeType, userPrompt);
@@ -313,7 +313,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
         PermisDocument pd = permisDocumentRepository.findById(permisDocumentId)
                 .orElseThrow(() -> new ResourceNotFoundException("PermisDocument introuvable : " + permisDocumentId));
         if (pd.getFilePath() == null) {
-            throw new BusinessException("Aucun fichier uploadé — impossible de relancer l analyse");
+            throw new BusinessException("Aucun fichier uploadé - impossible de relancer l analyse");
         }
         pd.setStatut(StatutPermisDocument.EN_ATTENTE_ANALYSE);
         pd.setMotifRejet(null);
@@ -372,7 +372,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
             JsonNode candidate = root.path("candidates").get(0);
             String finishReason = candidate.path("finishReason").asText("");
             if ("MAX_TOKENS".equals(finishReason)) {
-                log.warn("Réponse Gemini tronquée (MAX_TOKENS) — envisager d'augmenter maxOutputTokens. Body brut : {}",
+                log.warn("Réponse Gemini tronquée (MAX_TOKENS) - envisager d'augmenter maxOutputTokens. Body brut : {}",
                         response.getBody());
             }
             String text = candidate.path("content").path("parts").get(0).path("text").asText();
@@ -423,7 +423,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
         } catch (Exception e) {
             log.error("Erreur parsing réponse IA : {}. Texte brut reçu : {}", e.getMessage(), jsonText);
             pd.setStatut(StatutPermisDocument.REJETE);
-            pd.setMotifRejet("Réponse IA non parsable — veuillez re-soumettre le document");
+            pd.setMotifRejet("Réponse IA non parsable - veuillez re-soumettre le document");
             pd.setDateAnalyse(LocalDateTime.now());
         }
         permisDocumentRepository.save(pd);
@@ -431,7 +431,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
     }
 
     // ------------------------------------------------------------------ //
-    //  syncPermisStatutVerification — répercute le résultat de l'agent IA
+    //  syncPermisStatutVerification - répercute le résultat de l'agent IA
     //  (PermisDocument.statut) sur l'entité Permis.statutVerification,
     //  qui est la valeur réellement contrôlée par la garde de soumission
     //  (AutorisationTravailServiceImpl.soumettreAT). Sans cette synchro,
@@ -474,7 +474,7 @@ public class PermisDocumentServiceImpl implements PermisDocumentService {
                 + "  \"typeExtrait\": \"" + typeAttendu + " (simulation)\",\n"
                 + "  \"dateDebutExtrait\": null,\n"
                 + "  \"dateFinExtrait\": null,\n"
-                + "  \"responsablesExtraits\": \"Signataire simulé — Mode hors-ligne\",\n"
+                + "  \"responsablesExtraits\": \"Signataire simulé - Mode hors-ligne\",\n"
                 + "  \"estValide\": true,\n"
                 + "  \"scoreConfiance\": 0.85,\n"
                 + "  \"motifRejet\": null,\n"

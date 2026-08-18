@@ -152,7 +152,7 @@ export default function DemandeurDashboardPage() {
                         <TableCell>
                           <Chip label={at.statut} size="small" color={at.statut === 'VALIDEE' ? 'success' : at.statut === 'SOUMISE' ? 'warning' : at.statut === 'REJETEE' ? 'error' : 'default'} sx={{ fontWeight: 600 }} />
                         </TableCell>
-                        <TableCell>{at.echeance || '—'}</TableCell>
+                        <TableCell>{at.echeance || '-'}</TableCell>
                         <TableCell>
                           <IconButton size="small" onClick={() => navigate(`/autorisations/${at.id}`)}>
                             <EllipsisVerticalIcon width={18} />

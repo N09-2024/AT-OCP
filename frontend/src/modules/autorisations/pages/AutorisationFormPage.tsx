@@ -126,6 +126,9 @@ export default function AutorisationFormPage() {
         servicesIntervenants: data.servicesIntervenants || '',
         serviceIntervenantId: data.serviceIntervenantId || null,
         zoneProprietaireId: data.zoneProprietaireId || data.siteId || null,
+        zoneProprietaireNom: data.site || data.zoneProprietaireNom || null,
+        zoneExecutanteId: data.zoneExecutanteId || data.lieuId || null,
+        zoneExecutanteNom: data.zoneExecutante || data.zoneExecutanteNom || data.lieu || null,
         entreprisesIntervenantes: data.entreprisesIntervenantes || '',
         mesuresSecuriteExecutant: data.sectionF || '',
         risquesIds: (data.risquesIds || []).map(String),
@@ -187,7 +190,7 @@ export default function AutorisationFormPage() {
       });
       if (!ctrl.complet && ctrl.alertes?.length) {
         const ok = window.confirm(
-          'Contrôle IA — alertes :\n\n' +
+          'Contrôle IA - alertes :\n\n' +
           ctrl.alertes.join('\n') +
           '\n\nSoumettre quand même ?'
         );
@@ -243,7 +246,7 @@ export default function AutorisationFormPage() {
     }
     setLoading(true);
     try {
-      await visaApi.createAndSignVisa(atId, signatureBlob, 'Visa CEEE — signature exécutant', 2);
+      await visaApi.createAndSignVisa(atId, signatureBlob, 'Visa CEEE - signature exécutant', 2);
       setStatusMsg('Visa CEEE enregistré avec succès.');
       setTimeout(() => navigate(`/autorisations/${atId}`), 1500);
     } catch (err: any) {
@@ -253,6 +256,13 @@ export default function AutorisationFormPage() {
       setLoading(false);
     }
   };
+
+  const isSubmitted = Boolean(
+    atStatut &&
+    atStatut !== 'BROUILLON' &&
+    atStatut !== 'DEMANDE_CREEE' &&
+    atStatut !== 'CLASSIFICATION_EFFECTUEE'
+  );
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -281,7 +291,7 @@ export default function AutorisationFormPage() {
                   {formInteractiveData?.numero || (draftId ? 'Édition AT' : 'Nouvelle Autorisation de Travail')}
                 </Typography>
                 <Chip label="F-HSE-SEC-31-04" size="small" sx={{ bgcolor: '#1F4D3E', color: 'white', fontWeight: 700 }} />
-                {atStatut && <Chip label={atStatut} color="warning" size="small" sx={{ fontWeight: 700 }} />}
+                {atStatut && <Chip label={atStatut} color={isSubmitted ? "success" : "warning"} size="small" sx={{ fontWeight: 700 }} />}
               </Stack>
               <Typography variant="body2" sx={{ color: '#5C6E67', mt: 0.5 }}>
                 Standard OCP S-HSE-SEC-31 &mdash; Formulaire d'Autorisation de Travail et Permis
@@ -290,7 +300,7 @@ export default function AutorisationFormPage() {
           </Stack>
 
           <Stack direction="row" spacing={1.5}>
-            {!modeViser && (
+            {!modeViser && !isSubmitted && (
               <Button
                 variant="outlined"
                 startIcon={<SaveIcon />}
@@ -301,12 +311,6 @@ export default function AutorisationFormPage() {
                 Enregistrer Brouillon
               </Button>
             )}
-
-            {/* Bouton de soumission unique : voir "Signer & Transmettre" dans le formulaire
-                ci-dessous (handleSignerEtTransmettre), qui vérifie la Visite Préalable §8.2,
-                enrichit GPS/photo/commentaire et attache la signature CEEP avant transmission.
-                L'ancien bouton ici dupliquait la soumission en sautant ces étapes
-                (transmission "vide"/sans signature) — supprimé pour éviter toute confusion. */}
           </Stack>
         </Stack>
       </Paper>
@@ -324,22 +328,31 @@ export default function AutorisationFormPage() {
         </Alert>
       )}
 
+      {/* BANNIÈRE DE VERROUILLAGE APRÈS SOUMISSION */}
+      {isSubmitted && (
+        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2, fontWeight: 700 }}>
+          🔒 Cette Autorisation de Travail a été signée et transmise par le CEEP (Statut : {atStatut}). Conformément au Standard OCP S-HSE-SEC-31 (§8), le formulaire est définitivement verrouillé et ne peut plus être modifié.
+        </Alert>
+      )}
+
       {/* REGLEMENTARY INFO */}
-      <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-        <strong>Standard OCP S-HSE-SEC-31 (§2 & §8.1) :</strong> Le CEEP remplit l'AT (Sections A à G), appose sa signature et transmet l'AT au CEEE du service exécutant. La zone propriétaire et la zone exécutante doivent appartenir à des services différents.
-      </Alert>
+      {!isSubmitted && (
+        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+          <strong>Standard OCP S-HSE-SEC-31 (§2 & §8.1) :</strong> Le CEEP remplit l'AT (Sections A à G), appose sa signature et transmet l'AT au CEEE du service exécutant. La zone propriétaire et la zone exécutante doivent appartenir à des services différents.
+        </Alert>
+      )}
 
       {/* MAIN FORMULAIRE OCP INTERACTIVE */}
       <Paper elevation={0} sx={{ p: 1, borderRadius: 3, border: '1px solid #D6E3DC' }}>
         <FormulaireOCPInteractive
           key={atId || draftId || 'new'}
           initialData={formInteractiveData}
-          readOnly={false}
+          readOnly={isSubmitted}
           signMode={signMode}
           onChange={(data) => setFormInteractiveData(data)}
-          onSave={modeViser ? undefined : handleSaveDraft}
-          onAutoSave={modeViser ? undefined : handleSaveDraft}
-          onSubmitAT={modeViser ? undefined : handleSubmitAT}
+          onSave={modeViser || isSubmitted ? undefined : handleSaveDraft}
+          onAutoSave={modeViser || isSubmitted ? undefined : handleSaveDraft}
+          onSubmitAT={modeViser || isSubmitted ? undefined : handleSubmitAT}
           onVisaCeee={modeViser ? handleVisaCeee : undefined}
           loading={loading}
         />

@@ -1,4 +1,4 @@
-# OCP AT System — Système de Gestion des Autorisations de Travail
+# OCP AT System - Système de Gestion des Autorisations de Travail
 
 ![Java](https://img.shields.io/badge/Java-17-blue?logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen?logo=springboot)
@@ -9,7 +9,7 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 > Application industrielle complète de gestion des Autorisations de Travail (AT) développée pour **OCP Group**.  
-> Backend Spring Boot **✅ terminé** — Frontend React **🚧 en développement actif**.
+> Backend Spring Boot **✅ terminé** - Frontend React **🚧 en développement actif**.
 
 ---
 
@@ -271,7 +271,7 @@ curl http://localhost:8080/api/autorisations-travail \
 
 ---
 
-## 👥 Rôles & Workflow — Standard OCP S-HSE-SEC-31 v1.0
+## 👥 Rôles & Workflow - Standard OCP S-HSE-SEC-31 v1.0
 
 Le système implémente les 8 rôles opérationnels et les 9 étapes du workflow du **Standard OCP S-HSE-SEC-31 v1.0** :
 
@@ -350,10 +350,10 @@ Le frontend respecte la **charte graphique OCP** :
 
 ## 📚 Documentation
 
-- [docs/API.md](docs/API.md) — Documentation des endpoints REST
-- [DOCKER.md](DOCKER.md) — Guide de déploiement Docker
-- [AUDIT_REPORT.md](AUDIT_REPORT.md) — Rapport d'audit technique
-- [CHANGELOG.md](CHANGELOG.md) — Historique des versions
+- [docs/API.md](docs/API.md) - Documentation des endpoints REST
+- [DOCKER.md](DOCKER.md) - Guide de déploiement Docker
+- [AUDIT_REPORT.md](AUDIT_REPORT.md) - Rapport d'audit technique
+- [CHANGELOG.md](CHANGELOG.md) - Historique des versions
 - Swagger UI : `http://localhost:8080/swagger-ui.html`
 
 ---

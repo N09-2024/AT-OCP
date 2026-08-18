@@ -26,7 +26,7 @@ import { AuthService } from '../../../services/AuthService';
 import { OCP, OCP_FONTS, OCP_GRADIENTS } from '../../../theme/tokens';
 
 /**
- * NOTE POLICES — à ajouter dans public/index.html (ou via @font-face) :
+ * NOTE POLICES - à ajouter dans public/index.html (ou via @font-face) :
  * <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
  */
 
@@ -131,7 +131,7 @@ export default function LoginPage() {
               bgcolor: '#FFFFFF',
             }}
           >
-            {/* LEFT COLUMN: LOGIN FORM — style souche de permis */}
+            {/* LEFT COLUMN: LOGIN FORM - style souche de permis */}
             <Box
               sx={{
                 width: { xs: '100%', md: '42%' },
@@ -301,7 +301,7 @@ export default function LoginPage() {
               </Box>
             </Box>
 
-            {/* RIGHT COLUMN: PANNEAU HÉRO — style plan technique, dégradé vert */}
+            {/* RIGHT COLUMN: PANNEAU HÉRO - style plan technique, dégradé vert */}
             <Box
               sx={{
                 width: { xs: '100%', md: '58%' },

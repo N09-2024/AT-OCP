@@ -134,9 +134,9 @@ export const MaitriseDashboard: React.FC = () => {
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 0.5, alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {user?.prenom} {user?.nom} — {user?.service?.nomService || 'Service HM'}
+              {user?.prenom} {user?.nom} - {user?.service?.nomService || 'Service HM'}
             </Typography>
-            <Chip size="small" label="Niveau 3 — Haute Maîtrise" color="secondary" variant="outlined" sx={{ fontWeight: 700 }} />
+            <Chip size="small" label="Niveau 3 - Haute Maîtrise" color="secondary" variant="outlined" sx={{ fontWeight: 700 }} />
           </Stack>
         </Box>
       </Stack>
@@ -145,9 +145,9 @@ export const MaitriseDashboard: React.FC = () => {
         <strong>Standard OCP S-HSE-SEC-31 (§5, §7 & §8.6) :</strong> HMEP (Propriétaire) <strong>exécute l'archivage (§8.6)</strong> et agit comme garant sur les visites. HMEE (Exécutant) agit comme garant sur le démarrage.
       </Alert>
 
-      {renderSection('Position Propriétaire (HMEP — Exécute Archivage §8.6)', '#3C7A5C', cardsProprietaire)}
+      {renderSection('Position Propriétaire (HMEP - Exécute Archivage §8.6)', '#3C7A5C', cardsProprietaire)}
       <Divider sx={{ my: 3 }} />
-      {renderSection('Position Exécutante (HMEE — Garant Démarrage)', '#3C7A5C', cardsExecutant)}
+      {renderSection('Position Exécutante (HMEE - Garant Démarrage)', '#3C7A5C', cardsExecutant)}
     </Box>
   );
 };

@@ -52,7 +52,7 @@ public class VisitePrealable {
     private boolean effectuee = false;
 
     // =========================================================================
-    // §8.2 — Contenu obligatoire de la visite préalable
+    // §8.2 - Contenu obligatoire de la visite préalable
     // =========================================================================
 
     /**
@@ -64,34 +64,34 @@ public class VisitePrealable {
 
     /**
      * Permis requis pour l'intervention (ex: permis de feu, espace confiné, fouille, hauteur, consignation).
-     * Format JSON ou liste délimitée — alimenté dans TypePermis.
+     * Format JSON ou liste délimitée - alimenté dans TypePermis.
      */
     @Column(name = "permis_requis", columnDefinition = "TEXT")
     private String permisRequis;
 
     /**
-     * Référence du plan de consignation (§8.2 — obligatoire si équipements à consigner).
-     * Ex: "PC-2026-0042 — Chaudière Hall B".
+     * Référence du plan de consignation (§8.2 - obligatoire si équipements à consigner).
+     * Ex: "PC-2026-0042 - Chaudière Hall B".
      */
     @Column(name = "reference_plan_consignation", length = 255)
     private String referencePlanConsignation;
 
     /**
      * Décision issue de la visite : les actions de prévention sont-elles suffisantes
-     * pour démarrer l'intervention ? (§8.2 — point de décision du logigramme)
+     * pour démarrer l'intervention ? (§8.2 - point de décision du logigramme)
      */
     @Column(name = "actions_prevention_suffisantes")
     private Boolean actionsPreventionSuffisantes;
 
     /**
-     * Personne ayant effectué la visite de terrain (CEEP — Exécute, position P).
+     * Personne ayant effectué la visite de terrain (CEEP - Exécute, position P).
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "visiteur_id")
     private Utilisateur visiteur;
 
     /**
-     * Participant CEEE à la visite (position E — Participe selon §8.2).
+     * Participant CEEE à la visite (position E - Participe selon §8.2).
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ceee_participant_id")

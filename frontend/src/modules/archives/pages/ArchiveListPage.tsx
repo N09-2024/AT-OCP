@@ -124,7 +124,7 @@ export default function ArchiveListPage() {
                     <TableCell>v{row.version || 1}</TableCell>
 
                     <TableCell>
-                      {row.dateArchivage ? new Date(row.dateArchivage).toLocaleDateString('fr-FR') : '—'}
+                      {row.dateArchivage ? new Date(row.dateArchivage).toLocaleDateString('fr-FR') : '-'}
                     </TableCell>
 
                     <TableCell>

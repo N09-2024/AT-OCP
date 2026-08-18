@@ -1,4 +1,4 @@
--- V30 : débloquer création AT — s'assurer que CE a CREATE_AT
+-- V30 : débloquer création AT - s'assurer que CE a CREATE_AT
 -- et que les utilisateurs encore en CEEP/CEEE reçoivent aussi le rôle CE
 
 INSERT INTO permissions (id, nom, description)

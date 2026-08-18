@@ -109,7 +109,7 @@ export default function DocumentsListPage() {
                       <Chip label={row.statut || 'N/A'} size="small" color="primary" variant="outlined" />
                     </TableCell>
                     <TableCell>
-                      {row.dateCreation ? new Date(row.dateCreation).toLocaleDateString('fr-FR') : '—'}
+                      {row.dateCreation ? new Date(row.dateCreation).toLocaleDateString('fr-FR') : '-'}
                     </TableCell>
                     <TableCell align="right">
                       <Button

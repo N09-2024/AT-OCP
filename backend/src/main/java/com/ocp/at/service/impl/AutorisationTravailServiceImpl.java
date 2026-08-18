@@ -24,10 +24,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.criteria.Predicate;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -175,36 +179,142 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     @Override
     @Transactional(readOnly = true)
     public Page<AutorisationTravailResponse> findAll(Pageable pageable) {
+        return findAll(null, null, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AutorisationTravailResponse> findAll(String statut, String search, Pageable pageable) {
         Utilisateur currentUser = getCurrentUser();
 
-        // ADMIN et HM : vue globale complète
-        if (RoleUtils.userHasRolePattern(currentUser, "ADMIN")
-                || RoleUtils.userHasRolePattern(currentUser, "HM")) {
-            return atRepository.findAll(pageable).map(this::mapToResponse);
-        }
+        Specification<AutorisationTravail> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
 
-        // CE / CEEP / CEEE (Chef d'Équipe) : voit ses propres AT (propriétaire CEEP) + AT où son service est exécutant (CEEE)
-        if (RoleUtils.userHasRolePattern(currentUser, "CE")) {
-            String zoneId = (currentUser.getService() != null && currentUser.getService().getZone() != null)
-                    ? currentUser.getService().getZone().getId() : "";
-            String serviceNom = currentUser.getService() != null ? currentUser.getService().getNomService() : "";
-            return atRepository.findForChefEquipe(currentUser.getId(), zoneId, serviceNom, pageable)
-                    .map(this::mapToResponse);
-        }
+            // 1. Filtrage STRICT de base selon le rôle de l'utilisateur (Standard OCP S-HSE-SEC-31)
+            boolean isAdmin = RoleUtils.userHasRolePattern(currentUser, "ADMIN");
 
-        // HC (HCEP/HCEE) : AT liées à leur service (propriétaire ou exécutant)
-        if (RoleUtils.userHasRolePattern(currentUser, "HC")) {
-            if (currentUser.getService() != null) {
-                String zoneId = currentUser.getService().getZone() != null ? currentUser.getService().getZone().getId() : "";
-                String serviceNom = currentUser.getService().getNomService();
-                return atRepository.findByHcByZoneAndService(zoneId, serviceNom, pageable)
-                        .map(this::mapToResponse);
+            if (!isAdmin) {
+                String zoneId = (currentUser.getService() != null && currentUser.getService().getZone() != null)
+                        ? currentUser.getService().getZone().getId() : "";
+                String serviceNom = currentUser.getService() != null ? currentUser.getService().getNomService() : "";
+
+                boolean isCeep = RoleUtils.isCeep(currentUser);
+                boolean isCeee = RoleUtils.isCeee(currentUser);
+                boolean isHcep = RoleUtils.userHasRolePattern(currentUser, "HCEP");
+                boolean isHcee = RoleUtils.userHasRolePattern(currentUser, "HCEE");
+                boolean isHmep = RoleUtils.userHasRolePattern(currentUser, "HMEP");
+                boolean isHmee = RoleUtils.userHasRolePattern(currentUser, "HMEE");
+                boolean isHc = RoleUtils.isHc(currentUser);
+                boolean isHm = RoleUtils.isHm(currentUser);
+
+                // Règle fondamentale OCP : AUCUN utilisateur autre que le CEEP émetteur (et ADMIN)
+                // ne peut voir les brouillons en cours de rédaction
+                Predicate notBrouillon = cb.notEqual(root.get("statut"), StatutAT.BROUILLON);
+
+                if (isCeep && !isCeee && !isHc && !isHm) {
+                    // CEEP pur : uniquement les AT créées par lui (ses brouillons + ses AT soumises)
+                    predicates.add(cb.equal(root.get("proprietaireBrouillon").get("id"), currentUser.getId()));
+                } else if (isCeee && !isCeep && !isHc && !isHm) {
+                    // CEEE pur (Équipe Exécutante) :
+                    // Voit uniquement les ATs transmises (hors brouillon) adressées à son service/zone ou où il a signé
+                    if (!zoneId.isBlank() || !serviceNom.isBlank()) {
+                        Predicate zoneMatch = cb.equal(root.get("zoneExecutante").get("id"), zoneId);
+                        Predicate serviceMatch = cb.like(cb.lower(root.get("servicesIntervenants")), "%" + serviceNom.toLowerCase() + "%");
+                        predicates.add(cb.and(notBrouillon, cb.or(zoneMatch, serviceMatch)));
+                    } else {
+                        predicates.add(notBrouillon);
+                    }
+                } else if (isHcep || isHcee || isHc) {
+                    // Hors Cadre (HCEP / HCEE) :
+                    // Voit les ATs transmises (hors brouillon) liées à son périmètre propriétaire ou exécutant
+                    if (!zoneId.isBlank() || !serviceNom.isBlank()) {
+                        Predicate zonePropMatch = cb.equal(root.get("zoneProprietaire").get("id"), zoneId);
+                        Predicate zoneExecMatch = cb.equal(root.get("zoneExecutante").get("id"), zoneId);
+                        Predicate serviceMatch = cb.like(cb.lower(root.get("servicesIntervenants")), "%" + serviceNom.toLowerCase() + "%");
+                        predicates.add(cb.and(notBrouillon, cb.or(zonePropMatch, zoneExecMatch, serviceMatch)));
+                    } else {
+                        predicates.add(notBrouillon);
+                    }
+                } else if (isHmep || isHmee || isHm) {
+                    // Haute Maîtrise (HMEP / HMEE) :
+                    // Voit toutes les ATs transmises (hors brouillon)
+                    if (!zoneId.isBlank() || !serviceNom.isBlank()) {
+                        Predicate zonePropMatch = cb.equal(root.get("zoneProprietaire").get("id"), zoneId);
+                        Predicate zoneExecMatch = cb.equal(root.get("zoneExecutante").get("id"), zoneId);
+                        Predicate serviceMatch = cb.like(cb.lower(root.get("servicesIntervenants")), "%" + serviceNom.toLowerCase() + "%");
+                        predicates.add(cb.and(notBrouillon, cb.or(zonePropMatch, zoneExecMatch, serviceMatch)));
+                    } else {
+                        predicates.add(notBrouillon);
+                    }
+                } else if (isCeep && isCeee) {
+                    // Chef d'Équipe polyvalent (CE) :
+                    // Voit ses propres ATs (avec ses brouillons) OU les ATs transmises adressées à son service
+                    Predicate isOwner = cb.equal(root.get("proprietaireBrouillon").get("id"), currentUser.getId());
+                    if (!zoneId.isBlank() || !serviceNom.isBlank()) {
+                        Predicate zoneMatch = cb.equal(root.get("zoneExecutante").get("id"), zoneId);
+                        Predicate serviceMatch = cb.like(cb.lower(root.get("servicesIntervenants")), "%" + serviceNom.toLowerCase() + "%");
+                        predicates.add(cb.or(isOwner, cb.and(notBrouillon, cb.or(zoneMatch, serviceMatch))));
+                    } else {
+                        predicates.add(cb.or(isOwner, notBrouillon));
+                    }
+                } else {
+                    // Défaut sécurisé : uniquement ses créations
+                    predicates.add(cb.equal(root.get("proprietaireBrouillon").get("id"), currentUser.getId()));
+                }
             }
-            return atRepository.findByCeep(currentUser.getId(), pageable).map(this::mapToResponse);
-        }
 
-        // Défaut sécurisé : les AT créées par l'utilisateur
-        return atRepository.findByCeep(currentUser.getId(), pageable).map(this::mapToResponse);
+            // 2. Filtre par statut (avec support des statuts et alias OCP)
+            if (statut != null && !statut.isBlank() && !"TOUS".equalsIgnoreCase(statut)) {
+                String cleanStatut = statut.trim().toUpperCase();
+                List<StatutAT> matchingStatuts = new ArrayList<>();
+                try {
+                    matchingStatuts.add(StatutAT.valueOf(cleanStatut));
+                } catch (IllegalArgumentException ignored) {}
+
+                if ("SOUMISE".equals(cleanStatut)) {
+                    if (!matchingStatuts.contains(StatutAT.AT_REDIGEE)) matchingStatuts.add(StatutAT.AT_REDIGEE);
+                } else if ("VALIDEE".equals(cleanStatut)) {
+                    if (!matchingStatuts.contains(StatutAT.AT_VALIDEE)) matchingStatuts.add(StatutAT.AT_VALIDEE);
+                } else if ("INTERVENTION_EN_COURS".equals(cleanStatut) || "EN_COURS".equals(cleanStatut)) {
+                    if (!matchingStatuts.contains(StatutAT.EN_COURS)) matchingStatuts.add(StatutAT.EN_COURS);
+                    if (!matchingStatuts.contains(StatutAT.INTERVENTION_EN_COURS)) matchingStatuts.add(StatutAT.INTERVENTION_EN_COURS);
+                } else if ("FIN_TRAVAUX_DECLAREE".equals(cleanStatut) || "DECLAREE_TERMINEE".equals(cleanStatut)) {
+                    if (!matchingStatuts.contains(StatutAT.FIN_TRAVAUX_DECLAREE)) matchingStatuts.add(StatutAT.FIN_TRAVAUX_DECLAREE);
+                    if (!matchingStatuts.contains(StatutAT.DECLAREE_TERMINEE)) matchingStatuts.add(StatutAT.DECLAREE_TERMINEE);
+                } else if ("CLOTUREE".equals(cleanStatut) || "TRAVAUX_RECEPTIONES".equals(cleanStatut) || "RECEPTIONEES".equals(cleanStatut)) {
+                    if (!matchingStatuts.contains(StatutAT.CLOTUREE)) matchingStatuts.add(StatutAT.CLOTUREE);
+                    if (!matchingStatuts.contains(StatutAT.TRAVAUX_RECEPTIONES)) matchingStatuts.add(StatutAT.TRAVAUX_RECEPTIONES);
+                    if (!matchingStatuts.contains(StatutAT.RECEPTIONEES)) matchingStatuts.add(StatutAT.RECEPTIONEES);
+                } else if ("BROUILLON".equals(cleanStatut) || "DEMANDE_CREEE".equals(cleanStatut)) {
+                    if (!matchingStatuts.contains(StatutAT.BROUILLON)) matchingStatuts.add(StatutAT.BROUILLON);
+                    if (!matchingStatuts.contains(StatutAT.DEMANDE_CREEE)) matchingStatuts.add(StatutAT.DEMANDE_CREEE);
+                }
+
+                if (!matchingStatuts.isEmpty()) {
+                    predicates.add(cb.or(
+                        root.get("statut").in(matchingStatuts),
+                        root.get("statutWorkflow").in(matchingStatuts)
+                    ));
+                }
+            }
+
+            // 3. Recherche textuelle (N° AT, objet, description, document source, intervenants)
+            if (search != null && !search.isBlank()) {
+                String searchPattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("numero")), searchPattern),
+                    cb.like(cb.lower(root.get("objet")), searchPattern),
+                    cb.like(cb.lower(root.get("descriptionTravaux")), searchPattern),
+                    cb.like(cb.lower(root.get("numeroDocumentSource")), searchPattern),
+                    cb.like(cb.lower(root.get("servicesIntervenants")), searchPattern),
+                    cb.like(cb.lower(root.get("entreprisesIntervenantes")), searchPattern)
+                ));
+            }
+
+            return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return atRepository.findAll(spec, pageable).map(this::mapToResponse);
     }
 
     @Override
@@ -232,26 +342,23 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             log.warn("autoSave AT {} par {} alors que verrou tenu par {}",
                     id, currentUser.getEmail(), at.getProprietaireBrouillon().getEmail());
         }
-        // Statut : autoriser édition uniquement en phase initiale (BROUILLON / DEMANDE_CREEE)
+        // Statut : autoriser l'édition UNIQUEMENT en phase initiale (BROUILLON / DEMANDE_CREEE / CLASSIFICATION_EFFECTUEE).
+        // Dès que l'AT est signée et soumise par le CEEP, AUCUNE personne ne peut la modifier (même le CEEP).
         StatutAT st = at.getStatut();
         StatutAT stWf = at.getStatutWorkflow();
         if (st == StatutAT.SOUMISE || st == StatutAT.VALIDEE || st == StatutAT.CLOTUREE || st == StatutAT.ANNULEE
                 || st == StatutAT.ARCHIVEE || stWf == StatutAT.AT_REDIGEE || stWf == StatutAT.VISITE_REALISEE) {
-            if (!RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
-                throw new BusinessException("Cette Autorisation de Travail a déjà été transmise et ne peut plus être modifiée.");
-            }
+            throw new BusinessException("Cette Autorisation de Travail a déjà été signée et transmise. Le formulaire est verrouillé et ne peut plus être modifié.");
         }
 
-        // Seul le CEEP propriétaire du brouillon (ou un ADMIN) peut modifier le contenu de l'AT.
+        // Seul le CEEP propriétaire du brouillon peut modifier le contenu initial de l'AT.
         // Le CEEE ne modifie jamais le formulaire : il ne fait qu'accuser réception puis signer.
-        if (!RoleUtils.userHasRolePattern(currentUser, "ADMIN")) {
-            boolean estCeep = RoleUtils.userHasRolePattern(currentUser, "CEEP");
-            boolean estProprietaire = at.getProprietaireBrouillon() == null
-                    || at.getProprietaireBrouillon().getId().equals(currentUser.getId());
-            if (!estCeep || !estProprietaire) {
-                throw new com.ocp.at.exception.ForbiddenException(
-                        "Seul le CEEP rédacteur de cette AT (ou un administrateur) peut la modifier.");
-            }
+        boolean estCeep = RoleUtils.userHasRolePattern(currentUser, "CEEP") || RoleUtils.userHasRolePattern(currentUser, "ADMIN");
+        boolean estProprietaire = at.getProprietaireBrouillon() == null
+                || at.getProprietaireBrouillon().getId().equals(currentUser.getId());
+        if (!estCeep || !estProprietaire) {
+            throw new com.ocp.at.exception.ForbiddenException(
+                    "Seul le CEEP rédacteur de cette AT peut modifier ce formulaire.");
         }
 
         at.setObjet(request.getObjet());
@@ -266,29 +373,42 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setMesuresSecuriteExecutant(request.getMesuresSecuriteExecutant());
 
         // Document Source (DI / OT / BT)
-        if (request.getTypeDocumentSource() != null && request.getDocumentSourceId() != null) {
+        if (request.getTypeDocumentSource() != null && !request.getTypeDocumentSource().isBlank()) {
             try {
-                String docType = request.getTypeDocumentSource();
-                String docId = request.getDocumentSourceId();
-                if ("DI".equalsIgnoreCase(docType)) {
+                String docType = request.getTypeDocumentSource().trim().toUpperCase();
+                if ("DI".equals(docType)) {
                     at.setTypeDocumentSource(TypeDocumentSource.DI);
-                    diRepository.findById(docId).ifPresent(at::setDemandeIntervention);
-                } else if ("OT".equalsIgnoreCase(docType)) {
+                } else if ("OT".equals(docType)) {
                     at.setTypeDocumentSource(TypeDocumentSource.OT);
-                    otRepository.findById(docId).ifPresent(at::setOrdreTravail);
-                } else if ("BT".equalsIgnoreCase(docType)) {
+                } else if ("BT".equals(docType)) {
                     at.setTypeDocumentSource(TypeDocumentSource.BT);
-                    btRepository.findById(docId).ifPresent(at::setBonTravail);
                 }
-                if (request.getDocumentSourceNumero() != null) {
-                    at.setNumeroDocumentSource(request.getDocumentSourceNumero());
+
+                String numDoc = request.getDocumentSourceNumero();
+                if (numDoc != null && !numDoc.isBlank()) {
+                    at.setNumeroDocumentSource(numDoc.trim());
+                } else if (at.getNumeroDocumentSource() == null || at.getNumeroDocumentSource().isBlank()) {
+                    int randomNum = 1000 + (int)(Math.random() * 9000);
+                    int year = LocalDate.now().getYear();
+                    at.setNumeroDocumentSource(docType + "-" + year + "-" + randomNum);
+                }
+
+                if (request.getDocumentSourceId() != null && !request.getDocumentSourceId().isBlank()) {
+                    String docId = request.getDocumentSourceId();
+                    if ("DI".equals(docType)) {
+                        diRepository.findById(docId).ifPresent(at::setDemandeIntervention);
+                    } else if ("OT".equals(docType)) {
+                        otRepository.findById(docId).ifPresent(at::setOrdreTravail);
+                    } else if ("BT".equals(docType)) {
+                        btRepository.findById(docId).ifPresent(at::setBonTravail);
+                    }
                 }
             } catch (Exception e) {
                 log.warn("autoSave document source error: {}", e.getMessage());
             }
         }
 
-        // Visite Préalable (§8.2) — mise à jour ou création sur le document source
+        // Visite Préalable (§8.2) - mise à jour ou création sur le document source
         if (request.getLatitude() != null || request.getLongitude() != null || request.getVisiteCommentaire() != null || Boolean.TRUE.equals(request.getVisiteEffectuee())) {
             try {
                 VisitePrealable vp = null;
@@ -495,7 +615,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         StatutAT ancienStatut = statutEffectif(at);
         verifierServicesDifferents(at, null);
 
-        // Dates : avertissement souple — si absentes, on ne bloque plus systématiquement
+        // Dates : avertissement souple - si absentes, on ne bloque plus systématiquement
         // (le formulaire papier peut être complété terrain §8.3)
         if (at.getDateDebut() == null && at.getDateFin() == null
                 && at.getHeureDebut() == null && at.getHeureFin() == null) {
@@ -546,9 +666,9 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                     && ancienStatut != StatutAT.AT_REDIGEE) {
                 throw be;
             }
-            log.warn("Transition SOUMISSION non listée pour {} — forcée vers AT_REDIGEE", ancienStatut);
+            log.warn("Transition SOUMISSION non listée pour {} - forcée vers AT_REDIGEE", ancienStatut);
         }
-        // §8.3 — AT_REDIGEE (legacy statut = SOUMISE)
+        // §8.3 - AT_REDIGEE (legacy statut = SOUMISE)
         at.setStatut(StatutAT.SOUMISE);
         at.setStatutWorkflow(nouvelEtat);
         at.setEtatVerrou(EtatVerrou.LIBRE);
@@ -556,9 +676,9 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         
         AutorisationTravail savedAt = atRepository.save(at);
         
-        enregistrerHistorique(savedAt, TypeActionAT.SOUMISSION, ancienStatut, nouvelEtat, "Soumission AT — workflow standard (visite / rédaction)");
+        enregistrerHistorique(savedAt, TypeActionAT.SOUMISSION, ancienStatut, nouvelEtat, "Soumission AT - workflow standard (visite / rédaction)");
 
-        // Notifications best-effort — parcours standard CE → HM → HC
+        // Notifications best-effort - parcours standard CE → HM → HC
         String lienAt = "/autorisations/" + savedAt.getId();
         String lienViser = "/autorisations/" + savedAt.getId() + "/editer?mode=viser";
         String lienValider = "/visas/validation/" + savedAt.getId();
@@ -584,7 +704,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                 }
                 notificationService.createNotification(
                         ceee,
-                        "Nouvelle intervention à signer — AT " + savedAt.getNumero(),
+                        "Nouvelle intervention à signer - AT " + savedAt.getNumero(),
                         String.format(
                             "Une intervention est planifiée sur votre service.\nObjet : %s\nZone : %s\nDate : %s (%s → %s)\nEntreprise(s) intervenante(s) : %s\nVous devez accuser réception puis signer la case Visa CEEE.",
                             savedAt.getObjet(),
@@ -601,21 +721,21 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             log.warn("Notif CEEE: {}", e.getMessage());
         }
 
-        // 2) HM (HMEP / HMEE) — garants terrain
+        // 2) HM (HMEP / HMEE) - garants terrain
         try {
-            notificationService.sendNotificationToRole("HMEP", "AT soumise — garantie HMEP",
+            notificationService.sendNotificationToRole("HMEP", "AT soumise - garantie HMEP",
                     "L'AT " + savedAt.getNumero() + " nécessite votre garantie (Haute Maîtrise Propriétaire).",
                     "ACTION", lienValider);
-            notificationService.sendNotificationToRole("HMEE", "AT soumise — garantie HMEE",
+            notificationService.sendNotificationToRole("HMEE", "AT soumise - garantie HMEE",
                     "L'AT " + savedAt.getNumero() + " nécessite votre garantie (Haute Maîtrise Exécutante).",
                     "ACTION", lienValider);
         } catch (Exception e) {
             log.warn("Notif HM: {}", e.getMessage());
         }
 
-        // 3) HC (HCEE / HCEP) — validation / pilotage
+        // 3) HC (HCEE / HCEP) - validation / pilotage
         try {
-            notificationService.sendNotificationToRole("HCEE", "AT soumise — validation HCEE",
+            notificationService.sendNotificationToRole("HCEE", "AT soumise - validation HCEE",
                     "L'AT " + savedAt.getNumero() + " est soumise. Garantir / valider le dossier.",
                     "ACTION", lienValider);
             notificationService.sendNotificationToRole("HCEP", "AT soumise (info HCEP)",
@@ -668,7 +788,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
         AutorisationTravail savedAt = atRepository.save(at);
 
-        enregistrerHistorique(savedAt, TypeActionAT.VALIDATION, ancienStatut, nouvelEtat, "AT validée — §8.3 VALIDEE");
+        enregistrerHistorique(savedAt, TypeActionAT.VALIDATION, ancienStatut, nouvelEtat, "AT validée - §8.3 VALIDEE");
         notificationService.createNotification(at.getProprietaireBrouillon(), "AT Validée", "Votre AT " + savedAt.getNumero() + " a été validée.", "SUCCESS", "/at/" + savedAt.getId());
 
         return mapToResponse(savedAt);
@@ -724,6 +844,11 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         
         enregistrerHistorique(savedAt, TypeActionAT.ANNULATION, ancienStatut, StatutAT.ANNULEE, "Annulation de l'AT");
         
+        if (at.getProprietaireBrouillon() != null) {
+            notificationService.createNotification(at.getProprietaireBrouillon(), "AT Annulée", "L'AT " + savedAt.getNumero() + " a été annulée.", "WARNING", "/autorisations/" + savedAt.getId());
+        }
+        notificationService.sendNotificationToRole("CEEE", "AT " + savedAt.getNumero() + " Annulée", "L'AT " + savedAt.getNumero() + " a été annulée.", "WARNING", "/autorisations/" + savedAt.getId());
+
         return mapToResponse(savedAt);
     }
 
@@ -765,7 +890,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         
         AutorisationTravail savedAt = atRepository.save(at);
         
-        enregistrerHistorique(savedAt, TypeActionAT.RECEPTION_CONJOINTE, ancienStatut, StatutAT.TRAVAUX_RECEPTIONES, "§8.5 — Clôture / réception AT");
+        enregistrerHistorique(savedAt, TypeActionAT.RECEPTION_CONJOINTE, ancienStatut, StatutAT.TRAVAUX_RECEPTIONES, "§8.5 - Clôture / réception AT");
         notificationService.createNotification(at.getProprietaireBrouillon(), "AT Clôturée", "Votre AT " + savedAt.getNumero() + " a été clôturée.", "INFO", "/at/" + savedAt.getId());
         
         return mapToResponse(savedAt);
@@ -804,7 +929,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setStatut(StatutAT.VALIDEE);
         AutorisationTravail savedAt = atRepository.save(at);
 
-        enregistrerHistorique(savedAt, TypeActionAT.DEBUT_INTERVENTION, ancienStatut, nouvelEtat, "§8 — Démarrage travaux (CEEE E, HCEE/HMEP G)");
+        enregistrerHistorique(savedAt, TypeActionAT.DEBUT_INTERVENTION, ancienStatut, nouvelEtat, "§8 - Démarrage travaux (CEEE E, HCEE/HMEP G)");
         notificationService.createNotification(at.getProprietaireBrouillon(), "Intervention Démarrée", "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré.", "INFO", "/at/" + savedAt.getId());
 
         return mapToResponse(savedAt);
@@ -821,7 +946,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setStatutWorkflow(nouvelEtat);
         AutorisationTravail savedAt = atRepository.save(at);
 
-        enregistrerHistorique(savedAt, TypeActionAT.DECLARATION_FIN, ancienStatut, nouvelEtat, "§8.5 — Fin des travaux déclarée (CEEE E, CEEP I)");
+        enregistrerHistorique(savedAt, TypeActionAT.DECLARATION_FIN, ancienStatut, nouvelEtat, "§8.5 - Fin des travaux déclarée (CEEE E, CEEP I)");
         notificationService.createNotification(at.getProprietaireBrouillon(), "Fin des Travaux Déclarée", "Le CEEE a déclaré la fin des travaux sur l'AT " + savedAt.getNumero() + ".", "ACTION", "/at/" + savedAt.getId());
 
         return mapToResponse(savedAt);
@@ -855,7 +980,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         StatutAT nouvelEtat = StatutAT.VISITE_REALISEE;
         at.setStatutWorkflow(nouvelEtat);
         AutorisationTravail savedAt = atRepository.save(at);
-        enregistrerHistorique(savedAt, TypeActionAT.VISITE_CHANTIER, ancienStatut, nouvelEtat, "§8.2 — Visite préalable chantier réalisée");
+        enregistrerHistorique(savedAt, TypeActionAT.VISITE_CHANTIER, ancienStatut, nouvelEtat, "§8.2 - Visite préalable chantier réalisée");
         return mapToResponse(savedAt);
     }
 
@@ -869,7 +994,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setStatutWorkflow(nouvelEtat);
         at.setStatut(StatutAT.VALIDEE);
         AutorisationTravail savedAt = atRepository.save(at);
-        enregistrerHistorique(savedAt, TypeActionAT.REDACTION_AT, ancienStatut, nouvelEtat, "§8.3 — AT et permis rédigés/signés sur le terrain");
+        enregistrerHistorique(savedAt, TypeActionAT.REDACTION_AT, ancienStatut, nouvelEtat, "§8.3 - AT et permis rédigés/signés sur le terrain");
         return mapToResponse(savedAt);
     }
 
@@ -879,13 +1004,13 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         AutorisationTravail at = getEntityById(id);
         StatutAT ancienStatut = statutEffectif(at);
         if (depasse24h) {
-            // §8.4 — > 24h : nouvelle visite obligatoire
+            // §8.4 - > 24h : nouvelle visite obligatoire
             workflowService.verifierTransition(StatutAT.AT_RECONDUITE, TypeActionAT.VISITE_CHANTIER);
             at.setStatutWorkflow(StatutAT.VISITE_REALISEE);
             at.setVersion(at.getVersion() == null ? 2 : at.getVersion() + 1);
             AutorisationTravail savedAt = atRepository.save(at);
             enregistrerHistorique(savedAt, TypeActionAT.VISITE_CHANTIER, ancienStatut, StatutAT.VISITE_REALISEE,
-                    "§8.4 — Dépassement 24h : nouvelle visite chantier obligatoire");
+                    "§8.4 - Dépassement 24h : nouvelle visite chantier obligatoire");
             return mapToResponse(savedAt);
         }
         workflowService.verifierTransition(ancienStatut, TypeActionAT.RECONDUCTION);
@@ -894,7 +1019,11 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setVersion(at.getVersion() == null ? 2 : at.getVersion() + 1);
         AutorisationTravail savedAt = atRepository.save(at);
         enregistrerHistorique(savedAt, TypeActionAT.RECONDUCTION, ancienStatut, StatutAT.AT_RECONDUITE,
-                "§8.4 — Reconduction AT (début de poste)");
+                "§8.4 - Reconduction AT (début de poste)");
+        if (at.getProprietaireBrouillon() != null) {
+            notificationService.createNotification(at.getProprietaireBrouillon(), "AT Reconduite", "L'AT " + savedAt.getNumero() + " a été reconduite (Version " + savedAt.getVersion() + ").", "INFO", "/autorisations/" + savedAt.getId());
+        }
+        notificationService.sendNotificationToRole("CEEE", "AT " + savedAt.getNumero() + " Reconduite", "L'AT " + savedAt.getNumero() + " a été reconduite pour un nouveau poste de travail.", "INFO", "/autorisations/" + savedAt.getId());
         return mapToResponse(savedAt);
     }
 
@@ -907,7 +1036,11 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setStatutWorkflow(StatutAT.VISITE_REALISEE);
         AutorisationTravail savedAt = atRepository.save(at);
         enregistrerHistorique(savedAt, TypeActionAT.VISITE_CHANTIER, ancienStatut, StatutAT.VISITE_REALISEE,
-                "§8.4 — Incident/changement condition : " + (motif != null ? motif : "retour visite obligatoire"));
+                "§8.4 - Incident/changement condition : " + (motif != null ? motif : "retour visite obligatoire"));
+        if (at.getProprietaireBrouillon() != null) {
+            notificationService.createNotification(at.getProprietaireBrouillon(), "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + ". Nouvelle visite requise.", "WARNING", "/autorisations/" + savedAt.getId());
+        }
+        notificationService.sendNotificationToRole("CEEE", "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + ".", "WARNING", "/autorisations/" + savedAt.getId());
         return mapToResponse(savedAt);
     }
 
@@ -922,7 +1055,11 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         at.setStatut(StatutAT.CLOTUREE);
         AutorisationTravail savedAt = atRepository.save(at);
         enregistrerHistorique(savedAt, TypeActionAT.RECEPTION_CONJOINTE, ancienStatut, nouvelEtat,
-                "§8.5 — Réception conjointe CEEP+CEEE, clôture AT et permis");
+                "§8.5 - Réception conjointe CEEP+CEEE, clôture AT et permis");
+        if (at.getProprietaireBrouillon() != null) {
+            notificationService.createNotification(at.getProprietaireBrouillon(), "Travaux Réceptionnés", "La réception conjointe de l'AT " + savedAt.getNumero() + " a été validée avec succès.", "SUCCESS", "/autorisations/" + savedAt.getId());
+        }
+        notificationService.sendNotificationToRole("CEEE", "Travaux Réceptionnés - AT " + savedAt.getNumero(), "La réception conjointe des travaux est validée. L'AT est clôturée.", "SUCCESS", "/autorisations/" + savedAt.getId());
         return mapToResponse(savedAt);
     }
 
@@ -942,13 +1079,33 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     private void resoudreEtAffecterZones(AutorisationTravail at, AutoSaveRequest request) {
         try {
             Utilisateur current = getCurrentUser();
+            // 1. Résolution de la zone propriétaire (P)
+            if (request.getZoneProprietaireId() != null && !request.getZoneProprietaireId().isBlank()) {
+                zoneRepository.findById(request.getZoneProprietaireId()).ifPresent(at::setZoneProprietaire);
+            } else if (request.getZoneProprietaireNom() != null && !request.getZoneProprietaireNom().isBlank()) {
+                String nomP = request.getZoneProprietaireNom().trim();
+                zoneRepository.findAll().stream()
+                        .filter(z -> nomP.equalsIgnoreCase(z.getNomZone()) || nomP.equalsIgnoreCase(z.getCodeZone()))
+                        .findFirst()
+                        .ifPresent(at::setZoneProprietaire);
+            }
             if (at.getZoneProprietaire() == null && current.getService() != null
                     && current.getService().getZone() != null) {
                 at.setZoneProprietaire(current.getService().getZone());
             }
-            if (request.getZoneProprietaireId() != null && !request.getZoneProprietaireId().isBlank()) {
-                zoneRepository.findById(request.getZoneProprietaireId()).ifPresent(at::setZoneProprietaire);
+
+            // 2. Résolution de la zone exécutante (E)
+            if (request.getZoneExecutanteId() != null && !request.getZoneExecutanteId().isBlank()) {
+                zoneRepository.findById(request.getZoneExecutanteId()).ifPresent(at::setZoneExecutante);
+            } else if (request.getZoneExecutanteNom() != null && !request.getZoneExecutanteNom().isBlank()) {
+                String nomE = request.getZoneExecutanteNom().trim();
+                zoneRepository.findAll().stream()
+                        .filter(z -> nomE.equalsIgnoreCase(z.getNomZone()) || nomE.equalsIgnoreCase(z.getCodeZone()))
+                        .findFirst()
+                        .ifPresent(at::setZoneExecutante);
             }
+
+            // 3. Résolution du service intervenant
             com.ocp.at.entity.Service svc = null;
             if (request.getServiceIntervenantId() != null && !request.getServiceIntervenantId().isBlank()) {
                 svc = serviceRepository.findById(request.getServiceIntervenantId()).orElse(null);
@@ -963,7 +1120,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                         .orElse(null);
             }
             if (svc != null) {
-                if (svc.getZone() != null) {
+                if (at.getZoneExecutante() == null && svc.getZone() != null) {
                     at.setZoneExecutante(svc.getZone());
                 }
                 if (at.getServicesIntervenants() == null || at.getServicesIntervenants().isBlank()) {
@@ -991,12 +1148,12 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             throw new BusinessException("Une Autorisation de Travail ne peut pas être établie au sein d'un même service. Le service demandeur (" + userServiceName + ") et le service exécutant (" + executantServiceName + ") doivent être différents.");
         }
 
-        // Contrainte stricte §2 Standard S-HSE-SEC-31 — vérification par zones
+        // Contrainte stricte §2 Standard S-HSE-SEC-31 - vérification par zones
         if (at.getZoneProprietaire() != null && at.getZoneExecutante() != null) {
             if (at.getZoneProprietaire().getId().equals(at.getZoneExecutante().getId())) {
                 throw new BusinessException(
                     "La zone propriétaire et la zone exécutante doivent être différentes " +
-                    "(Standard S-HSE-SEC-31 §2 — une AT ne peut pas lier deux zones identiques)."
+                    "(Standard S-HSE-SEC-31 §2 - une AT ne peut pas lier deux zones identiques)."
                 );
             }
             // Chercher les services associés à chaque zone
@@ -1012,7 +1169,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                 if (memeService) {
                     throw new BusinessException(
                         "Le service propriétaire et le service exécutant doivent être différents " +
-                        "(Standard S-HSE-SEC-31 §2 — une AT ne peut pas lier deux zones du même service)."
+                        "(Standard S-HSE-SEC-31 §2 - une AT ne peut pas lier deux zones du même service)."
                     );
                 }
             }
@@ -1240,7 +1397,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             if (memeService) {
                 throw new BusinessException(
                     "Le service propriétaire et le service exécutant doivent être différents " +
-                    "(Standard S-HSE-SEC-31 §2 — une AT ne peut pas lier deux zones du même service)."
+                    "(Standard S-HSE-SEC-31 §2 - une AT ne peut pas lier deux zones du même service)."
                 );
             }
         }
@@ -1350,18 +1507,39 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
     private AutorisationTravailResponse mapToResponse(AutorisationTravail at) {
         AutorisationTravailResponse response = atMapper.toResponse(at);
+        if (at.getTypeDocumentSource() != null) {
+            response.setTypeDocumentSource(at.getTypeDocumentSource().name());
+        }
+        if (at.getNumeroDocumentSource() != null) {
+            response.setDocumentSourceNumero(at.getNumeroDocumentSource());
+        }
         if (at.getDemandeIntervention() != null) {
             response.setTypeDocumentSource("DI");
             response.setDocumentSourceId(at.getDemandeIntervention().getId());
-            response.setDocumentSourceNumero(at.getDemandeIntervention().getNumero());
+            if (response.getDocumentSourceNumero() == null) {
+                response.setDocumentSourceNumero(at.getDemandeIntervention().getNumero());
+            }
         } else if (at.getOrdreTravail() != null) {
             response.setTypeDocumentSource("OT");
             response.setDocumentSourceId(at.getOrdreTravail().getId());
-            response.setDocumentSourceNumero(at.getOrdreTravail().getNumero());
+            if (response.getDocumentSourceNumero() == null) {
+                response.setDocumentSourceNumero(at.getOrdreTravail().getNumero());
+            }
         } else if (at.getBonTravail() != null) {
             response.setTypeDocumentSource("BT");
             response.setDocumentSourceId(at.getBonTravail().getId());
-            response.setDocumentSourceNumero(at.getBonTravail().getNumero());
+            if (response.getDocumentSourceNumero() == null) {
+                response.setDocumentSourceNumero(at.getBonTravail().getNumero());
+            }
+        }
+
+        if (at.getZoneProprietaire() != null) {
+            response.setZoneProprietaireId(at.getZoneProprietaire().getId());
+            response.setZoneProprietaireNom(at.getZoneProprietaire().getNomZone());
+        }
+        if (at.getZoneExecutante() != null) {
+            response.setZoneExecutanteId(at.getZoneExecutante().getId());
+            response.setZoneExecutanteNom(at.getZoneExecutante().getNomZone());
         }
         
         response.setServicesIntervenants(at.getServicesIntervenants());
@@ -1425,7 +1603,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             } catch (Exception ignored) {}
         }
 
-        // Visite Préalable (§8.2) — extraite du document source ou des données d'inspection
+        // Visite Préalable (§8.2) - extraite du document source ou des données d'inspection
         VisitePrealable vp = null;
         if (at.getDemandeIntervention() != null) {
             vp = at.getDemandeIntervention().getVisitePrealable();

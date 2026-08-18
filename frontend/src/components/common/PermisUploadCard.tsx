@@ -140,7 +140,7 @@ const PermisUploadCard: React.FC<Props> = ({ doc, onUpload, onRelancer, uploadin
               />
             </Box>
             <Typography sx={{ fontSize: 10, color: "text.secondary", mt: 0.5 }}>
-              Formats : JPG, PNG, PDF — max 10 Mo
+              Formats : JPG, PNG, PDF - max 10 Mo
             </Typography>
           </Box>
         )}

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Bridge LangChain — appelle le microservice Python FastAPI si configuré,
+ * Bridge LangChain - appelle le microservice Python FastAPI si configuré,
  * sinon UnsupportedOperationException (utiliser mockAIProvider en @Primary).
  */
 @Component("langChainProvider")

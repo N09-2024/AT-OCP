@@ -1,4 +1,4 @@
--- V34: Standard S-HSE-SEC-31 §5 — niveau hiérarchique dynamique + §8.2 visite préalable étendue
+-- V34: Standard S-HSE-SEC-31 §5 - niveau hiérarchique dynamique + §8.2 visite préalable étendue
 
 -- 1. Ajouter la colonne niveau_hierarchique sur les utilisateurs
 --    Valeur par défaut: CHEF_EQUIPE (rétro-compat).

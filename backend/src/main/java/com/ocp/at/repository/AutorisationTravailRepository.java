@@ -156,24 +156,38 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
     // ============================================
 
     /**
+     * AT hors d'un statut donné (ex: hors BROUILLON pour CEEE ou HC)
+     */
+    Page<AutorisationTravail> findByStatutNot(StatutAT statut, Pageable pageable);
+
+    /**
      * AT visibles par le CEEP : uniquement ses propres brouillons et AT créées.
-     * Un CEEP ne voit PAS les AT d'autres CEEP.
+     * Un CEEP ne voit PAS les brouillons d'autres CEEP.
      */
     @Query("SELECT at FROM AutorisationTravail at WHERE at.proprietaireBrouillon.id = :userId")
     Page<AutorisationTravail> findByCeep(@Param("userId") String userId, Pageable pageable);
 
     /**
-     * AT visibles par le CEEE : AT dont la zone exécutante correspond à la zone de son service,
-     * ou le nom du service correspond à servicesIntervenants, et dont le statut est hors BROUILLON.
+     * AT visibles par le CEEE :
+     * 1. AT où le CEEE a déjà signé ou est associé
+     * 2. AT transmises (hors brouillon) dont la zone ou le service exécutant correspond
      */
-    @Query("SELECT at FROM AutorisationTravail at WHERE " +
-           "((at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
-           " OR (at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
-           "AND at.statut NOT IN ('BROUILLON')")
-    Page<AutorisationTravail> findByCeeeByZoneAndService(@Param("zoneId") String zoneId, @Param("serviceNom") String serviceNom, Pageable pageable);
+    @Query("SELECT DISTINCT at FROM AutorisationTravail at WHERE " +
+           "(EXISTS (SELECT v FROM at.visas v WHERE v.utilisateur.id = :userId)) " +
+           "OR (" +
+           "  ((:zoneId IS NOT NULL AND :zoneId <> '' AND at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
+           "   OR (:serviceNom IS NOT NULL AND :serviceNom <> '' AND at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
+           "  AND at.statut NOT IN ('BROUILLON')" +
+           ")")
+    Page<AutorisationTravail> findByCeeeByZoneAndService(
+        @Param("userId") String userId,
+        @Param("zoneId") String zoneId,
+        @Param("serviceNom") String serviceNom,
+        Pageable pageable
+    );
 
     /**
-     * AT visibles par HCEP/HCEE : AT liées à leur zone (propriétaire ou exécutante).
+     * AT visibles par HCEP/HCEE : AT liées à leur zone (propriétaire ou exécutante) ou service.
      */
     @Query("SELECT DISTINCT at FROM AutorisationTravail at WHERE " +
            "(at.zoneProprietaire IS NOT NULL AND at.zoneProprietaire.id = :zoneId) " +
@@ -183,14 +197,16 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
 
     /**
      * AT visibles par un Chef d'Équipe (CE) :
-     * 1. AT qu'il a créées (proprietaireBrouillon = userId) — y compris ses brouillons (CEEP)
-     * 2. AT où son service est exécutant et le statut est hors BROUILLON (CEEE)
+     * 1. AT qu'il a créées (proprietaireBrouillon = userId) - y compris ses brouillons (CEEP)
+     * 2. AT où il a déjà un visa
+     * 3. AT où son service est exécutant et le statut est hors BROUILLON (CEEE)
      */
     @Query("SELECT DISTINCT at FROM AutorisationTravail at WHERE " +
            "(at.proprietaireBrouillon IS NOT NULL AND at.proprietaireBrouillon.id = :userId) " +
+           "OR (EXISTS (SELECT v FROM at.visas v WHERE v.utilisateur.id = :userId)) " +
            "OR (" +
-           "  ((at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
-           "   OR (at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
+           "  ((:zoneId IS NOT NULL AND :zoneId <> '' AND at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
+           "   OR (:serviceNom IS NOT NULL AND :serviceNom <> '' AND at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
            "  AND at.statut NOT IN ('BROUILLON')" +
            ")")
     Page<AutorisationTravail> findForChefEquipe(
@@ -201,11 +217,23 @@ public interface AutorisationTravailRepository extends JpaRepository<Autorisatio
     );
 
     /**
+     * AT visibles pour un CE polyvalent sans filtre strict de zone
+     */
+    @Query("SELECT DISTINCT at FROM AutorisationTravail at WHERE " +
+           "(at.proprietaireBrouillon IS NOT NULL AND at.proprietaireBrouillon.id = :userId) " +
+           "OR at.statut NOT IN ('BROUILLON')")
+    Page<AutorisationTravail> findForChefEquipeGlobal(
+        @Param("userId") String userId,
+        Pageable pageable
+    );
+
+    /**
      * AT à viser par le CEEE (statut SOUMISE, DEMANDE_CREEE, EN_VISITE_REDACTION, AT_REDIGEE) liées à son service exécutant.
      */
     @Query("SELECT DISTINCT at FROM AutorisationTravail at WHERE " +
-           "((at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
-           " OR (at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%')))) " +
+           "((:zoneId IS NOT NULL AND :zoneId <> '' AND at.zoneExecutante IS NOT NULL AND at.zoneExecutante.id = :zoneId) " +
+           " OR (:serviceNom IS NOT NULL AND :serviceNom <> '' AND at.servicesIntervenants IS NOT NULL AND LOWER(at.servicesIntervenants) LIKE LOWER(CONCAT('%', :serviceNom, '%'))) " +
+           " OR ((:zoneId IS NULL OR :zoneId = '') AND (:serviceNom IS NULL OR :serviceNom = ''))) " +
            "AND at.statut IN ('SOUMISE', 'DEMANDE_CREEE', 'EN_VISITE_REDACTION', 'AT_REDIGEE')")
     List<AutorisationTravail> findATaViserByCeee(@Param("zoneId") String zoneId, @Param("serviceNom") String serviceNom);
 }

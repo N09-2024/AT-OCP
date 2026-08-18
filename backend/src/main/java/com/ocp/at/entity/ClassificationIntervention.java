@@ -28,8 +28,8 @@ public class ClassificationIntervention {
     private String reference;
 
     /**
-     * NIVEAU_1 : Intervention de routine / interne — Pas d'AT requise (§7.1)
-     * NIVEAU_2 : Intervention à risque / tiers — AT obligatoire (§7.2)
+     * NIVEAU_1 : Intervention de routine / interne - Pas d'AT requise (§7.1)
+     * NIVEAU_2 : Intervention à risque / tiers - AT obligatoire (§7.2)
      */
     @Column(nullable = false)
     private String niveau;

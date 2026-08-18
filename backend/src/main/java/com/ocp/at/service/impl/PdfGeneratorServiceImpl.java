@@ -1085,7 +1085,9 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         Font fv = FontFactory.getFont(FontFactory.HELVETICA, 7.2f, Color.BLACK);
 
         String site = at.getZoneProprietaire() != null ? at.getZoneProprietaire().getNomZone() : "...............";
-        String entite = at.getServicesIntervenants() != null ? at.getServicesIntervenants() : "...............";
+        String entite = at.getProprietaireBrouillon() != null && at.getProprietaireBrouillon().getService() != null
+                ? at.getProprietaireBrouillon().getService().getNomService()
+                : (at.getZoneProprietaire() != null ? at.getZoneProprietaire().getNomZone() : "...............");
         String numeroAT = at.getNumero() != null ? at.getNumero() : "N/A";
 
         // Row 1: Site + Entité (span 2) / Encadré AT n° (col 3, rowspan 2)
@@ -1112,9 +1114,17 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         table.addCell(cAtBox);
 
         // Row 2: DI n° / OT n° / BT n° (span 2)
-        String diNum = at.getDemandeIntervention() != null ? at.getDemandeIntervention().getNumero() : (at.getTypeDocumentSource() == TypeDocumentSource.DI && at.getNumeroDocumentSource() != null ? at.getNumeroDocumentSource() : "...............");
-        String otNum = at.getOrdreTravail() != null ? at.getOrdreTravail().getNumero() : (at.getTypeDocumentSource() == TypeDocumentSource.OT && at.getNumeroDocumentSource() != null ? at.getNumeroDocumentSource() : "...............");
-        String btNum = at.getBonTravail() != null ? at.getBonTravail().getNumero() : (at.getTypeDocumentSource() == TypeDocumentSource.BT && at.getNumeroDocumentSource() != null ? at.getNumeroDocumentSource() : "...............");
+        TypeDocumentSource typeDoc = at.getTypeDocumentSource();
+        String numDoc = at.getNumeroDocumentSource();
+        if (numDoc == null || numDoc.isBlank()) {
+            if (at.getDemandeIntervention() != null) numDoc = at.getDemandeIntervention().getNumero();
+            else if (at.getOrdreTravail() != null) numDoc = at.getOrdreTravail().getNumero();
+            else if (at.getBonTravail() != null) numDoc = at.getBonTravail().getNumero();
+        }
+
+        String diNum = (typeDoc == TypeDocumentSource.DI && numDoc != null && !numDoc.isBlank()) ? numDoc : "...............";
+        String otNum = (typeDoc == TypeDocumentSource.OT && numDoc != null && !numDoc.isBlank()) ? numDoc : "...............";
+        String btNum = (typeDoc == TypeDocumentSource.BT && numDoc != null && !numDoc.isBlank()) ? numDoc : "...............";
 
         Paragraph pDocSource = new Paragraph();
         pDocSource.setLeading(8f);
@@ -1129,7 +1139,8 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         table.addCell(cDoc);
 
         // Row 3: Lieu / Services / Entreprises (span 3)
-        String lieu = at.getZoneProprietaire() != null ? at.getZoneProprietaire().getNomZone() : (at.getDemandeIntervention() != null && at.getDemandeIntervention().getInstallation() != null ? at.getDemandeIntervention().getInstallation().getNomInstallation() : "...............");
+        String lieu = at.getZoneExecutante() != null ? at.getZoneExecutante().getNomZone()
+                : (at.getServicesIntervenants() != null && !at.getServicesIntervenants().isBlank() ? at.getServicesIntervenants() : "...............");
         String services = at.getServicesIntervenants() != null ? at.getServicesIntervenants() : "...............";
         String entreprises = at.getEntreprisesIntervenantes() != null ? at.getEntreprisesIntervenantes() : "...............";
 
@@ -1728,7 +1739,7 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
     }
 
     // =========================================================================
-    // RÉSOLUTION DES IDS EN NOMS (Option A — fix bug cases cochées PDF)
+    // RÉSOLUTION DES IDS EN NOMS (Option A - fix bug cases cochées PDF)
     // Les formXxxIds stockent des UUIDs : on les résout via les repositories
     // pour retrouver les noms et faire le matching par mot-clé.
     // =========================================================================
@@ -1913,12 +1924,11 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         PosteVisa pv = new PosteVisa();
         if (visas != null) {
             for (Visa v : visas) {
-                if (v == null || v.getStatut() == com.ocp.at.entity.enums.StatutVisa.REFUS) continue;
+                if (v == null || v.getStatut() == com.ocp.at.entity.enums.StatutVisa.REFUS || v.getStatut() == com.ocp.at.entity.enums.StatutVisa.REFUSE) continue;
                 String comment = v.getCommentaire() != null ? v.getCommentaire().toLowerCase() : "";
 
-                // Le visa créé par le formulaire CEEP porte explicitement le marqueur g1VisaCeep.
-                // Cela évite de sélectionner par erreur un autre visa du même utilisateur.
-                if (isCeep && posteNum == 1 && comment.contains("g1visaceep")) {
+                // Le visa créé par le formulaire CEEP porte explicitement le marqueur g1visaceep ou ceep.
+                if (isCeep && posteNum == 1 && (comment.contains("g1visaceep") || comment.contains("ceep"))) {
                     PosteVisa exact = new PosteVisa();
                     Utilisateur u = v.getUtilisateur();
                     if (u != null) {
@@ -1934,18 +1944,25 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
                     } else if (v.getDateVisa() != null) {
                         exact.dateHeure = v.getDateVisa().format(DATETIME_FMT);
                     }
-                    return exact;
+                    if (exact.signatureImage != null || exact.nomSignataire != null) {
+                        return exact;
+                    }
                 }
 
                 // Identification rôle CEEP vs CEEE
                 boolean matchesRole;
                 if (isCeep) {
-                    matchesRole = comment.contains("ceep") || (!comment.contains("ceee") && (comment.contains("p1") || comment.contains("poste") || comment.contains("création") || comment.contains("creation")));
-                    if (!matchesRole && v.getUtilisateur() != null && v.getUtilisateur().getRoles() != null) {
-                        matchesRole = v.getUtilisateur().getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("CEEP"));
+                    matchesRole = comment.contains("ceep") || comment.contains("g1visaceep")
+                            || (!comment.contains("ceee") && (comment.contains("p1") || comment.contains("poste") || comment.contains("création") || comment.contains("creation")));
+                    if (!matchesRole && v.getUtilisateur() != null) {
+                        if (at != null && at.getProprietaireBrouillon() != null && at.getProprietaireBrouillon().getId().equals(v.getUtilisateur().getId())) {
+                            matchesRole = true;
+                        } else if (v.getUtilisateur().getRoles() != null) {
+                            matchesRole = v.getUtilisateur().getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("CEEP"));
+                        }
                     }
                 } else {
-                    matchesRole = comment.contains("ceee");
+                    matchesRole = comment.contains("ceee") || comment.contains("g1visaceee");
                     if (!matchesRole && v.getUtilisateur() != null && v.getUtilisateur().getRoles() != null) {
                         matchesRole = v.getUtilisateur().getRoles().stream().anyMatch(r -> r.getNom() != null && r.getNom().toUpperCase().contains("CEEE"));
                     }
@@ -1968,7 +1985,7 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
                     if (u != null) {
                         pv.nomSignataire = (u.getPrenom() != null ? u.getPrenom() : "") + " " + (u.getNom() != null ? u.getNom() : "") + (u.getMatricule() != null ? " (" + u.getMatricule() + ")" : "");
                     }
-                    if (v.getSignaturePath() != null) {
+                    if (v.getSignaturePath() != null && !v.getSignaturePath().isBlank()) {
                         pv.signatureImage = loadSignatureImage(v.getSignaturePath());
                     }
                     if (v.getDateSignature() != null) {

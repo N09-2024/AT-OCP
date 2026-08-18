@@ -19,7 +19,7 @@ export interface FieldDef {
   required?: boolean;
   multiline?: boolean;
   rows?: number;
-  readKey?: string;     // optional: use a different key when reading (GET) — defaults to `key`
+  readKey?: string;     // optional: use a different key when reading (GET) - defaults to `key`
 }
 
 interface SimpleReferentielFormProps {
@@ -134,7 +134,7 @@ export default function SimpleReferentielForm({
           Retour
         </Button>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }} color="text.primary">
-          {isEdit ? `Modifier — ${title}` : `Nouveau — ${title}`}
+          {isEdit ? `Modifier - ${title}` : `Nouveau - ${title}`}
         </Typography>
       </Box>
 

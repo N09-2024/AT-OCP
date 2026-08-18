@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -14,13 +15,22 @@ import {
   Alert,
   Tooltip,
 } from '@mui/material';
-import { BellIcon, CheckIcon, EnvelopeOpenIcon } from '@heroicons/react/24/outline';
+import {
+  BellIcon,
+  CheckIcon,
+  EnvelopeOpenIcon,
+  ArrowTopRightOnSquareIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/24/outline';
 import { NotificationService, type NotificationItem } from '../../../services/NotificationService';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
+  const navigate = useNavigate();
 
   const loadNotifications = () => {
     setLoading(true);
@@ -34,7 +44,8 @@ export default function NotificationsPage() {
     loadNotifications();
   }, []);
 
-  const handleMarkAsRead = async (id: string) => {
+  const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     await NotificationService.markAsRead(id);
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, lu: true, dateLecture: new Date().toISOString() } : n))
@@ -43,15 +54,47 @@ export default function NotificationsPage() {
 
   const handleMarkAllAsRead = async () => {
     setMarkingAll(true);
-    const unread = notifications.filter((n) => !n.lu);
-    await Promise.all(unread.map((n) => NotificationService.markAsRead(n.id)));
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, lu: true, dateLecture: n.dateLecture ?? new Date().toISOString() }))
-    );
-    setMarkingAll(false);
+    try {
+      await NotificationService.markAllAsRead();
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, lu: true, dateLecture: n.dateLecture ?? new Date().toISOString() }))
+      );
+    } catch (err) {
+      console.error('Erreur markAllAsRead', err);
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const handleNotificationClick = async (notif: NotificationItem) => {
+    if (!notif.lu) {
+      await handleMarkAsRead(notif.id);
+    }
+    if (notif.lien) {
+      // Normaliser les URLs relatives backend (ex: /at/123 -> /autorisations/123)
+      let target = notif.lien;
+      if (target.startsWith('/at/')) {
+        target = target.replace('/at/', '/autorisations/');
+      }
+      navigate(target);
+    }
   };
 
   const unreadCount = notifications.filter((n) => !n.lu).length;
+
+  const getTypeChip = (type?: string) => {
+    switch (type?.toUpperCase()) {
+      case 'ACTION':
+        return <Chip label="Action requise" size="small" color="warning" sx={{ height: 20, fontSize: 10, fontWeight: 700 }} />;
+      case 'SUCCESS':
+        return <Chip label="Succès" size="small" color="success" sx={{ height: 20, fontSize: 10, fontWeight: 700 }} />;
+      case 'WARNING':
+      case 'ERROR':
+        return <Chip label="Important" size="small" color="error" sx={{ height: 20, fontSize: 10, fontWeight: 700 }} />;
+      default:
+        return <Chip label="Information" size="small" color="default" sx={{ height: 20, fontSize: 10, fontWeight: 600 }} />;
+    }
+  };
 
   return (
     <Box>
@@ -110,38 +153,57 @@ export default function NotificationsPage() {
             {notifications.map((notif, index) => (
               <Box key={notif.id}>
                 <ListItem
+                  onClick={() => handleNotificationClick(notif)}
                   sx={{
                     px: 3,
                     py: 2,
-                    bgcolor: notif.lu ? 'transparent' : 'primary.50',
+                    cursor: notif.lien ? 'pointer' : 'default',
+                    bgcolor: notif.lu ? 'transparent' : 'rgba(46, 98, 74, 0.05)',
                     borderLeft: notif.lu ? '3px solid transparent' : '3px solid',
                     borderColor: notif.lu ? 'transparent' : 'primary.main',
-                    transition: 'background-color 0.2s',
-                    '&:hover': { bgcolor: 'action.hover' },
+                    transition: 'all 0.2s',
+                    '&:hover': { bgcolor: notif.lu ? 'action.hover' : 'rgba(46, 98, 74, 0.1)' },
                   }}
                   secondaryAction={
-                    !notif.lu && (
-                      <Tooltip title="Marquer comme lu">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleMarkAsRead(notif.id)}
-                          sx={{ color: 'primary.main' }}
-                        >
-                          <EnvelopeOpenIcon width={18} />
-                        </IconButton>
-                      </Tooltip>
-                    )
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {notif.lien && (
+                        <Tooltip title="Ouvrir l'autorisation">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleNotificationClick(notif);
+                            }}
+                            sx={{ color: 'primary.main' }}
+                          >
+                            <ArrowTopRightOnSquareIcon width={18} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {!notif.lu && (
+                        <Tooltip title="Marquer comme lu">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleMarkAsRead(notif.id, e)}
+                            sx={{ color: '#5C6E67' }}
+                          >
+                            <EnvelopeOpenIcon width={18} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                   }
                 >
                   <ListItemText
                     primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
                         <Typography
                           variant="body2"
-                          sx={{ fontWeight: notif.lu ? 500 : 700, color: 'text.primary' }}
+                          sx={{ fontWeight: notif.lu ? 600 : 800, color: 'text.primary' }}
                         >
                           {notif.titre}
                         </Typography>
+                        {getTypeChip(notif.type)}
                         {!notif.lu && (
                           <Chip
                             label="Nouveau"
@@ -154,7 +216,11 @@ export default function NotificationsPage() {
                     }
                     secondary={
                       <Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mb: 0.5, whiteSpace: 'pre-line' }}
+                        >
                           {notif.message}
                         </Typography>
                         <Typography variant="caption" color="text.disabled">
