@@ -295,11 +295,12 @@ export default function Sidebar() {
       {/* OCP Header */}
       <Box sx={{ p: 2.5, borderBottom: '1px solid #E3ECE7' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <svg width="34" height="34" viewBox="0 0 100 100" fill="none">
-            <path d="M50 10L61 40H93L67 59L77 89L50 70L23 89L33 59L7 40H39L50 10Z" fill={PRIMARY_COLOR} />
-            <circle cx="50" cy="50" r="15" fill="white" />
-            <circle cx="50" cy="50" r="10" fill={PRIMARY_COLOR} />
-          </svg>
+          <Box
+            component="img"
+            src="/OCP_Group.svg.webp"
+            alt="Logo OCP"
+            sx={{ width: 38, height: 38, objectFit: 'contain' }}
+          />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 900, color: PRIMARY_COLOR, letterSpacing: -0.5, lineHeight: 1 }}>
               OCP GROUP

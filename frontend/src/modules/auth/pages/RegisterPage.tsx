@@ -123,17 +123,12 @@ export default function RegisterPage() {
     >
       {/* Top Left Brand Logo */}
       <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
-          <defs>
-            <linearGradient id="logoGradReg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor={MOSS} />
-              <stop offset="100%" stopColor={FOREST} />
-            </linearGradient>
-          </defs>
-          <path d="M50 10L61 40H93L67 59L77 89L50 70L23 89L33 59L7 40H39L50 10Z" fill="url(#logoGradReg)" />
-          <circle cx="50" cy="50" r="14" fill={SAGE} />
-          <circle cx="50" cy="50" r="9" fill={FOREST} />
-        </svg>
+        <Box
+          component="img"
+          src="/OCP_Group.svg.webp"
+          alt="Logo OCP"
+          sx={{ width: 40, height: 40, objectFit: 'contain' }}
+        />
         <Box>
           <Typography
             sx={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: '1.05rem', color: FOREST, letterSpacing: 0.2, lineHeight: 1 }}

@@ -759,24 +759,11 @@ export default function FormulaireOCPInteractive({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, position: 'relative', zIndex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box
-              sx={{
-                width: 56,
-                height: 56,
-                borderRadius: 2.5,
-                bgcolor: 'rgba(255, 255, 255, 0.15)',
-                backdropFilter: 'blur(10px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-              }}
-            >
-              <svg width="36" height="36" viewBox="0 0 100 100">
-                <polygon points="50,5 61,38 96,38 68,58 79,91 50,71 21,91 32,58 4,38 39,38" fill="#FFFFFF" />
-                <circle cx="50" cy="55" r="14" fill="#1F4D3E" />
-                <circle cx="50" cy="55" r="9" fill="#FFFFFF" />
-              </svg>
-            </Box>
+              component="img"
+              src="/OCP_Group.svg.webp"
+              alt="Logo OCP"
+              sx={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 2.5, bgcolor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', p: 0.5 }}
+            />
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Autorisation de Travail

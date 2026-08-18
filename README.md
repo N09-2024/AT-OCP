@@ -1,313 +1,424 @@
-# OCP AT System - Syst√®me de Gestion des Autorisations de Travail
+# OCP AT System ó SystËme de Gestion des Autorisations de Travail
 
-![Java](https://img.shields.io/badge/Java-21-blue?logo=openjdk)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.x-brightgreen?logo=springboot)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.0-brightgreen?logo=springboot)
+![Java](https://img.shields.io/badge/Java-17-blue?logo=openjdk)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite)
 ![MUI](https://img.shields.io/badge/MUI-v9-007FFF?logo=mui)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)
-![License](https://img.shields.io/badge/License-MIT-yellow)
 
-> Plateforme industrielle int√©gr√©e de gestion et de num√©risation du cycle de vie complet des **Autorisations de Travail (AT)** et des **Permis Associ√©s**, strictement conforme au **Standard OCP S-HSE-SEC-31 v1.0**.
-
----
-
-## üìã Table des Mati√®res
-
-- [Aper√ßu & Fonctionnalit√©s Cl√©s](#-aper√ßu--fonctionnalit√©s-cl√©s)
-- [Stack Technique](#-stack-technique)
-- [Architecture du Projet](#-architecture-du-projet)
-- [Standard OCP S-HSE-SEC-31 & Cha√Æne de Signatures](#-standard-ocp-s-hse-sec-31--cha√Æne-de-signatures)
-- [Pr√©requis](#-pr√©requis)
-- [Installation & D√©marrage](#-installation--d√©marrage)
-  - [Option 1 : D√©marrage Local (Recommand√© & Rapide)](#option-1--d√©marrage-local-recommand√©--rapide)
-  - [Option 2 : D√©marrage avec Docker Compose](#option-2--d√©marrage-avec-docker-compose)
-- [Modules & Fonctionnalit√©s](#-modules--fonctionnalit√©s)
-- [API REST Principale](#-api-rest-principale)
-- [Comptes de D√©monstration](#-comptes-de-d√©monstration)
-- [Licence & √âquipe](#-licence--√©quipe)
+> Plateforme industrielle de numÈrisation du cycle de vie complet des **Autorisations de Travail (AT)** et **Permis AssociÈs**, conforme au **Standard OCP S-HSE-SEC-31 v1.0**.
 
 ---
 
-## üåü Aper√ßu & Fonctionnalit√©s Cl√©s
+## Table des MatiËres
 
-**OCP AT System** num√©rise de bout en bout la gestion des autorisations et permis de travail sur les sites industriels OCP :
-
-1. **Cycle de Vie Complet Conforme au Standard OCP S-HSE-SEC-31** :
-   - Cr√©ation depuis les documents sources : **Demande d'Intervention (DI)**, **Ordre de Travail (OT)**, ou **Bon de Travail (BT)** avec num√©rotation automatique.
-   - Classification des interventions (Niveau 1 sans AT / Niveau 2 avec AT obligatoire).
-   - Visite pr√©alable de chantier (¬ß8.2) avec g√©olocalisation GPS et capture photo.
-   - Analyse dynamique des risques, mesures de pr√©vention, EPI et moyens d'acc√®s.
-   - Reconduction de poste (¬ß8.4) et d√©claration d'incidents / changements de conditions.
-   - R√©ception conjointe des travaux (¬ß8.5) avec contr√¥le des essais et remise en √©tat.
-   - Cl√¥ture et archivage s√©curis√© (¬ß8.6) avec tra√ßabilit√© minimale d'un an.
-
-2. **Cha√Æne S√©quentielle des Visas & Signatures Num√©riques** :
-   - Signatures manuscrites tactiles int√©gr√©es avec horodatage, hachage cryptographique **SHA-256**, adresse IP et User-Agent pour conformit√© l√©gale et audit trail.
-   - Respect strict de l'ordre hi√©rarchique :
-     $$\text{CEEP (1)} \longrightarrow \text{CEEE (2)} \longrightarrow \text{HCEP (3)} \longrightarrow \text{HCEE (4)} \longrightarrow \text{HMEP (5)} \longrightarrow \text{HMEE (6)}$$
-
-3. **Assistant IA & Analyse Automatique des Permis (OCR)** :
-   - Microservice d√©di√© en Python FastAPI exploitant l'OCR et l'analyse documentaire pour la conformit√© automatique des permis requis (feu, espace confin√©, fouille, hauteur, √©lectrique).
-   - Gating automatique emp√™chant la soumission si des permis obligatoires ne sont pas valid√©s.
-
-4. **Filtrage Intelligent & S√©gr√©gation des R√¥les** :
-   - Confidentialit√© stricte des brouillons (visibles uniquement par le CEEP √©metteur et l'Admin).
-   - Affectation et visibilit√© contextuelle selon le p√©rim√®tre de la Zone Propri√©taire (P) et de la Zone Ex√©cutante (E).
-   - Recherche multicrit√®re instantan√©e et filtres dynamiques par r√¥le.
-
-5. **Syst√®me de Notifications Temps R√©el** :
-   - Notifications automatiques achemin√©es aux r√¥les concern√©s lors de chaque changement d'√©tape (signature, validation, refus, reconduction, incident, cl√¥ture).
-   - Polling temps r√©el (30s) avec badge interactif dans la barre sup√©rieure et navigation directe vers l'AT concern√©e.
-
-6. **G√©n√©ration PDF Officielle** :
-   - Moteur de rendu haute fid√©lit√© (Apache FOP & PDFBox) produisant le formulaire officiel OCP 2 pages avec QR Code de v√©rification d'authenticit√©.
+- [AperÁu & FonctionnalitÈs](#aperÁu--fonctionnalitÈs)
+- [Stack Technique](#stack-technique)
+- [Architecture du Projet](#architecture-du-projet)
+- [Base de DonnÈes & Migrations](#base-de-donnÈes--migrations)
+- [Standard S-HSE-SEC-31 & RÙles](#standard-s-hse-sec-31--rÙles)
+- [PrÈrequis](#prÈrequis)
+- [DÈmarrage Local](#dÈmarrage-local)
+- [DÈmarrage Docker Compose](#dÈmarrage-docker-compose)
+- [Variables d'Environnement](#variables-denvironnement)
+- [API REST](#api-rest)
+- [Comptes de DÈmonstration](#comptes-de-dÈmonstration)
 
 ---
 
-## üõ† Stack Technique
+## AperÁu & FonctionnalitÈs
 
-### Backend (Spring Boot 3.4)
-- **Langage** : Java 21 (Eclipse Temurin)
-- **Framework** : Spring Boot 3.4.x (Web, Data JPA, Security, Validation)
-- **S√©curit√©** : Spring Security 6 + JWT (JSON Web Tokens) + RBAC multi-r√¥les
-- **Base de Donn√©es** : PostgreSQL 16 avec Flyway Migrations
-- **Moteur PDF** : Apache FOP 2.9, Apache PDFBox 2.0, Apache XML Graphics Batik (SVG)
-- **Mapping & DTOs** : MapStruct 1.5 & Lombok
-- **Documentation API** : OpenAPI 3 / Swagger UI
+**OCP AT System** numÈrise de bout en bout la gestion des autorisations de travail sur les sites OCP :
 
-### Microservice IA & OCR (FastAPI)
-- **Langage** : Python 3.11
-- **Framework** : FastAPI & Uvicorn
-- **Traitement & OCR** : PyMuPDF (Fitz), Pillow, Tesseract OCR
-- **Analyse S√©mantique** : Int√©gration IA pour v√©rification de conformit√© des permis
-
-### Frontend (React 19)
-- **Framework** : React 19 + TypeScript 5
-- **Build Tool** : Vite 6
-- **UI Library** : Material UI (MUI v9) + Emotion
-- **Navigation & Routage** : React Router v7
-- **Gestion d'√âtat** : Zustand
-- **Signatures Num√©riques** : React Signature Canvas
-- **Ic√¥nes & Th√®me** : Heroicons, Material Icons, Charte graphique officielle OCP Green (`#009A44`, `#1F4D3E`)
+- Cycle complet S-HSE-SEC-31 : DI/OT/BT ? Classification ? Visite prÈalable ? 6 visas ? Travaux ? RÈception ? Archivage PDF
+- ChaÓne sÈquentielle de 6 visas avec signatures manuscrites horodatÈes (SHA-256, IP, User-Agent)
+- Assistant IA (CrewAI + Gemini 2.5 Flash) : Analyse et validation de conformitÈ des permis
+- Notifications temps rÈel par rÙle (polling 30s) avec navigation directe vers l'AT
+- GÈnÈration PDF officielle F-HSE-SEC-31-04 avec QR Code de vÈrification
+- RBAC multi-rÙles : CEEP, CEEE, HCEP, HCEE, HMEP, HMEE, ADMIN, RESPONSABLE_EXTERIEUR
+- Tableaux de bord personnalisÈs par rÙle avec statistiques HSE
 
 ---
 
-## üèó Architecture du Projet
+## Stack Technique
+
+### Backend ó Spring Boot 3.3.0 / Java 17
+
+| Composant | Technologie | Version |
+|---|---|---|
+| Langage | Java (OpenJDK / Temurin) | **17** |
+| Framework | Spring Boot (Web, JPA, Security, Validation, AOP) | **3.3.0** |
+| SÈcuritÈ | Spring Security 6 + JWT (jjwt) | **0.12.5** |
+| Base de donnÈes | PostgreSQL | **16** |
+| Migrations | Flyway (35 scripts V1 ? V35) | intÈgrÈ |
+| Mapping | MapStruct + Lombok | 1.5.5 / 1.18.32 |
+| Documentation | SpringDoc OpenAPI 3 / Swagger UI | **2.5.0** |
+| Artefact | `com.ocp:at-backend:0.0.1-SNAPSHOT` | |
+
+### Microservice IA ó FastAPI / CrewAI / Gemini
+
+| Composant | Technologie | Version |
+|---|---|---|
+| Framework | FastAPI + Uvicorn | **0.115.0 / 0.30.6** |
+| Validation | Pydantic | **2.9.2** |
+| Orchestration IA | CrewAI | **0.70.1** |
+| LLM | LangChain + Google Gemini | langchain 0.2.x |
+| ModËle IA | Gemini 2.5 Flash | `gemini-2.5-flash` |
+
+### Frontend ó React 19 / TypeScript 6 / Vite 8
+
+| Composant | Technologie | Version |
+|---|---|---|
+| Framework | React | **19.x** |
+| Langage | TypeScript | **~6.0.2** |
+| Build Tool | Vite | **8.x** |
+| UI Library | Material UI (MUI) | **v9.2.0** |
+| Navigation | React Router DOM | **v7.18** |
+| …tat Global | Zustand | **5.0.14** |
+| Formulaires | React Hook Form + Zod | 7.81 / 4.x |
+| Signatures | react-signature-canvas | 1.1.0-alpha.2 |
+| Graphiques | Recharts | **3.9.2** |
+| Animations | Framer Motion | **12.x** |
+| HTTP | Axios + TanStack React Query | 1.18 / 5.x |
+
+---
+
+## Architecture du Projet
 
 ```
 ocp-at-system/
-‚îú‚îÄ‚îÄ backend/                              # Backend Spring Boot (Java 21)
-‚îÇ   ‚îú‚îÄ‚îÄ src/main/java/com/ocp/at/
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ controller/                   # Endpoints REST (AT, Visas, Permis, Notifications, Admin...)
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ service/                      # Logique m√©tier & orchestration de workflow
-‚îÇ   ‚îÇ   ‚îÇ   ‚îî‚îÄ‚îÄ impl/                     # Impl√©mentations (AutorisationTravail, Visa, Notification...)
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ repository/                   # Repositories Spring Data JPA optimis√©s
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ entity/                       # Entit√©s JPA (AutorisationTravail, Visa, Notification, Zone...)
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ security/                     # Filtres JWT, SecurityUtils, RoleUtils, ATContextService
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ pdf/                          # G√©n√©rateur PDF officiel Apache FOP / XSL-FO
-‚îÇ   ‚îÇ   ‚îî‚îÄ‚îÄ mapper/                       # Mappers MapStruct
-‚îÇ   ‚îî‚îÄ‚îÄ pom.xml
-‚îÇ
-‚îú‚îÄ‚îÄ ai-service/                           # Microservice IA / OCR (Python FastAPI)
-‚îÇ   ‚îú‚îÄ‚îÄ app/
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ main.py                       # Application FastAPI
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ routes/                       # Endpoints d'analyse OCR des permis
-‚îÇ   ‚îÇ   ‚îî‚îÄ‚îÄ services/                     # Analyse d'images et extraction de conformit√©
-‚îÇ   ‚îî‚îÄ‚îÄ requirements.txt
-‚îÇ
-‚îú‚îÄ‚îÄ frontend/                             # Frontend React 19 + TypeScript + Vite
-‚îÇ   ‚îú‚îÄ‚îÄ src/
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ components/
-‚îÇ   ‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ common/                   # FormulaireOCPInteractive, FormulaireOCPViewer, SignaturePad...
-‚îÇ   ‚îÇ   ‚îÇ   ‚îî‚îÄ‚îÄ layout/                   # Topbar (avec polling notifs), Sidebar, Breadcrumbs...
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ modules/
-‚îÇ   ‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ autorisations/            # Liste, D√©tail, Formulaire, Signature CEEE, Actions de workflow
-‚îÇ   ‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ visas/                    # Validation des visas HC & HM
-‚îÇ   ‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ profile/                  # Profil utilisateur & NotificationsPage
-‚îÇ   ‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ dashboard/                # Tableaux de bord personnalis√©s par r√¥le
-‚îÇ   ‚îÇ   ‚îÇ   ‚îî‚îÄ‚îÄ administration/           # Gestion utilisateurs, r√¥les, permissions et r√©f√©rentiels
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ services/                     # Clients Axios (AT, Visas, Notifications, Documents...)
-‚îÇ   ‚îÇ   ‚îú‚îÄ‚îÄ store/                        # Stores Zustand (AuthStore)
-‚îÇ   ‚îÇ   ‚îî‚îÄ‚îÄ theme/                        # Th√®me OCP
-‚îÇ   ‚îî‚îÄ‚îÄ package.json
-‚îÇ
-‚îú‚îÄ‚îÄ docker-compose.yml                    # D√©ploiement multi-conteneurs
-‚îî‚îÄ‚îÄ README.md
++-- backend/                              # Spring Boot Java 17
+¶   +-- src/main/java/com/ocp/at/
+¶   ¶   +-- controller/                   # 37 contrÙleurs REST
+¶   ¶   +-- service/impl/                 # Logique mÈtier (AT, Visa, Notification, PDF...)
+¶   ¶   +-- repository/                   # Spring Data JPA
+¶   ¶   +-- entity/                       # EntitÈs JPA
+¶   ¶   +-- security/                     # JWT, RBAC, ATContextService
+¶   ¶   +-- dto/                          # DTOs request/response
+¶   ¶   +-- mapper/                       # MapStruct
+¶   +-- src/main/resources/
+¶   ¶   +-- application.yml               # Config principale
+¶   ¶   +-- application-dev.yml           # Config dev (DB locale)
+¶   ¶   +-- application-prod.yml          # Config production
+¶   ¶   +-- db/migration/                 # 35 scripts Flyway (V1-V35)
+¶   +-- pom.xml
+¶
++-- ai-service/                           # Python / FastAPI / CrewAI / Gemini
+¶   +-- app/
+¶   ¶   +-- main.py
+¶   ¶   +-- routes/                       # Endpoints IA
+¶   ¶   +-- services/                     # Agents CrewAI
+¶   +-- requirements.txt
+¶
++-- frontend/                             # React 19 + TypeScript + Vite 8
+¶   +-- src/
+¶   ¶   +-- components/
+¶   ¶   ¶   +-- common/                   # FormulaireOCPInteractive, SignaturePad...
+¶   ¶   ¶   +-- layout/                   # Topbar (polling notifs), Sidebar
+¶   ¶   +-- modules/
+¶   ¶   ¶   +-- auth/                     # LoginPage, RegisterPage
+¶   ¶   ¶   +-- autorisations/            # Liste, DÈtail, Workflow
+¶   ¶   ¶   +-- visas/                    # ValidationOCPPage (HC & HM)
+¶   ¶   ¶   +-- profile/                  # Profil & Notifications
+¶   ¶   ¶   +-- dashboard/                # Tableaux de bord par rÙle
+¶   ¶   ¶   +-- administration/           # Utilisateurs, RÙles, RÈfÈrentiels
+¶   ¶   +-- services/                     # Clients Axios
+¶   ¶   +-- store/                        # Zustand AuthStore
+¶   +-- public/
+¶   ¶   +-- OCP_Group.jpg                 # Logo OCP officiel
+¶   +-- package.json
+¶
++-- docker-compose.yml                    # 4 services : postgres, backend, ai-service, nginx
++-- README.md
 ```
 
 ---
 
-## üë• Standard OCP S-HSE-SEC-31 & Cha√Æne de Signatures
+## Base de DonnÈes & Migrations
 
-### R√¥les M√©tiers D√©finis
+PostgreSQL 16 avec 35 scripts Flyway versionnÈs :
 
-| R√¥le | D√©signation | Missions principales |
+| Scripts | Contenu |
+|---|---|
+| V1 ? V2 | SchÈma initial, sÈcuritÈ, utilisateurs, rÙles, permissions |
+| V3 ? V6 | Documents sources, Visites prÈalables, Analyses de risques |
+| V7 ? V11 | AT, Workflow, Permis, RÈception travaux, Archivage |
+| V12 ? V18 | Correctifs : Flyway, inscriptions, rÙles CE/HM/HC |
+| V19 ? V26 | Formulaire officiel OCP, Workflow standard, Habilitations |
+| V27 ? V35 | Correctifs : Visas, RÈception, Permis documents, HiÈrarchie |
+
+**Configuration dÈveloppement** (`application-dev.yml`) :
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/at_ocp_db
+    username: at_ocp_user
+    password: at_ocp_secret
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+ocp:
+  ai:
+    provider: CREW_AI       # MOCK | LANG_CHAIN | CREW_AI
+    fastapi-url: http://localhost:8000
+```
+
+---
+
+## Standard S-HSE-SEC-31 & RÙles
+
+### RÙles MÈtiers
+
+| RÙle | DÈsignation | ResponsabilitÈs |
 |---|---|---|
-| **CEEP** | Chef d'√âquipe √âmetteur / Propri√©taire (P) | R√©dige l'AT, effectue la visite pr√©alable, signe l'√âtape 1, effectue la r√©ception conjointe. |
-| **CEEE** | Chef d'√âquipe Ex√©cutant (E) | Accuse r√©ception de l'AT, signe l'√âtape 2, d√©marre les travaux, d√©clare la fin des travaux. |
-| **HCEP** | Hors Cadre √âmetteur / Propri√©taire (P) | Classifie les interventions, appose son visa (√âtape 3), garant de la s√©curit√© propri√©taire. |
-| **HCEE** | Hors Cadre Ex√©cutant (E) | Appose son visa (√âtape 4), garant de la s√©curit√© ex√©cutante et de l'archivage. |
-| **HMEP** | Haute Ma√Ætrise √âmettrice / Propri√©taire (P) | Garant terrain √©metteur, appose son visa de garantie (√âtape 5). |
-| **HMEE** | Haute Ma√Ætrise Ex√©cutante (E) | Garant terrain ex√©cutant, appose son visa de garantie (√âtape 6). |
-| **ADMIN** | Administrateur Syst√®me | Gestion des utilisateurs, r√¥les, services, zones et audits. |
+| **CEEP** | Chef d'…quipe …metteur / PropriÈtaire | RÈdaction AT, Visite prÈalable, Visa …tape 1, RÈception conjointe |
+| **CEEE** | Chef d'…quipe ExÈcutant | AccusÈ rÈception, Visa …tape 2, DÈmarrage, Fin des travaux |
+| **HCEP** | Hors Cadre …metteur / PropriÈtaire | Classification, Visa …tape 3, Garant sÈcuritÈ propriÈtaire |
+| **HCEE** | Hors Cadre ExÈcutant | Visa …tape 4, Garant sÈcuritÈ exÈcutante, Archivage |
+| **HMEP** | Haute MaÓtrise …mettrice | Visa de garantie …tape 5 |
+| **HMEE** | Haute MaÓtrise ExÈcutante | Visa de garantie …tape 6 |
+| **ADMIN** | Administrateur SystËme | Gestion users, rÙles, zones, rÈfÈrentiels, audit |
+| **RESPONSABLE_EXTERIEUR** | Responsable Entreprise ExtÈrieure | Suivi des AT de son entreprise |
 
-### Diagramme des 9 √âtapes du Workflow
+### ChaÓne des 6 Visas
 
-```mermaid
-graph TD
-    E0[0. CLASSIFICATION_EFFECTUEE<br/>HCEP] --> E1[1. DEMANDE_CREEE / BROUILLON<br/>CEEP - DI / OT / BT]
-    E1 --> E2[2. VISITE_REALISEE<br/>CEEP + GPS/Photo]
-    E2 --> E3[3. AT_REDIGEE & SIGN√âE<br/>1. CEEP ‚Üí 2. CEEE ‚Üí 3. HCEP ‚Üí 4. HCEE ‚Üí 5. HMEP ‚Üí 6. HMEE]
-    E3 --> E4[4. INTERVENTION_EN_COURS<br/>CEEE]
-    E4 -->|D√©but de nouveau poste| E5[5. AT_RECONDUITE<br/>CEEP / CEEE]
-    E5 --> E4
-    E4 -->|Incident / Changement condition| E2
-    E4 --> E6[6. FIN_TRAVAUX_DECLAREE<br/>CEEE]
-    E6 --> E7[7. TRAVAUX_RECEPTIONES<br/>R√©ception conjointe CEEP + CEEE]
-    E7 --> E8[8. ARCHIVEE<br/>Archivage officiel PDF + QR Code]
+```
+CEEP (1) ? CEEE (2) ? HCEP (3) ? HCEE (4) ? HMEP (5) ? HMEE (6)
+```
+
+Chaque visa est horodatÈ, signÈ manuscritement et hashÈ en SHA-256.
+
+### Workflow ó 9 …tats
+
+```
+BROUILLON ? VISITE_REALISEE ? AT_REDIGEE (6 visas)
+? INTERVENTION_EN_COURS ? AT_RECONDUITE
+? FIN_TRAVAUX_DECLAREE ? TRAVAUX_RECEPTIONES ? ARCHIVEE
 ```
 
 ---
 
-## üì¶ Pr√©requis
+## PrÈrequis
 
-- **Java JDK** : Version 21 (Eclipse Temurin ou OpenJDK 21)
-- **Maven** : Version 3.9+
-- **Node.js** : Version 20+ avec **npm**
-- **Python** : Version 3.10 ou 3.11 (pour le service IA)
-- **PostgreSQL** : Version 15 ou 16
+| Outil | Version | Usage |
+|---|---|---|
+| Java JDK | **17** (OpenJDK / Temurin) | Backend |
+| Maven | **3.9+** | Build backend |
+| Node.js | **20+** avec npm | Frontend |
+| Python | **3.11** | Microservice IA |
+| PostgreSQL | **16** | Base de donnÈes |
+| Docker | Latest | DÈploiement complet (optionnel) |
 
 ---
 
-## üöÄ Installation & D√©marrage
+## DÈmarrage Local
 
-### Option 1 : D√©marrage Local (Recommand√© & Rapide)
+### …tape 1 ó Base de DonnÈes
 
-#### 1. D√©marrer la Base de Donn√©es PostgreSQL
-Si vous n'avez pas PostgreSQL install√© en local, vous pouvez lancer uniquement la base avec Docker en 2 secondes :
 ```bash
-docker run --name postgres-ocp -e POSTGRES_DB=at_ocp_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16-alpine
+docker run --name at-ocp-postgres \
+  -e POSTGRES_DB=at_ocp_db \
+  -e POSTGRES_USER=at_ocp_user \
+  -e POSTGRES_PASSWORD=at_ocp_secret \
+  -p 5432:5432 \
+  -d postgres:16-alpine
 ```
 
-#### 2. D√©marrer le Backend (Spring Boot)
-Ouvrez un terminal :
+### …tape 2 ó Backend Spring Boot
+
 ```bash
 cd backend
+
+# Windows PowerShell
+$env:JWT_SECRET="404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
+
 mvn spring-boot:run
 ```
-- **API REST** : `http://localhost:8080/api`
-- **Documentation Swagger UI** : `http://localhost:8080/swagger-ui.html`
 
-#### 3. D√©marrer le Frontend (React / Vite)
-Ouvrez un second terminal :
+| URL | Description |
+|---|---|
+| `http://localhost:8080/api` | API REST |
+| `http://localhost:8080/swagger-ui.html` | Swagger UI |
+| `http://localhost:8080/actuator/health` | Health check |
+
+### …tape 3 ó Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
+# Application : http://localhost:5173
 ```
-- **Application Web** : `http://localhost:5173` (ou `http://localhost:3000`)
 
-#### 4. D√©marrer le Service IA (FastAPI - Optionnel)
-Ouvrez un troisi√®me terminal :
+### …tape 4 ó Microservice IA (optionnel)
+
 ```bash
 cd ai-service
-# Cr√©er et activer l'environnement virtuel
-python -m venv venv
-# Windows :
-.\venv\Scripts\activate
-# Linux/Mac :
-source venv/bin/activate
 
+# Windows
+python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
+
+$env:GOOGLE_API_KEY="votre-clÈ-api-google"
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Service IA : http://localhost:8000
 ```
-- **Service IA** : `http://localhost:8000`
+
+> Sans clÈ API Google, dÈfinir `OCP_AI_PROVIDER=MOCK` dans `application-dev.yml`.
 
 ---
 
-### Option 2 : D√©marrage avec Docker Compose
+## DÈmarrage Docker Compose
 
-Pour d√©marrer l'ensemble des conteneurs (PostgreSQL + Backend + Frontend + Service IA) :
+4 services orchestrÈs : `postgres`, `backend`, `ai-service`, `nginx`
 
 ```bash
-# Lancement en arri√®re-plan
+# CrÈer le fichier d'environnement
+cp .env.example .env   # puis remplir les valeurs
+
+# Lancer
 docker-compose up -d
 
-# Visualiser les logs
-docker-compose logs -f
+# Logs
+docker-compose logs -f backend
+docker-compose logs -f ai-service
+
+# ArrÍter
+docker-compose down
 ```
 
 ---
 
-## üì¶ Modules & Fonctionnalit√©s
+## Variables d'Environnement
 
-| Module | Description | Backend | Frontend |
-|---|---|:---:|:---:|
-| **Authentification & S√©curit√©** | Connexion JWT, gestion des sessions, refresh tokens et RBAC complet | ‚úÖ | ‚úÖ |
-| **Formulaire Interactif OCP** | Formulaire officiel S-HSE-SEC-31 sections A √† J avec auto-save | ‚úÖ | ‚úÖ |
-| **Documents Sources** | Gestion et g√©n√©ration des Demandes d'Intervention (DI), OT et BT | ‚úÖ | ‚úÖ |
-| **Visite Pr√©alable** | Enregistrement terrain avec coordonn√©es GPS et photos | ‚úÖ | ‚úÖ |
-| **Analyse des Risques & EPI** | R√©f√©rentiels complets des risques OCP, mesures, EPI et moyens d'acc√®s | ‚úÖ | ‚úÖ |
-| **V√©rification IA des Permis** | Analyse automatique OCR des permis scann√©s | ‚úÖ | ‚úÖ |
-| **Cha√Æne des Visas & Signatures** | Signature manuscrite horodat√©e SHA-256 (CEEP $\rightarrow$ HMEE) | ‚úÖ | ‚úÖ |
-| **Cycle de Vie & Transitions** | D√©marrage, reconduction, signalement d'incident, fin de travaux | ‚úÖ | ‚úÖ |
-| **R√©ception Conjointe** | Contr√¥le des essais, remise en √©tat et cl√¥ture officielle | ‚úÖ | ‚úÖ |
-| **Notifications Temps R√©el** | Acheminement par r√¥le avec polling 30s et navigation directe | ‚úÖ | ‚úÖ |
-| **G√©n√©ration PDF & QR Code** | Exportation du formulaire officiel 2 pages avec QR Code d'authenticit√© | ‚úÖ | ‚úÖ |
-| **Administration & R√©f√©rentiels** | Gestion des utilisateurs, zones, services, installations et habilitations | ‚úÖ | ‚úÖ |
+Fichier `.env` ‡ crÈer ‡ la racine :
+
+```env
+# Base de DonnÈes
+DB_PASSWORD=at_ocp_secret_password
+
+# JWT
+JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+JWT_EXPIRATION=86400000
+JWT_REFRESH_EXPIRATION=604800000
+
+# Google Gemini
+GOOGLE_API_KEY=AIza...votre_cle
+GEMINI_MODEL=gemini-2.5-flash
+
+# Fournisseur IA : MOCK | LANG_CHAIN | CREW_AI
+OCP_AI_PROVIDER=CREW_AI
+
+# Spring
+SPRING_PROFILES=prod
+```
 
 ---
 
-## üì° API REST Principale
+## API REST
 
-| M√©thode | Endpoint | Description |
+### Authentification
+
+| MÈthode | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/auth/login` | Authentification utilisateur et √©mission du token JWT |
-| `GET` | `/api/auth/me` | Profil et permissions de l'utilisateur connect√© |
-| `GET` | `/api/autorisations-travail` | Liste pagin√©e avec recherche (`search`) et filtre de statut (`statut`) |
-| `POST` | `/api/autorisations-travail` | Cr√©ation d'une nouvelle AT depuis un document source |
-| `GET` | `/api/autorisations-travail/{id}` | Consultation d√©taill√©e de l'autorisation de travail |
-| `PUT` | `/api/autorisations-travail/{id}/auto-save` | Sauvegarde automatique des sections du formulaire |
-| `POST` | `/api/autorisations-travail/{id}/soumettre` | Soumission de l'AT avec validation des permis IA |
-| `POST` | `/api/autorisations-travail/{id}/accuser-reception-ceee` | Accus√© de r√©ception par le Chef d'√âquipe Ex√©cutant |
-| `POST` | `/api/visas/create-and-sign` | Cr√©ation et signature d'un visa avec image manuscrite |
-| `GET` | `/api/visas/autorisation/{atId}` | Liste chronologique des visas et signatures d'une AT |
-| `POST` | `/api/autorisations-travail/{id}/demarrer` | D√©marrage officiel des travaux sur site |
-| `POST` | `/api/autorisations-travail/{id}/reconduire` | Reconduction de l'autorisation pour un nouveau poste |
-| `POST` | `/api/autorisations-travail/{id}/declarer-fin` | D√©claration de fin d'intervention par le CEEE |
-| `POST` | `/api/autorisations-travail/{id}/receptionner` | Validation conjointe de la r√©ception des travaux |
-| `GET` | `/api/pdf/at/{id}` | T√©l√©chargement du formulaire officiel PDF certifi√© |
-| `GET` | `/api/notifications` | Liste pagin√©e des notifications de l'utilisateur |
-| `GET` | `/api/notifications/count-unread` | Compteur instantan√© des notifications non lues |
-| `PUT` | `/api/notifications/read-all` | Marquer toutes les notifications comme lues |
+| `POST` | `/api/auth/login` | Connexion + JWT & refresh token |
+| `POST` | `/api/auth/refresh-token` | Renouvellement du JWT |
+| `POST` | `/api/auth/logout` | RÈvocation du refresh token |
+| `GET` | `/api/auth/me` | Profil & permissions utilisateur |
+| `POST` | `/api/auth/register` | Inscription (validation admin requise) |
+
+### Autorisations de Travail
+
+| MÈthode | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/autorisations-travail` | Liste paginÈe (`search`, `statut`, `page`, `size`) |
+| `POST` | `/api/autorisations-travail` | CrÈation depuis un document source |
+| `GET` | `/api/autorisations-travail/{id}` | DÈtail complet |
+| `PUT` | `/api/autorisations-travail/{id}/auto-save` | Sauvegarde auto des champs |
+| `POST` | `/api/autorisations-travail/{id}/soumettre` | Soumission + validation IA permis |
+| `POST` | `/api/autorisations-travail/{id}/accuser-reception-ceee` | AccusÈ rÈception CEEE |
+| `POST` | `/api/autorisations-travail/{id}/demarrer` | DÈmarrage des travaux |
+| `POST` | `/api/autorisations-travail/{id}/reconduire` | Reconduction de poste |
+| `POST` | `/api/autorisations-travail/{id}/declarer-fin` | Fin d'intervention |
+| `POST` | `/api/autorisations-travail/{id}/receptionner` | RÈception conjointe |
+| `POST` | `/api/autorisations-travail/{id}/annuler` | Annulation |
+
+### Visas & Signatures
+
+| MÈthode | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/visas/create-and-sign` | Signature manuscrite horodatÈe SHA-256 |
+| `GET` | `/api/visas/autorisation/{atId}` | Historique chronologique des visas |
+
+### Notifications
+
+| MÈthode | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/notifications` | Liste paginÈe |
+| `GET` | `/api/notifications/count-unread` | Compteur non lues (polling 30s) |
+| `PUT` | `/api/notifications/{id}/read` | Marquer comme lue |
+| `PUT` | `/api/notifications/read-all` | Tout marquer comme lu |
+
+### Documents Sources
+
+| MÈthode | Endpoint | Description |
+|---|---|---|
+| `GET/POST` | `/api/demandes-intervention` | Demandes d'Intervention (DI) |
+| `GET/POST` | `/api/ordres-travail` | Ordres de Travail (OT) |
+| `GET/POST` | `/api/bons-travail` | Bons de Travail (BT) |
+
+### Permis & PDF
+
+| MÈthode | Endpoint | Description |
+|---|---|---|
+| `GET/POST` | `/api/permis` | Gestion des permis |
+| `POST` | `/api/permis-documents/upload` | Upload + analyse OCR |
+| `GET` | `/api/pdf/at/{id}` | Formulaire PDF officiel certifiÈ |
+
+### Administration & RÈfÈrentiels
+
+| MÈthode | Endpoint | Description |
+|---|---|---|
+| `GET/POST/PUT/DELETE` | `/api/utilisateurs` | CRUD utilisateurs |
+| `PUT` | `/api/utilisateurs/{id}/approve` | Validation inscription |
+| `GET/POST/PUT/DELETE` | `/api/roles` | RÙles & permissions |
+| `GET/POST/PUT/DELETE` | `/api/zones` | Zones propriÈtaire/exÈcutante |
+| `GET/POST/PUT/DELETE` | `/api/services` | Services OCP |
+| `GET/POST/PUT/DELETE` | `/api/installations` | Installations |
+| `GET` | `/api/dashboard` | KPI & statistiques par rÙle |
+| `GET` | `/api/audit` | Journal d'audit |
 
 ---
 
-## üîê Comptes de D√©monstration
+## Comptes de DÈmonstration
 
-Pour tester les diff√©rents r√¥les du workflow S-HSE-SEC-31 :
+CrÈÈs automatiquement par les scripts Flyway (V23 seed data) :
 
-| R√¥le | Email | Mot de passe | P√©rim√®tre |
+| RÙle | Email | Mot de passe | PÈrimËtre |
 |---|---|---|---|
-| **Admin** | `admin@ocp.ma` | `Admin123!` | Acc√®s complet syst√®me et gestion |
-| **CEEP** | `ceep@ocp.ma` | `Password123!` | √âmetteur / Propri√©taire (R√©daction, Visite, Cl√¥ture) |
-| **CEEE** | `ceee@ocp.ma` | `Password123!` | Ex√©cutant (Accus√©, Signature, Travaux, Fin) |
-| **HCEP** | `hcep@ocp.ma` | `Password123!` | Hors Cadre √âmetteur (Classification, Visa √âtape 3) |
-| **HCEE** | `hcee@ocp.ma` | `Password123!` | Hors Cadre Ex√©cutant (Visa √âtape 4, Archivage) |
-| **HMEP** | `hmep@ocp.ma` | `Password123!` | Haute Ma√Ætrise √âmettrice (Garantie Visa √âtape 5) |
-| **HMEE** | `hmee@ocp.ma` | `Password123!` | Haute Ma√Ætrise Ex√©cutante (Garantie Visa √âtape 6) |
+| **Admin** | `admin@ocp.ma` | `Admin123!` | AccËs complet systËme |
+| **CEEP** | `ceep@ocp.ma` | `Password123!` | RÈdaction, Visite, Visa 1, ClÙture |
+| **CEEE** | `ceee@ocp.ma` | `Password123!` | AccusÈ, Visa 2, Travaux, Fin |
+| **HCEP** | `hcep@ocp.ma` | `Password123!` | Classification, Visa 3 |
+| **HCEE** | `hcee@ocp.ma` | `Password123!` | Visa 4, Archivage |
+| **HMEP** | `hmep@ocp.ma` | `Password123!` | Visa garantie 5 |
+| **HMEE** | `hmee@ocp.ma` | `Password123!` | Visa garantie 6 |
 
 ---
-
-## üìÑ Licence & √âquipe
-
-Ce projet est sous licence propri√©taire d√©velopp√© pour **OCP Group**.
 
 <p align="center">
-  <strong>OCP Group ¬∑ Direction S√©curit√© & Sant√© au Travail (HSE)</strong><br/>
-  Conforme √† la directive <em>S-HSE-SEC-31</em>
+  <strong>OCP Group ∑ Direction SÈcuritÈ & SantÈ au Travail (HSE)</strong><br/>
+  Standard <em>S-HSE-SEC-31</em> ∑ Formulaire <em>F-HSE-SEC-31-04</em><br/>
+  © 2026 OCP Group ó SystËme AT Intelligente
 </p>
