@@ -13,6 +13,7 @@ import {
   Alert,
   Divider,
 } from '@mui/material';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import ShieldIcon from '@mui/icons-material/Shield';
 import { useAuthStore } from '../../store/authStore';
@@ -23,13 +24,22 @@ export const MaitriseDashboard: React.FC = () => {
 
   const cardsProprietaire = [
     {
+      title: '🔄 Décisions de Reconduction (HMEP)',
+      subtitle: 'Approuver ou refuser les demandes de prolongation soumises par les CEEE — Responsable OCP',
+      action: 'Traiter les reconductions',
+      path: '/reconductions',
+      icon: <AutorenewIcon sx={{ fontSize: 32, color: '#E65100' }} />,
+      color: '#E65100',
+      highlight: true,
+    },
+    {
       title: 'Signature Haute Maîtrise (HMEP)',
       subtitle: 'Viser et signer les autorisations de travail en tant que Haute Maîtrise Propriétaire (après signature HCEP/HCEE)',
       action: 'Signer AT (HMEP)',
       path: '/autorisations',
       icon: <ShieldIcon sx={{ fontSize: 32, color: '#3C7A5C' }} />,
       color: '#3C7A5C',
-      highlight: true,
+      highlight: false,
     },
     {
       title: 'Archivage AT (§8.6 - HMEP)',

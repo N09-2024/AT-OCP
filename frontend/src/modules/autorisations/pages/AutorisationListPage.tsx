@@ -42,10 +42,12 @@ import { useAuthStore } from '../../../store/authStore';
 export default function AutorisationListPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const filterParam = searchParams.get('filtre');
+  const filterParam = searchParams.get('filtre') || searchParams.get('statut');
   const user = useAuthStore((s) => s.user);
 
-  const roles = user?.roles?.map((r: any) => r.nom) || [];
+  const roles: string[] = (user?.roles || []).map((r: any) =>
+    typeof r === 'string' ? r.toUpperCase() : (r.nom || r.name || '').toUpperCase()
+  );
   const isAdmin = roles.includes('ADMIN');
   const isCeep = roles.some((r: string) => r === 'CEEP' || r === 'DEMANDEUR');
   const isCeee = roles.includes('CEEE');

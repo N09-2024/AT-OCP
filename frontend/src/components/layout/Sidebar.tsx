@@ -90,10 +90,7 @@ const CE_MENU = {
     {
       title: 'Suivi du Processus',
       items: [
-        { text: 'Documents source (DI/OT/BT)', path: '/documents', icon: <DocumentTextIcon width={20} /> },
-        { text: 'Visites préalables', path: '/visites', icon: <MapPinIcon width={20} /> },
-        { text: 'Gestion des permis', path: '/permis', icon: <ShieldCheckIcon width={20} /> },
-        { text: 'Réception travaux', path: '/receptions', icon: <ArchiveBoxIcon width={20} /> },
+       
         { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
       ],
     },

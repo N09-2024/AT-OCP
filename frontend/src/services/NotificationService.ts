@@ -36,16 +36,13 @@ export const NotificationService = {
     await apiClient.put('/notifications/read-all');
   },
 
-  countUnread: async (): Promise<number> => {
-    try {
-      const res = await apiClient.get<{ count: number }>('/notifications/count-unread');
-      return res.data.count;
-    } catch {
-      // Fallback
-      const all = await apiClient.get<Page<NotificationItem>>('/notifications', {
-        params: { page: 0, size: 50 },
-      });
-      return all.data.content.filter((n) => !n.lu).length;
-    }
+countUnread: async (): Promise<number> => {
+  try {
+    const res = await apiClient.get<{ count: number }>('/notifications/count-unread');
+    return res.data.count ?? 0;
+  } catch {
+    return 0; // silencieux — ne jamais crasher la Topbar
+  }
+
   },
 };

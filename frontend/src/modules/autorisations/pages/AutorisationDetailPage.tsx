@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+
 import {
   Box,
   Typography,
@@ -12,51 +13,137 @@ import {
   Alert,
   Divider,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Checkbox,
+  FormControlLabel,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Chip,
 } from '@mui/material';
+
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import ArchiveIcon from '@mui/icons-material/Archive';
-import LockIcon from '@mui/icons-material/Lock';
-import HistoryIcon from '@mui/icons-material/History';
 import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import ErrorIcon from '@mui/icons-material/Error';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+
 import { autorisationTravailApi } from '../../../services/autorisationTravailApi';
 import { visaApi } from '../../../services/visaApi';
 import { archiveApi } from '../../../services/archiveApi';
-import { apiClient } from '../../../services/apiClient';
-import type { AutorisationTravail, Visa, HistoriqueAT } from '../../../types';
+import { interventionApi, type ReadinessCheckItem } from '../../../services/interventionApi';
+import { reconductionApi } from '../../../services/reconductionApi';
+
+import type {
+  AutorisationTravail,
+  Visa,
+  HistoriqueAT,
+} from '../../../types';
+
 import FormulaireOCPViewer from '../../../components/common/FormulaireOCPViewer';
 import { useAuthStore } from '../../../store/authStore';
 
 export default function AutorisationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const user = useAuthStore((s) => s.user);
 
+  // ============================================================
+  // ÉTAT PRINCIPAL
+  // ============================================================
+
   const [loading, setLoading] = useState(true);
+
   const [at, setAt] = useState<AutorisationTravail | null>(null);
+
   const [visas, setVisas] = useState<Visa[]>([]);
+
   const [historiques, setHistoriques] = useState<HistoriqueAT[]>([]);
+
   const [tabIndex, setTabIndex] = useState(0);
+
   const [pdfLoading, setPdfLoading] = useState(false);
+
   const [actionLoading, setActionLoading] = useState(false);
 
+  // ============================================================
+  // DIALOGUE READINESS CHECK
+  // ============================================================
+
+  const [readinessOpen, setReadinessOpen] = useState(false);
+
+  const [readinessChecks, setReadinessChecks] = useState<
+    ReadinessCheckItem[]
+  >([]);
+
+  const [readinessLoading, setReadinessLoading] = useState(false);
+
+  // ============================================================
+  // DIALOGUE RECONDUCTION
+  // CEEE -> HMEP
+  // ============================================================
+
+  const [reconductionOpen, setReconductionOpen] = useState(false);
+
+  const [reconductionDate, setReconductionDate] = useState('');
+
+  const [reconductionMotif, setReconductionMotif] = useState('');
+
+  const [reconductionLoading, setReconductionLoading] = useState(false);
+
+  // ============================================================
+  // DIALOGUE FIN DES TRAVAUX
+  // ============================================================
+
+  const [finOpen, setFinOpen] = useState(false);
+
+  const [rapportFin, setRapportFin] = useState('');
+
+  const [materielEvacue, setMaterielEvacue] = useState(false);
+
+  const [zoneNettoyee, setZoneNettoyee] = useState(false);
+
+  const [consignationRetiree, setConsignationRetiree] = useState(false);
+
+  const [finLoading, setFinLoading] = useState(false);
+
+  // ============================================================
+  // CHARGEMENT DES DONNÉES
+  // ============================================================
+
   const loadDetails = async () => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
+
     setLoading(true);
+
     try {
       const data = await autorisationTravailApi.findById(id);
+
       setAt(data);
+
       const visaList = await visaApi.getVisasByAtId(id);
+
       setVisas(visaList || []);
+
       const histoList = await autorisationTravailApi.getHistorique(id);
+
       setHistoriques(histoList || []);
     } catch (err) {
-      console.error(err);
+      console.error('Erreur lors du chargement de l’AT :', err);
     } finally {
       setLoading(false);
     }
@@ -66,161 +153,465 @@ export default function AutorisationDetailPage() {
     loadDetails();
   }, [id]);
 
+  // ============================================================
+  // EXPORT PDF
+  // ============================================================
+
   const handleExportPdf = async () => {
-    if (!id || !at) return;
+    if (!id || !at) {
+      return;
+    }
+
     setPdfLoading(true);
+
     try {
       const blob = await autorisationTravailApi.exportPdf(id);
+
       const url = window.URL.createObjectURL(blob);
+
       const a = document.createElement('a');
+
       a.href = url;
+
       a.download = `${at.numero || 'AT'}.pdf`;
+
+      document.body.appendChild(a);
+
       a.click();
+
+      document.body.removeChild(a);
+
+      window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la génération du PDF.');
+      alert(
+        err?.response?.data?.message ||
+          'Erreur lors de la génération du PDF.'
+      );
     } finally {
       setPdfLoading(false);
     }
   };
 
+  // ============================================================
+  // ARCHIVAGE
+  // HCEP / HCEE
+  // ============================================================
+
   const handleArchiver = async () => {
-    if (!id || !at) return;
+    if (!id || !at) {
+      return;
+    }
+
     try {
       await archiveApi.archiverAT(id);
-      alert('AT archivée officiellement avec succès (Étape 8).');
-      loadDetails();
+
+      alert(
+        'AT archivée officiellement avec succès (Étape 8).'
+      );
+
+      await loadDetails();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de l\'archivage.');
+      alert(
+        err?.response?.data?.message ||
+          "Erreur lors de l'archivage."
+      );
     }
   };
 
-  // Étape 4 - Démarrer l'intervention (CEEE Exécutant)
-  const handleDemarrerIntervention = async () => {
-    if (!id) return;
-    setActionLoading(true);
+  // ============================================================
+  // READINESS CHECK
+  // ============================================================
+
+  const handleOpenReadiness = async () => {
+    if (!id) {
+      return;
+    }
+
+    setReadinessLoading(true);
+
+    setReadinessOpen(true);
+
     try {
-      await apiClient.post(`/autorisations-travail/${id}/demarrer-intervention`);
-      alert('Démarrage des travaux enregistré avec succès (Étape 4). Statut : INTERVENTION EN COURS.');
-      loadDetails();
+      const result = await interventionApi.getReadiness(id);
+
+      setReadinessChecks(result.checks || []);
+    } catch (err) {
+      console.error(
+        'Erreur lors du readiness check :',
+        err
+      );
+
+      setReadinessChecks([]);
+    } finally {
+      setReadinessLoading(false);
+    }
+  };
+
+  // ============================================================
+  // DÉMARRER INTERVENTION
+  // CEEE
+  // ============================================================
+
+  const handleConfirmerDemarrage = async () => {
+    if (!id) {
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      await interventionApi.start(id, {
+        confirmationCeee: true,
+      });
+
+      setReadinessOpen(false);
+
+      alert(
+        'Démarrage des travaux enregistré avec succès. ' +
+          'Statut : INTERVENTION EN COURS.'
+      );
+
+      await loadDetails();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors du démarrage des travaux.');
+      alert(
+        err?.response?.data?.message ||
+          'Erreur lors du démarrage des travaux.'
+      );
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Étape 5b - Reconduire l'AT (CEEP / CEEE / HCEE)
-  const handleReconduire = async () => {
-    if (!id) return;
-    setActionLoading(true);
+  // ============================================================
+  // RECONDUCTION
+  // CEEE -> HMEP
+  // ============================================================
+
+  const handleOpenReconduction = () => {
+    setReconductionDate('');
+
+    setReconductionMotif('');
+
+    setReconductionOpen(true);
+  };
+
+  const handleSoumettreReconduction = async () => {
+    if (
+      !id ||
+      !at ||
+      !reconductionDate ||
+      !reconductionMotif.trim()
+    ) {
+      alert(
+        'Veuillez renseigner la nouvelle date de fin et le motif de la reconduction.'
+      );
+
+      return;
+    }
+
+    setReconductionLoading(true);
+
     try {
-      await apiClient.post(`/autorisations-travail/${id}/renew`);
-      alert('AT et permis reconduits pour le poste (Étape 5b). Version incrémentée.');
-      loadDetails();
+      await reconductionApi.demander({
+        atId: id,
+        nouvelleDateFin: reconductionDate,
+        motif: reconductionMotif.trim(),
+      });
+
+      setReconductionOpen(false);
+
+      alert(
+        'Demande de reconduction soumise au HMEP ' +
+          '(Responsable OCP). Vous serez notifié de la décision.'
+      );
+
+      await loadDetails();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la reconduction.');
+      alert(
+        err?.response?.data?.message ||
+          'Erreur lors de la demande de reconduction.'
+      );
     } finally {
-      setActionLoading(false);
+      setReconductionLoading(false);
     }
   };
 
-  // Étape 6 - Déclarer la fin des travaux (CEEE Exécutant)
-  const handleDeclarerFin = async () => {
-    if (!id) return;
-    setActionLoading(true);
+  // ============================================================
+  // FIN DES TRAVAUX
+  // CEEE
+  // ============================================================
+
+  const handleOpenFin = () => {
+    setRapportFin('');
+
+    setMaterielEvacue(false);
+
+    setZoneNettoyee(false);
+
+    setConsignationRetiree(false);
+
+    setFinOpen(true);
+  };
+
+  const handleConfirmerFin = async () => {
+    if (!id) {
+      return;
+    }
+
+    if (
+      !materielEvacue ||
+      !zoneNettoyee ||
+      !consignationRetiree
+    ) {
+      alert(
+        'Veuillez confirmer toutes les vérifications de fin de chantier avant de déclarer la fin.'
+      );
+
+      return;
+    }
+
+    setFinLoading(true);
+
     try {
-      await apiClient.post(`/autorisations-travail/${id}/declarer-fin`);
-      alert('Fin des travaux déclarée par le CEEE avec succès (Étape 6). Prêt pour réception.');
-      loadDetails();
+      await interventionApi.end(id, {
+        rapportFinChantier: rapportFin.trim(),
+        materielEvacue,
+        zoneNettoyee,
+        consignationRetiree,
+      });
+
+      setFinOpen(false);
+
+      alert(
+        'Fin des travaux déclarée par le CEEE avec succès. ' +
+          'Prêt pour réception conjointe.'
+      );
+
+      await loadDetails();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la déclaration de fin.');
+      alert(
+        err?.response?.data?.message ||
+          'Erreur lors de la déclaration de fin.'
+      );
     } finally {
-      setActionLoading(false);
+      setFinLoading(false);
     }
   };
+
+  // ============================================================
+  // LOADING
+  // ============================================================
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+        }}
+      >
         <CircularProgress color="success" />
       </Box>
     );
   }
 
+  // ============================================================
+  // AT INTROUVABLE
+  // ============================================================
+
   if (!at) {
     return (
-      <Box sx={{ p: 4, textAlign: 'center' }}>
-        <Alert severity="error">Autorisation de travail introuvable.</Alert>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/autorisations')} sx={{ mt: 2 }}>
+      <Box
+        sx={{
+          p: 4,
+          textAlign: 'center',
+        }}
+      >
+        <Alert severity="error">
+          Autorisation de travail introuvable.
+        </Alert>
+
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/autorisations')}
+          sx={{ mt: 2 }}
+        >
           Retour à la liste
         </Button>
       </Box>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // LOGIQUE STRICTE : Rôle de l'utilisateur connecté
-  // ═══════════════════════════════════════════════════════════════════════
-  const roles = user?.roles?.map((r: any) => r.nom) || [];
-  const isAdmin  = roles.includes('ADMIN');
-  const isCeep   = roles.includes('CEEP') || isAdmin;
-  const isCeee   = roles.includes('CEEE') || isAdmin;
-  const isCe     = isCeep || isCeee;
-  const isHcep   = roles.includes('HCEP') || isAdmin;
-  const isHcee   = roles.includes('HCEE') || isAdmin;
-  const isHmep   = roles.includes('HMEP') || isAdmin;
-  const isHmee   = roles.includes('HMEE') || isAdmin;
-  const isHc     = isHcep || isHcee;
-  const isHm     = isHmep || isHmee;
+  // ============================================================
+  // RÔLES
+  // ============================================================
 
-  // Raccourcis de statut
+  const roles: string[] = (user?.roles || []).map(
+    (r: any) =>
+      typeof r === 'string'
+        ? r.toUpperCase()
+        : (r?.nom || r?.name || '').toUpperCase()
+  );
+
+  const isAdmin = roles.includes('ADMIN');
+
+  // Rôles stricts
+
+  const isCeepStrict = roles.includes('CEEP');
+
+  const isCeeeStrict = roles.includes('CEEE');
+
+  const isHcepStrict = roles.includes('HCEP');
+
+  const isHceeStrict = roles.includes('HCEE');
+
+  const isHmepStrict = roles.includes('HMEP');
+
+  const isHmeeStrict = roles.includes('HMEE');
+
+  // Rôles synthétiques
+
+  const isCeSynth = roles.includes('CE');
+
+  const isHcSynth = roles.includes('HC');
+
+  const isHmSynth = roles.includes('HM');
+
+  // Droits effectifs
+
+  const isCeep =
+    isCeepStrict ||
+    isCeSynth ||
+    isAdmin;
+
+  const isCeee =
+    isCeeeStrict ||
+    isCeSynth ||
+    isAdmin;
+
+  const isHcep =
+    isHcepStrict ||
+    isHcSynth ||
+    isAdmin;
+
+  const isHcee =
+    isHceeStrict ||
+    isHcSynth ||
+    isAdmin;
+
+  const isHmep =
+    isHmepStrict ||
+    isHmSynth ||
+    isAdmin;
+
+  const isHmee =
+    isHmeeStrict ||
+    isHmSynth ||
+    isAdmin;
+
+  const isCe = isCeep || isCeee;
+
+  const isHc = isHcep || isHcee;
+
+  // ============================================================
+  // STATUT
+  // ============================================================
+
   const statut = at.statut as string;
 
-  // Détection des visas déjà apposés (par rôle du signataire)
+  // ============================================================
+  // DÉTECTION DES VISAS
+  // ============================================================
+
   const isPositiveVisa = (v: Visa) =>
-    v.statut === 'VALIDE' || v.statut === 'VALIDATION' || v.statut === 'SIGNATURE';
+    v.statut === 'VALIDE' ||
+    v.statut === 'VALIDATION' ||
+    v.statut === 'SIGNATURE';
 
   const detectVisa = (roleKeyword: string) =>
-    visas.some(v => {
-      if (!isPositiveVisa(v)) return false;
-      const comment = (v.commentaire || '').toUpperCase();
-      const keyword = roleKeyword.toUpperCase();
-      if (comment.includes(keyword)) return true;
-      // Fallback: rôle de l'utilisateur signataire
-      const userRoles: string[] = ((v as any).utilisateur?.roles || []).map((r: any) =>
-        (r.nom || r.name || '').toUpperCase()
-      );
-      if (userRoles.some(r => r === keyword || r.includes(keyword))) return true;
-      // Fallback: champ role direct sur la réponse visa
-      const directRole = ((v as any).role || (v as any).utilisateurRole || (v as any).roleSignataire || '').toUpperCase();
-      if (directRole === keyword || directRole.includes(keyword)) return true;
+    visas.some((v) => {
+      if (!isPositiveVisa(v)) {
+        return false;
+      }
+
+      const comment =
+        (v.commentaire || '').toUpperCase();
+
+      const keyword =
+        roleKeyword.toUpperCase();
+
+      if (comment.includes(keyword)) {
+        return true;
+      }
+
+      const userRoles: string[] =
+        ((v as any).utilisateur?.roles || []).map(
+          (r: any) =>
+            (r?.nom || r?.name || '').toUpperCase()
+        );
+
+      if (
+        userRoles.some(
+          (r) =>
+            r === keyword ||
+            r.includes(keyword)
+        )
+      ) {
+        return true;
+      }
+
+      const directRole = (
+        (v as any).role ||
+        (v as any).utilisateurRole ||
+        (v as any).roleSignataire ||
+        ''
+      ).toUpperCase();
+
+      if (
+        directRole === keyword ||
+        directRole.includes(keyword)
+      ) {
+        return true;
+      }
+
       return false;
     });
 
-  // hasCeeeVisa : aussi vrai si AT a progressé au-delà de SOUMISE (preuve implicite de réception CEEE)
-  const hasCeeeVisaExact = detectVisa('CEEE');
-  const hasCeeeVisa = hasCeeeVisaExact ||
+  const hasCeeeVisaExact =
+    detectVisa('CEEE');
+
+  const hasCeeeVisa =
+    hasCeeeVisaExact ||
     statut === 'EN_ATTENTE_VALIDATION' ||
     statut === 'VALIDEE' ||
     statut === 'AT_VALIDEE' ||
     statut === 'AT_REDIGEE' ||
     Boolean((at as any).dateReceptionCeee);
-  const hasHcepVisa = detectVisa('HCEP');
-  const hasHceeVisa = detectVisa('HCEE');
-  const hasHmepVisa = detectVisa('HMEP');
-  const hasHmeeVisa = detectVisa('HMEE');
 
-  // Toutes les signatures requises avant PDF
-  const allSignaturesComplete = hasCeeeVisa && hasHcepVisa && hasHceeVisa && hasHmepVisa && hasHmeeVisa;
-  const hmSignaturesComplete  = hasHmepVisa && hasHmeeVisa;
+  const hasHcepVisa =
+    detectVisa('HCEP');
 
-  // Validation globale des droits pour certaines actions
-  const hasValidationRights = isHc;
+  const hasHceeVisa =
+    detectVisa('HCEE');
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // Règles strictes d'affichage des boutons
-  // Standard S-HSE-SEC-31 - Cycle de vie séquentiel
-  // ═══════════════════════════════════════════════════════════════════════
+  const hasHmepVisa =
+    detectVisa('HMEP');
+
+  const hasHmeeVisa =
+    detectVisa('HMEE');
+
+  const allSignaturesComplete =
+    hasCeeeVisa &&
+    hasHcepVisa &&
+    hasHceeVisa &&
+    hasHmepVisa &&
+    hasHmeeVisa;
+
+  // ============================================================
+  // RÈGLES DE WORKFLOW
+  // ============================================================
 
   const canSignVisaStatus =
     statut === 'SOUMISE' ||
@@ -229,325 +620,1150 @@ export default function AutorisationDetailPage() {
     statut === 'VALIDEE' ||
     statut === 'AT_VALIDEE';
 
-  // Étape 0 - Reprendre le brouillon (CEEP uniquement, AT en BROUILLON)
-  const showEditDraft = statut === 'BROUILLON' && isCeep;
+  // Étape 0
+  const showEditDraft =
+    statut === 'BROUILLON' &&
+    isCeep;
 
-  // Étape 3b - Visa CEEE (CEEE uniquement, AT transmise / pas encore CEEE signé)
+  // Visa CEEE
   const showSignCeee =
     canSignVisaStatus &&
-    isCeee && !hasCeeeVisaExact;
+    isCeee &&
+    !hasCeeeVisaExact;
 
-  // Étape 3c - Visa HCEP (HCEP uniquement, après visa CEEE)
+  // Visa HCEP
   const showSignHcep =
     canSignVisaStatus &&
-    isHcep && hasCeeeVisa && !hasHcepVisa;
+    isHcep &&
+    hasCeeeVisa &&
+    !hasHcepVisa;
 
-  // Étape 3d - Visa HCEE (HCEE uniquement, après visa HCEP)
+  // Visa HCEE
   const showSignHcee =
     canSignVisaStatus &&
-    isHcee && hasHcepVisa && !hasHceeVisa;
+    isHcee &&
+    hasHcepVisa &&
+    !hasHceeVisa;
 
-  // Étape 3e - Visa HMEP (HMEP uniquement, après visa HCEE)
+  // Visa HMEP
   const showSignHmep =
     canSignVisaStatus &&
-    isHmep && hasHceeVisa && !hasHmepVisa;
+    isHmep &&
+    hasHceeVisa &&
+    !hasHmepVisa;
 
-  // Étape 3f - Visa HMEE (HMEE uniquement, après visa HMEP)
+  // Visa HMEE
   const showSignHmee =
     canSignVisaStatus &&
-    isHmee && hasHmepVisa && !hasHmeeVisa;
+    isHmee &&
+    hasHmepVisa &&
+    !hasHmeeVisa;
 
-  // Étape 4 - Démarrer l'intervention (CEEE uniquement, AT VALIDEE)
+  // Étape 4
   const showDemarrer =
-    (statut === 'VALIDEE' || statut === 'AT_VALIDEE') && isCeee;
+    (statut === 'VALIDEE' ||
+      statut === 'AT_VALIDEE') &&
+    isCeee;
 
-  // Étape 5b - Reconduire (CEEP ou CEEE, AT EN COURS)
+  // Étape 5
   const showReconduire =
-    (statut === 'INTERVENTION_EN_COURS' || statut === 'AT_RECONDUITE') && isCe;
+    (
+      statut === 'INTERVENTION_EN_COURS' ||
+      statut === 'AT_RECONDUITE'
+    ) &&
+    isCeee;
 
-  // Étape 6 - Déclarer la fin (CEEE uniquement, AT EN COURS)
+  // Étape 6
   const showDeclarerFin =
-    (statut === 'INTERVENTION_EN_COURS' || statut === 'AT_RECONDUITE') && isCeee;
+    (
+      statut === 'INTERVENTION_EN_COURS' ||
+      statut === 'AT_RECONDUITE'
+    ) &&
+    isCeee;
 
-  // Étape 7 - Réception conjointe (CEEP ou CEEE, AT FIN_TRAVAUX_DECLAREE)
+  // Étape 7
   const showReceptionner =
-    statut === 'FIN_TRAVAUX_DECLAREE' && isCe;
+    statut === 'FIN_TRAVAUX_DECLAREE' &&
+    isCe;
 
-  // PDF officiel - disponible après toutes signatures HM, pour tout rôle qui a signé
-  const showPdf = hmSignaturesComplete || allSignaturesComplete ||
-    (statut === 'CLOTUREE') || (statut === 'TRAVAUX_RECEPTIONES');
+  // ============================================================
+  // PDF
+  // ============================================================
 
-  // Étape 8 - Archivage officiel (HCEP ou HCEE uniquement, AT CLOTUREE)
+  const pdfUnlocked =
+    hasHmeeVisa ||
+    allSignaturesComplete ||
+    statut === 'CLOTUREE' ||
+    statut === 'TRAVAUX_RECEPTIONES' ||
+    statut === 'ARCHIVEE';
+
+  const isWorkflowParticipant =
+    isCeep ||
+    isCeee ||
+    isHcep ||
+    isHcee ||
+    isHmep ||
+    isHmee ||
+    isAdmin;
+
+  const showPdf =
+    pdfUnlocked &&
+    isWorkflowParticipant;
+
+  // ============================================================
+  // ARCHIVAGE
+  // HCEP / HCEE
+  // ============================================================
+
   const showArchiver =
-    (statut === 'CLOTUREE' || statut === 'TRAVAUX_RECEPTIONES') && hasValidationRights;
+    (
+      statut === 'CLOTUREE' ||
+      statut === 'TRAVAUX_RECEPTIONES'
+    ) &&
+    isHc;
+
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
-      {/* Header Actions */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/autorisations')} sx={{ color: '#5C6E67' }}>
-          Retour aux ATs
-        </Button>
+    <>
+      {/* ========================================================
+          CONTENU PRINCIPAL
+      ======================================================== */}
 
-        <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', gap: 1 }}>
-          {/* Étape 0 - Reprendre brouillon (CEEP) */}
-          {showEditDraft && (
-            <Button
-              variant="contained"
-              startIcon={<EditIcon />}
-              onClick={() => navigate(`/autorisations/${at.id}/editer`)}
-              sx={{ fontWeight: 700, background: '#A87532', '&:hover': { background: '#A87532' } }}
-            >
-              Reprendre le brouillon
-            </Button>
-          )}
+      <Box
+        sx={{
+          p: 3,
+          maxWidth: 1100,
+          mx: 'auto',
+        }}
+      >
+        {/* HEADER */}
 
-          {/* Étape 3b - Visa CEEE */}
-          {showSignCeee && (
-            <Tooltip title="Accuser réception et apposer votre visa CEEE">
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3,
+            gap: 2,
+          }}
+        >
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() =>
+              navigate('/autorisations')
+            }
+            sx={{
+              color: '#5C6E67',
+              flexShrink: 0,
+            }}
+          >
+            Retour aux ATs
+          </Button>
+
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              flexWrap: 'wrap',
+              gap: 1,
+              justifyContent: 'flex-end',
+            }}
+          >
+            {/* ==================================================
+                ÉTAPE 0 — BROUILLON
+            ================================================== */}
+
+            {showEditDraft && (
               <Button
                 variant="contained"
-                color="success"
-                startIcon={<CheckCircleIcon />}
-                onClick={() => navigate(`/autorisations/${at.id}/signature-ceee`)}
-                sx={{ fontWeight: 700 }}
+                startIcon={<EditIcon />}
+                onClick={() =>
+                  navigate(
+                    `/autorisations/${at.id}/editer`
+                  )
+                }
+                sx={{
+                  fontWeight: 700,
+                  background: '#A87532',
+                  '&:hover': {
+                    background: '#A87532',
+                  },
+                }}
               >
-                Signer l'AT (Visa CEEE)
+                Reprendre le brouillon
               </Button>
-            </Tooltip>
-          )}
+            )}
 
-          {/* Étape 3c - Visa HCEP */}
-          {showSignHcep && (
-            <Tooltip title="Apposer votre visa en tant que Hors Cadre Propriétaire (HCEP)">
+            {/* ==================================================
+                VISA CEEE
+            ================================================== */}
+
+            {showSignCeee && (
+              <Tooltip
+                title="Accuser réception et apposer votre visa CEEE"
+              >
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircleIcon />}
+                  onClick={() =>
+                    navigate(
+                      `/autorisations/${at.id}/signature-ceee`
+                    )
+                  }
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  Signer l'AT (Visa CEEE)
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ==================================================
+                VISA HCEP
+            ================================================== */}
+
+            {showSignHcep && (
+              <Tooltip
+                title="Apposer votre visa en tant que Hors Cadre Propriétaire (HCEP)"
+              >
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircleIcon />}
+                  onClick={() =>
+                    navigate(
+                      `/visas/validation/${at.id}?role=HCEP`
+                    )
+                  }
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  Signer l'AT (Visa HCEP)
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ==================================================
+                VISA HCEE
+            ================================================== */}
+
+            {showSignHcee && (
+              <Tooltip
+                title="Apposer votre visa en tant que Hors Cadre Exécutant (HCEE)"
+              >
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircleIcon />}
+                  onClick={() =>
+                    navigate(
+                      `/visas/validation/${at.id}?role=HCEE`
+                    )
+                  }
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  Signer l'AT (Visa HCEE)
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ==================================================
+                VISA HMEP
+            ================================================== */}
+
+            {showSignHmep && (
+              <Tooltip
+                title="Apposer votre visa en tant que Haute Maîtrise Propriétaire (HMEP)"
+              >
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircleIcon />}
+                  onClick={() =>
+                    navigate(
+                      `/visas/validation/${at.id}?role=HMEP`
+                    )
+                  }
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  Signer l'AT (Visa HMEP)
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ==================================================
+                VISA HMEE
+            ================================================== */}
+
+            {showSignHmee && (
+              <Tooltip
+                title="Apposer votre visa en tant que Haute Maîtrise Exécutante (HMEE)"
+              >
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircleIcon />}
+                  onClick={() =>
+                    navigate(
+                      `/visas/validation/${at.id}?role=HMEE`
+                    )
+                  }
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  Signer l'AT (Visa HMEE)
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ==================================================
+                ÉTAPE 4 — DÉMARRER
+            ================================================== */}
+
+            {showDemarrer && (
+              <Tooltip
+                title="Vérifier les conditions pré-démarrage"
+              >
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<PlayArrowIcon />}
+                  onClick={handleOpenReadiness}
+                  disabled={actionLoading}
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  Démarrer l'intervention
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ==================================================
+                ÉTAPE 5 — RECONDUCTION
+                CEEE -> HMEP
+            ================================================== */}
+
+            {showReconduire && (
+              <Tooltip
+                title="Demander une reconduction au Responsable OCP (HMEP)"
+              >
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<AutorenewIcon />}
+                  onClick={handleOpenReconduction}
+                  disabled={actionLoading}
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  Demander une reconduction
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ==================================================
+                ÉTAPE 6 — FIN TRAVAUX
+            ================================================== */}
+
+            {showDeclarerFin && (
+              <Tooltip
+                title="Déclarer la fin des travaux"
+              >
+                <Button
+                  variant="contained"
+                  color="info"
+                  startIcon={<TaskAltIcon />}
+                  onClick={handleOpenFin}
+                  disabled={actionLoading}
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  Déclarer la fin des travaux
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ==================================================
+                ÉTAPE 7 — RÉCEPTION
+            ================================================== */}
+
+            {showReceptionner && (
               <Button
                 variant="contained"
-                color="success"
-                startIcon={<CheckCircleIcon />}
-                onClick={() => navigate(`/visas/validation/${at.id}?role=HCEP`)}
-                sx={{ fontWeight: 700 }}
+                color="primary"
+                startIcon={<VerifiedIcon />}
+                onClick={() =>
+                  navigate(
+                    `/receptions?atId=${at.id}`
+                  )
+                }
+                sx={{
+                  fontWeight: 700,
+                }}
               >
-                Signer l'AT (Visa HCEP)
+                Réception conjointe & Clôture
               </Button>
-            </Tooltip>
-          )}
+            )}
 
-          {/* Étape 3d - Visa HCEE */}
-          {showSignHcee && (
-            <Tooltip title="Apposer votre visa en tant que Hors Cadre Exécutant (HCEE)">
+            {/* ==================================================
+                PDF OFFICIEL
+            ================================================== */}
+
+            {showPdf && (
               <Button
-                variant="contained"
+                variant="outlined"
                 color="success"
-                startIcon={<CheckCircleIcon />}
-                onClick={() => navigate(`/visas/validation/${at.id}?role=HCEE`)}
-                sx={{ fontWeight: 700 }}
+                startIcon={
+                  pdfLoading ? (
+                    <CircularProgress
+                      size={18}
+                      color="inherit"
+                    />
+                  ) : (
+                    <PictureAsPdfIcon />
+                  )
+                }
+                onClick={handleExportPdf}
+                disabled={pdfLoading}
+                sx={{
+                  fontWeight: 700,
+                }}
               >
-                Signer l'AT (Visa HCEE)
+                Télécharger le PDF Officiel
               </Button>
-            </Tooltip>
-          )}
+            )}
 
-          {/* Étape 3e - Visa HMEP */}
-          {showSignHmep && (
-            <Tooltip title="Apposer votre visa en tant que Haute Maîtrise Propriétaire (HMEP)">
+            {/* ==================================================
+                ÉTAPE 8 — ARCHIVAGE
+            ================================================== */}
+
+            {showArchiver && (
               <Button
-                variant="contained"
-                color="success"
-                startIcon={<CheckCircleIcon />}
-                onClick={() => navigate(`/visas/validation/${at.id}?role=HMEP`)}
-                sx={{ fontWeight: 700 }}
+                variant="outlined"
+                color="secondary"
+                startIcon={<ArchiveIcon />}
+                onClick={handleArchiver}
+                sx={{
+                  fontWeight: 700,
+                }}
               >
-                Signer l'AT (Visa HMEP)
+                Archiver officiellement
               </Button>
-            </Tooltip>
-          )}
+            )}
+          </Stack>
+        </Box>
 
-          {/* Étape 3f - Visa HMEE */}
-          {showSignHmee && (
-            <Tooltip title="Apposer votre visa en tant que Haute Maîtrise Exécutante (HMEE)">
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<CheckCircleIcon />}
-                onClick={() => navigate(`/visas/validation/${at.id}?role=HMEE`)}
-                sx={{ fontWeight: 700 }}
+        {/* ======================================================
+            MESSAGE PDF
+        ====================================================== */}
+
+        {at.exportPdfAutorise === false &&
+          (at.exportPdfMotifsRefus || []).length > 0 && (
+            <Alert
+              severity="warning"
+              sx={{ mb: 3 }}
+            >
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 800 }}
               >
-                Signer l'AT (Visa HMEE)
-              </Button>
-            </Tooltip>
+                Conditions requises pour télécharger
+                le document PDF officiel :
+              </Typography>
+
+              <ul
+                style={{
+                  margin: '4px 0 0 16px',
+                  padding: 0,
+                }}
+              >
+                {at.exportPdfMotifsRefus?.map(
+                  (motif, index) => (
+                    <li key={index}>
+                      {motif}
+                    </li>
+                  )
+                )}
+              </ul>
+            </Alert>
           )}
 
-          {/* Étape 4 - Démarrer l'intervention (CEEE) */}
-          {showDemarrer && (
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<PlayArrowIcon />}
-              onClick={handleDemarrerIntervention}
-              disabled={actionLoading}
-              sx={{ fontWeight: 700 }}
-            >
-              Démarrer l'intervention
-            </Button>
-          )}
+        {/* ======================================================
+            TABS
+        ====================================================== */}
 
-          {/* Étape 5b - Reconduire l'AT (CEEP / CEEE) */}
-          {showReconduire && (
-            <Button
-              variant="outlined"
-              color="warning"
-              startIcon={<AutorenewIcon />}
-              onClick={handleReconduire}
-              disabled={actionLoading}
-              sx={{ fontWeight: 700 }}
-            >
-              Reconduire l'AT (2ème / 3ème poste)
-            </Button>
-          )}
+        <Box
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            mb: 3,
+          }}
+        >
+          <Tabs
+            value={tabIndex}
+            onChange={(_, value) =>
+              setTabIndex(value)
+            }
+          >
+            <Tab label="Formulaire Officiel F-HSE-SEC-31-04" />
 
-          {/* Étape 6 - Déclarer la fin des travaux (CEEE) */}
-          {showDeclarerFin && (
-            <Button
-              variant="contained"
-              color="info"
-              startIcon={<TaskAltIcon />}
-              onClick={handleDeclarerFin}
-              disabled={actionLoading}
-              sx={{ fontWeight: 700 }}
-            >
-              Déclarer la fin des travaux
-            </Button>
-          )}
+            <Tab
+              label={`Visas (${visas.length})`}
+            />
 
-          {/* Étape 7 - Réception conjointe (CEEP + CEEE) */}
-          {showReceptionner && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<VerifiedIcon />}
-              onClick={() => navigate(`/receptions?atId=${at.id}`)}
-              sx={{ fontWeight: 700 }}
-            >
-              Réception conjointe & Clôture
-            </Button>
-          )}
+            <Tab
+              label={`Historique d'Audit (${historiques.length})`}
+            />
+          </Tabs>
+        </Box>
 
-          {/* PDF Officiel */}
-          {showPdf && (
-            <Button
-              variant="outlined"
-              color="success"
-              startIcon={pdfLoading ? <CircularProgress size={18} color="inherit" /> : <PictureAsPdfIcon />}
-              onClick={handleExportPdf}
-              disabled={pdfLoading}
-              sx={{ fontWeight: 700 }}
-            >
-              Télécharger le PDF Officiel
-            </Button>
-          )}
+        {/* ======================================================
+            TAB 0 — FORMULAIRE
+        ====================================================== */}
 
-          {/* Étape 8 - Archivage officiel (HCEP / HCEE) */}
-          {showArchiver && (
-            <Button
-              variant="outlined"
-              color="secondary"
-              startIcon={<ArchiveIcon />}
-              onClick={handleArchiver}
-              sx={{ fontWeight: 700 }}
+        {tabIndex === 0 && (
+          <FormulaireOCPViewer
+            at={at}
+            visas={visas}
+          />
+        )}
+
+        {/* ======================================================
+            TAB 1 — VISAS
+        ====================================================== */}
+
+        {tabIndex === 1 && (
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 2,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                mb: 2,
+              }}
             >
-              Archiver officiellement (Étape 8)
-            </Button>
-          )}
-        </Stack>
+              Liste des Visas & Signatures
+            </Typography>
+
+            {visas.length === 0 ? (
+              <Alert severity="info">
+                Aucun visa enregistré pour le moment.
+              </Alert>
+            ) : (
+              visas.map((v) => (
+                <Box
+                  key={v.id}
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    border:
+                      '1px solid #D6E3DC',
+                    borderRadius: 2,
+                    bgcolor: '#F7FAF8',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent:
+                        'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700 }}
+                    >
+                      Signataire :{' '}
+                      {v.utilisateurNomComplet ||
+                        'Utilisateur'}
+                    </Typography>
+
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      {v.dateSignature
+                        ? new Date(
+                            v.dateSignature
+                          ).toLocaleString(
+                            'fr-FR'
+                          )
+                        : 'En attente'}
+                    </Typography>
+                  </Box>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                  >
+                    Statut :{' '}
+                    <strong>
+                      {v.statut}
+                    </strong>{' '}
+                    | IP :{' '}
+                    {v.adresseIP ||
+                      'Non capturée'}
+                  </Typography>
+
+                  {v.commentaire && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontStyle: 'italic',
+                        mt: 1,
+                        p: 1,
+                        bgcolor: 'white',
+                        borderRadius: 1,
+                      }}
+                    >
+                      « {v.commentaire} »
+                    </Typography>
+                  )}
+                </Box>
+              ))
+            )}
+          </Paper>
+        )}
+
+        {/* ======================================================
+            TAB 2 — HISTORIQUE
+        ====================================================== */}
+
+        {tabIndex === 2 && (
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 2,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                mb: 2,
+              }}
+            >
+              Journal des Événements & Audit
+            </Typography>
+
+            {historiques.length === 0 ? (
+              <Alert severity="info">
+                Aucun événement enregistré.
+              </Alert>
+            ) : (
+              historiques.map((h) => (
+                <Box
+                  key={h.id}
+                  sx={{
+                    p: 2,
+                    mb: 1.5,
+                    borderLeft:
+                      '4px solid #1F4D3E',
+                    bgcolor: '#F7FAF8',
+                    borderRadius: 1,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent:
+                        'space-between',
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700 }}
+                    >
+                      {h.action} par{' '}
+                      {h.utilisateurNomComplet ||
+                        'Système'}
+                    </Typography>
+
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      {new Date(
+                        h.dateAction
+                      ).toLocaleString(
+                        'fr-FR'
+                      )}
+                    </Typography>
+                  </Box>
+
+                  {h.commentaire && (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5 }}
+                    >
+                      {h.commentaire}
+                    </Typography>
+                  )}
+                </Box>
+              ))
+            )}
+          </Paper>
+        )}
       </Box>
 
-      {at.exportPdfAutorise === false && (at.exportPdfMotifsRefus || []).length > 0 && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-            Conditions requises pour télécharger le document PDF officiel (Standard S-HSE-SEC-31 & Formulaire F-HSE-SEC-31-04) :
-          </Typography>
-          <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
-            {at.exportPdfMotifsRefus?.map((motif, i) => (
-              <li key={i}>{motif}</li>
-            ))}
-          </ul>
-        </Alert>
-      )}
+      {/* ========================================================
+          DIALOGUE READINESS CHECK
+      ======================================================== */}
 
-      {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)}>
-          <Tab label="Formulaire Officiel F-HSE-SEC-31-04" />
-          <Tab label={`Visas (${visas.length})`} />
-          <Tab label={`Historique d'Audit (${historiques.length})`} />
-        </Tabs>
-      </Box>
+      <Dialog
+        open={readinessOpen}
+        onClose={() =>
+          setReadinessOpen(false)
+        }
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 800,
+            bgcolor: '#1F4D3E',
+            color: 'white',
+          }}
+        >
+          Contrôle Pré-Démarrage
+        </DialogTitle>
 
-      {/* Tab 0: Form Viewer */}
-      {tabIndex === 0 && <FormulaireOCPViewer at={at} visas={visas} />}
-
-      {/* Tab 1: Visas */}
-      {tabIndex === 1 && (
-        <Paper sx={{ p: 3, borderRadius: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-            Liste des Visas & Signatures
-          </Typography>
-          {visas.length === 0 ? (
-            <Alert severity="info">Aucun visa enregistré pour le moment.</Alert>
+        <DialogContent sx={{ p: 3 }}>
+          {readinessLoading ? (
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                py: 4,
+              }}
+            >
+              <CircularProgress color="success" />
+            </Box>
           ) : (
-            visas.map((v) => (
-              <Box key={v.id} sx={{ p: 2, mb: 2, border: '1px solid #D6E3DC', borderRadius: 2, bgcolor: '#F7FAF8' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    Signataire : {v.utilisateurNomComplet || 'Utilisateur'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {v.dateSignature ? new Date(v.dateSignature).toLocaleString('fr-FR') : 'En attente'}
-                  </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Statut : <strong>{v.statut}</strong> | IP : {v.adresseIP || 'Non capturée'}
-                </Typography>
-                {v.commentaire && (
-                  <Typography variant="body2" sx={{ fontStyle: 'italic', mt: 1, p: 1, bgcolor: 'white', borderRadius: 1 }}>
-                    « {v.commentaire} »
-                  </Typography>
-                )}
-              </Box>
-            ))
-          )}
-        </Paper>
-      )}
+            <>
+              <Alert
+                severity="info"
+                sx={{ mb: 2 }}
+              >
+                Les conditions suivantes doivent
+                être satisfaites avant de démarrer
+                l'intervention.
+              </Alert>
 
-      {/* Tab 2: Historique */}
-      {tabIndex === 2 && (
-        <Paper sx={{ p: 3, borderRadius: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-            Journal des Événements & Audit
-          </Typography>
-          {historiques.length === 0 ? (
-            <Alert severity="info">Aucun événement enregistré.</Alert>
-          ) : (
-            historiques.map((h) => (
-              <Box key={h.id} sx={{ p: 2, mb: 1.5, borderLeft: '4px solid #1F4D3E', bgcolor: '#F7FAF8', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    {h.action} par {h.utilisateurNomComplet || 'Système'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {new Date(h.dateAction).toLocaleString('fr-FR')}
-                  </Typography>
-                </Box>
-                {h.commentaire && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    {h.commentaire}
-                  </Typography>
+              <List dense>
+                {readinessChecks.map(
+                  (check) => (
+                    <ListItem
+                      key={check.code}
+                      sx={{
+                        mb: 0.5,
+                        borderRadius: 1,
+                        bgcolor: check.passed
+                          ? '#F0FAF5'
+                          : check.blocking
+                            ? '#FFF3F3'
+                            : '#FFF8E1',
+                        border: `1px solid ${
+                          check.passed
+                            ? '#C8E6C9'
+                            : check.blocking
+                              ? '#FFCDD2'
+                              : '#FFE082'
+                        }`,
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          minWidth: 36,
+                        }}
+                      >
+                        {check.passed ? (
+                          <CheckCircleIcon color="success" />
+                        ) : check.blocking ? (
+                          <ErrorIcon color="error" />
+                        ) : (
+                          <WarningAmberIcon color="warning" />
+                        )}
+                      </ListItemIcon>
+
+                      <ListItemText
+                        primary={
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems:
+                                'center',
+                              gap: 1,
+                            }}
+                          >
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 600,
+                              }}
+                            >
+                              {check.label}
+                            </Typography>
+
+                            {check.blocking &&
+                              !check.passed && (
+                                <Chip
+                                  label="BLOQUANT"
+                                  size="small"
+                                  color="error"
+                                />
+                              )}
+                          </Box>
+                        }
+                        secondary={
+                          check.message
+                        }
+                      />
+                    </ListItem>
+                  )
                 )}
-              </Box>
-            ))
+              </List>
+
+              {readinessChecks.filter(
+                (c) =>
+                  !c.passed &&
+                  c.blocking
+              ).length > 0 && (
+                <Alert
+                  severity="error"
+                  sx={{ mt: 2 }}
+                >
+                  {
+                    readinessChecks.filter(
+                      (c) =>
+                        !c.passed &&
+                        c.blocking
+                    ).length
+                  }{' '}
+                  condition(s) bloquante(s)
+                  détectée(s). Résolvez-les
+                  avant de démarrer.
+                </Alert>
+              )}
+            </>
           )}
-        </Paper>
-      )}
-    </Box>
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            p: 2,
+            gap: 1,
+          }}
+        >
+          <Button
+            onClick={() =>
+              setReadinessOpen(false)
+            }
+            color="inherit"
+          >
+            Annuler
+          </Button>
+
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<PlayArrowIcon />}
+            disabled={
+              actionLoading ||
+              readinessLoading ||
+              readinessChecks.some(
+                (c) =>
+                  !c.passed &&
+                  c.blocking
+              )
+            }
+            onClick={
+              handleConfirmerDemarrage
+            }
+            sx={{
+              fontWeight: 700,
+            }}
+          >
+            {actionLoading ? (
+              <CircularProgress
+                size={20}
+                color="inherit"
+              />
+            ) : (
+              'Confirmer le démarrage'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ========================================================
+          DIALOGUE RECONDUCTION
+          CEEE -> HMEP
+      ======================================================== */}
+
+      <Dialog
+        open={reconductionOpen}
+        onClose={() =>
+          setReconductionOpen(false)
+        }
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 800,
+            bgcolor: '#E65100',
+            color: 'white',
+          }}
+        >
+          Demande de Reconduction
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 3 }}>
+          <Alert
+            severity="warning"
+            sx={{ mb: 3 }}
+          >
+            <Typography variant="body2">
+              La demande sera transmise au{' '}
+              <strong>
+                Responsable OCP (HMEP)
+              </strong>{' '}
+              pour approbation ou refus motivé.
+            </Typography>
+          </Alert>
+
+          <TextField
+            label="Nouvelle date/heure de fin"
+            type="datetime-local"
+            fullWidth
+            value={reconductionDate}
+            onChange={(e) =>
+              setReconductionDate(
+                e.target.value
+              )
+            }
+            slotProps={{
+              inputLabel: {
+                shrink: true,
+              },
+            }}
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            label="Motif de la reconduction *"
+            multiline
+            rows={4}
+            fullWidth
+            value={reconductionMotif}
+            onChange={(e) =>
+              setReconductionMotif(
+                e.target.value
+              )
+            }
+            placeholder="Expliquer pourquoi la reconduction est nécessaire."
+          />
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            p: 2,
+            gap: 1,
+          }}
+        >
+          <Button
+            onClick={() =>
+              setReconductionOpen(false)
+            }
+            color="inherit"
+          >
+            Annuler
+          </Button>
+
+          <Button
+            variant="contained"
+            color="warning"
+            startIcon={<AutorenewIcon />}
+            disabled={
+              reconductionLoading ||
+              !reconductionDate ||
+              !reconductionMotif.trim()
+            }
+            onClick={
+              handleSoumettreReconduction
+            }
+            sx={{
+              fontWeight: 700,
+            }}
+          >
+            {reconductionLoading ? (
+              <CircularProgress
+                size={20}
+                color="inherit"
+              />
+            ) : (
+              'Soumettre au HMEP'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ========================================================
+          DIALOGUE FIN DES TRAVAUX
+          CEEE
+      ======================================================== */}
+
+      <Dialog
+        open={finOpen}
+        onClose={() => setFinOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 800,
+            bgcolor: '#0288D1',
+            color: 'white',
+          }}
+        >
+          Déclaration de Fin des Travaux
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 3 }}>
+          <Alert
+            severity="info"
+            sx={{ mb: 2 }}
+          >
+            Confirmez les vérifications
+            obligatoires de fin de chantier avant
+            de déclarer la fin.
+          </Alert>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={materielEvacue}
+                onChange={(e) =>
+                  setMaterielEvacue(
+                    e.target.checked
+                  )
+                }
+                color="success"
+              />
+            }
+            label="Tout le matériel et les outils ont été évacués de la zone"
+          />
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={zoneNettoyee}
+                onChange={(e) =>
+                  setZoneNettoyee(
+                    e.target.checked
+                  )
+                }
+                color="success"
+              />
+            }
+            label="La zone de travail est nettoyée et remise en état"
+          />
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={consignationRetiree}
+                onChange={(e) =>
+                  setConsignationRetiree(
+                    e.target.checked
+                  )
+                }
+                color="success"
+              />
+            }
+            label="La consignation / déconsignation a été réalisée conformément"
+          />
+
+          <Divider sx={{ my: 2 }} />
+
+          <TextField
+            label="Rapport de fin de chantier (observations)"
+            multiline
+            rows={3}
+            fullWidth
+            value={rapportFin}
+            onChange={(e) =>
+              setRapportFin(
+                e.target.value
+              )
+            }
+            placeholder="Résumé des travaux réalisés, anomalies constatées, réserves éventuelles..."
+          />
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            p: 2,
+            gap: 1,
+          }}
+        >
+          <Button
+            onClick={() =>
+              setFinOpen(false)
+            }
+            color="inherit"
+          >
+            Annuler
+          </Button>
+
+          <Button
+            variant="contained"
+            color="info"
+            startIcon={<TaskAltIcon />}
+            disabled={
+              finLoading ||
+              !materielEvacue ||
+              !zoneNettoyee ||
+              !consignationRetiree
+            }
+            onClick={handleConfirmerFin}
+            sx={{
+              fontWeight: 700,
+            }}
+          >
+            {finLoading ? (
+              <CircularProgress
+                size={20}
+                color="inherit"
+              />
+            ) : (
+              'Déclarer la fin'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

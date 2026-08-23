@@ -27,6 +27,7 @@ import NotificationsPage from '../modules/profile/pages/NotificationsPage';
 import { ChefEquipeDashboard } from '../modules/chef-equipe/ChefEquipeDashboard';
 import { HierarchieChefDashboard } from '../modules/hierarchie-chef/HierarchieChefDashboard';
 import { MaitriseDashboard } from '../modules/maitrise/MaitriseDashboard';
+import ReconductionDecisionPage from '../modules/maitrise/ReconductionDecisionPage';
 
 // AT & Workflow Pages
 import AutorisationListPage from '../modules/autorisations/pages/AutorisationListPage';
@@ -51,6 +52,7 @@ import SimpleReferentielForm from '../modules/administration/pages/SimpleReferen
 import HabilitationsPage from '../modules/administration/pages/HabilitationsPage';
 
 import { ProtectedRoute, RoleGuard } from '../components/guards/Guards';
+import VerificationPublicPage from '../pages/VerificationPublicPage';
 
 const REFERENTIEL_ROUTES = [
   {
@@ -162,6 +164,10 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
+      {/* Route publique — Vérification QR Code (sans authentification) */}
+      <Route path="/verification/:numero" element={<VerificationPublicPage />} />
+      <Route path="/verification" element={<VerificationPublicPage />} />
+
       <Route path="/auth" element={<AuthLayout />}>
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
@@ -218,6 +224,16 @@ export default function AppRoutes() {
 
         {/* Archives & PDF */}
         <Route path="archives" element={<ArchiveListPage />} />
+
+        {/* HMEP — Décisions de reconduction */}
+        <Route
+          path="reconductions"
+          element={
+            <RoleGuard roles={['HM', 'HMEP', 'ADMIN']}>
+              <ReconductionDecisionPage />
+            </RoleGuard>
+          }
+        />
 
         {/* Permis */}
         <Route path="permis">
