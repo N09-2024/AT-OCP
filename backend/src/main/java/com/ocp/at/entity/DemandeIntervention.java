@@ -58,11 +58,6 @@ public class DemandeIntervention {
     private Utilisateur demandeur;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "installation_id")
-    @ToString.Exclude
-    private Installation installation;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipement_id")
     @ToString.Exclude
     private Equipement equipement;

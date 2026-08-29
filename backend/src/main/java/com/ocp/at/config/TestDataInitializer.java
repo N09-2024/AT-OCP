@@ -104,101 +104,134 @@ public class TestDataInitializer {
             new String[]{"HCEE", "Hors Cadre Responsable de l'Entité Exécutante"},
             new String[]{"HMEP", "Haute Maîtrise de l'Entité Propriétaire"},
             new String[]{"HMEE", "Haute Maîtrise de l'Entité Exécutante"},
-            new String[]{"RESPONSABLE_ENTREPRISE", "Responsable d'entreprise externe"}
+            new String[]{"CE", "Chef d'Équipe - position CEEP ou CEEE selon le territoire de l'AT"},
+            new String[]{"HM", "Haute Maîtrise - position HMEP ou HMEE selon le territoire de l'AT"},
+            new String[]{"HC", "Hors Cadre - position HCEP ou HCEE selon le territoire de l'AT"},
+            new String[]{"RESPONSABLE_ENTREPRISE", "Responsable d'entreprise externe"},
+            new String[]{"RESPONSABLE_EXTERIEUR", "Responsable Entreprise Extérieure"}
         );
 
         for (String[] roleData : roles) {
-            if (!roleRepository.existsByNom(roleData[0])) {
-                Set<Permission> perms = new HashSet<>();
-
-                switch (roleData[0]) {
-                    case "ADMIN":
-                        perms.addAll(permissionRepository.findAll());
-                        break;
-
-                    case "CEEP":
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "CREATE_AT", "EDIT_AT", "SUBMIT_AT",
-                            "SIGN_AT", "RENEW_AT", "RECEIVE_AT", "CLOSE_AT",
-                            "CREATE_VISITE", "TRANSFER_AT", "UPLOAD_FILES", "EXPORT_PDF",
-                            "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "CEEE":
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "EDIT_AT", "SIGN_AT", "START_INTERVENTION",
-                            "DECLARE_FIN_TRAVAUX", "VIEW_PERMIS", "EDIT_PERMIS",
-                            "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "HCEP":
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "CLASSIFY_INTERVENTION", "MANAGE_HABILITATIONS",
-                            "VIEW_ARCHIVE", "MANAGE_REFERENTIALS", "VIEW_AUDIT",
-                            "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "HCEE":
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "VALIDATE_AT", "REJECT_AT", "SIGN_AT",
-                            "VALIDATE_VISITE", "ARCHIVE_AT", "VIEW_ARCHIVE",
-                            "VIEW_PERMIS", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "HMEP":
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "VALIDATE_VISITE", "SIGN_AT",
-                            "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "HMEE":
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "READ_AT", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-
-                    case "RESPONSABLE_ENTREPRISE":
-                        permissionRepository.findByNomIn(Arrays.asList(
-                            "VIEW_PERMIS", "UPLOAD_PERMIS", "ANALYSE_PERMIS", "CREATE_PERMIS",
-                            "READ_AT", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
-                        )).forEach(perms::add);
-                        break;
-                }
-
-                roleRepository.save(Role.builder()
-                        .nom(roleData[0]).description(roleData[1]).permissions(perms).build());
-                log.info("Rôle test créé: {}", roleData[0]);
-            } else if ("ADMIN".equals(roleData[0])) {
-                // Toujours s'assurer que l'ADMIN a toutes les permissions
-                Role adminRole = roleRepository.findByNom("ADMIN").get();
-                adminRole.setPermissions(new HashSet<>(permissionRepository.findAll()));
-                roleRepository.save(adminRole);
-                log.info("Permissions du rôle ADMIN synchronisées (TestDataInitializer)");
+            Role role = roleRepository.findByNom(roleData[0]).orElse(null);
+            if (role == null) {
+                role = Role.builder().nom(roleData[0]).description(roleData[1]).permissions(new HashSet<>()).build();
             }
+
+            Set<Permission> perms = new HashSet<>();
+            switch (roleData[0]) {
+                case "ADMIN":
+                    perms.addAll(permissionRepository.findAll());
+                    break;
+                case "CEEP":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "READ_AT", "CREATE_AT", "EDIT_AT", "SUBMIT_AT", "SIGN_AT", "VALIDATE_AT",
+                        "RENEW_AT", "RECEIVE_AT", "CLOSE_AT", "CREATE_VISITE", "TRANSFER_AT",
+                        "VIEW_RECEPTION", "CREATE_RECEPTION", "EDIT_RECEPTION", "SIGN_RECEPTION",
+                        "VIEW_PERMIS", "CREATE_PERMIS", "EDIT_PERMIS", "UPLOAD_PERMIS", "ANALYSE_PERMIS",
+                        "UPLOAD_FILES", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
+                    )).forEach(perms::add);
+                    break;
+                case "CEEE":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "READ_AT", "EDIT_AT", "SIGN_AT", "VALIDATE_AT", "START_INTERVENTION",
+                        "DECLARE_FIN_TRAVAUX", "RECEIVE_AT", "CLOSE_AT", "CREATE_VISITE", "RENEW_AT",
+                        "VIEW_RECEPTION", "CREATE_RECEPTION", "SIGN_RECEPTION",
+                        "VIEW_PERMIS", "CREATE_PERMIS", "EDIT_PERMIS", "UPLOAD_PERMIS", "ANALYSE_PERMIS",
+                        "UPLOAD_FILES", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
+                    )).forEach(perms::add);
+                    break;
+                case "HCEP":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "READ_AT", "CLASSIFY_INTERVENTION", "SIGN_AT", "VALIDATE_AT", "REJECT_AT",
+                        "VALIDATE_VISITE", "VIEW_ARCHIVE", "ARCHIVE_AT", "MANAGE_HABILITATIONS",
+                        "VIEW_RECEPTION", "VIEW_PERMIS", "EXPORT_PDF", "RECEIVE_NOTIFICATION",
+                        "MANAGE_REFERENTIALS", "VIEW_AUDIT"
+                    )).forEach(perms::add);
+                    break;
+                case "HCEE":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "READ_AT", "SIGN_AT", "VALIDATE_AT", "REJECT_AT", "VALIDATE_VISITE",
+                        "START_INTERVENTION", "ARCHIVE_AT", "VIEW_ARCHIVE", "VIEW_RECEPTION",
+                        "VIEW_PERMIS", "EXPORT_PDF", "RECEIVE_NOTIFICATION", "MANAGE_REFERENTIALS", "VIEW_AUDIT"
+                    )).forEach(perms::add);
+                    break;
+                case "HMEP":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "READ_AT", "SIGN_AT", "VALIDATE_AT", "REJECT_AT", "VALIDATE_VISITE",
+                        "VIEW_ARCHIVE", "ARCHIVE_AT", "VIEW_RECEPTION", "VIEW_PERMIS", "EXPORT_PDF",
+                        "RECEIVE_NOTIFICATION"
+                    )).forEach(perms::add);
+                    break;
+                case "HMEE":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "READ_AT", "SIGN_AT", "VALIDATE_AT", "REJECT_AT", "VALIDATE_VISITE",
+                        "START_INTERVENTION", "VIEW_ARCHIVE", "VIEW_RECEPTION", "VIEW_PERMIS",
+                        "EXPORT_PDF", "RECEIVE_NOTIFICATION"
+                    )).forEach(perms::add);
+                    break;
+                case "CE":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "CREATE_AT", "EDIT_AT", "SUBMIT_AT", "READ_AT", "CREATE_VISITE", "SIGN_AT",
+                        "CLOSE_AT", "RECEIVE_AT", "START_INTERVENTION", "DECLARE_FIN_TRAVAUX",
+                        "RENEW_AT", "VALIDATE_AT", "REJECT_AT", "VIEW_RECEPTION", "CREATE_RECEPTION",
+                        "EDIT_RECEPTION", "SIGN_RECEPTION", "VIEW_PERMIS", "CREATE_PERMIS", "EDIT_PERMIS",
+                        "UPLOAD_PERMIS", "ANALYSE_PERMIS", "UPLOAD_FILES", "EXPORT_PDF", "RECEIVE_NOTIFICATION",
+                        "TRANSFER_AT"
+                    )).forEach(perms::add);
+                    break;
+                case "HM":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "READ_AT", "VALIDATE_VISITE", "SIGN_AT", "START_INTERVENTION", "VALIDATE_AT",
+                        "REJECT_AT", "VIEW_ARCHIVE", "ARCHIVE_AT", "VIEW_RECEPTION", "VIEW_PERMIS",
+                        "EXPORT_PDF", "RECEIVE_NOTIFICATION"
+                    )).forEach(perms::add);
+                    break;
+                case "HC":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "READ_AT", "CLASSIFY_INTERVENTION", "VALIDATE_AT", "REJECT_AT", "VALIDATE_VISITE",
+                        "SIGN_AT", "START_INTERVENTION", "ARCHIVE_AT", "VIEW_ARCHIVE", "VIEW_RECEPTION",
+                        "MANAGE_HABILITATIONS", "MANAGE_REFERENTIALS", "VIEW_AUDIT", "VIEW_PERMIS",
+                        "EXPORT_PDF", "RECEIVE_NOTIFICATION"
+                    )).forEach(perms::add);
+                    break;
+                case "RESPONSABLE_ENTREPRISE":
+                case "RESPONSABLE_EXTERIEUR":
+                    permissionRepository.findByNomIn(Arrays.asList(
+                        "VIEW_PERMIS", "UPLOAD_PERMIS", "ANALYSE_PERMIS", "CREATE_PERMIS",
+                        "READ_AT", "EXPORT_PDF", "RECEIVE_NOTIFICATION"
+                    )).forEach(perms::add);
+                    break;
+            }
+            role.setPermissions(perms);
+            roleRepository.save(role);
+            log.info("Rôle test synchronisé: {} ({} perms)", roleData[0], perms.size());
         }
     }
 
     private void initAdminUser() {
-        if (!utilisateurRepository.existsByEmail("admin@ocp.ma")) {
-            Role adminRole = roleRepository.findByNom("ADMIN")
-                    .orElseThrow(() -> new RuntimeException("Rôle ADMIN introuvable lors de l'initialisation test"));
+        createTestUserIfNotExists("admin@ocp.ma", "ADMIN001", "Administrateur", "Système", "Admin@123", "ADMIN");
+        createTestUserIfNotExists("ceep@ocp.ma", "CEEP001", "Chef Equipe", "Propriétaire", "Password123!", "CEEP");
+        createTestUserIfNotExists("ceee@ocp.ma", "CEEE001", "Chef Equipe", "Exécutant", "Password123!", "CEEE");
+        createTestUserIfNotExists("hcep@ocp.ma", "HCEP001", "Hors Cadre", "Propriétaire", "Password123!", "HCEP");
+        createTestUserIfNotExists("hcee@ocp.ma", "HCEE001", "Hors Cadre", "Exécutant", "Password123!", "HCEE");
+        createTestUserIfNotExists("hmep@ocp.ma", "HMEP001", "Haute Maîtrise", "Propriétaire", "Password123!", "HMEP");
+        createTestUserIfNotExists("hmee@ocp.ma", "HMEE001", "Haute Maîtrise", "Exécutante", "Password123!", "HMEE");
+    }
 
-            Utilisateur admin = Utilisateur.builder()
-                    .matricule("ADMIN001")
-                    .nom("Administrateur")
-                    .prenom("Système")
-                    .email("admin@ocp.ma")
-                    .motDePasse(passwordEncoder.encode("Admin@123"))
+    private void createTestUserIfNotExists(String email, String matricule, String nom, String prenom, String rawPassword, String roleName) {
+        if (!utilisateurRepository.existsByEmail(email)) {
+            Role role = roleRepository.findByNom(roleName).orElse(null);
+            if (role == null) return;
+            Utilisateur user = Utilisateur.builder()
+                    .matricule(matricule)
+                    .nom(nom)
+                    .prenom(prenom)
+                    .email(email)
+                    .motDePasse(passwordEncoder.encode(rawPassword))
                     .actif(true)
-                    .roles(Set.of(adminRole))
+                    .roles(new HashSet<>(Set.of(role)))
                     .build();
-
-            utilisateurRepository.save(admin);
+            utilisateurRepository.save(user);
         }
     }
 }

@@ -11,6 +11,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -21,6 +23,7 @@ import java.util.Map;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private static final Logger log = LoggerFactory.getLogger(NotificationController.class);
 
     @GetMapping
     @Operation(summary = "Lister les notifications de l'utilisateur connecté")
@@ -30,18 +33,22 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.getUserNotifications(userId, pageable));
     }
 
+   
     @GetMapping("/count-unread")
     @Operation(summary = "Nombre de notifications non lues")
     public ResponseEntity<Map<String, Long>> countUnread() {
-        String userId = SecurityUtils.getCurrentUtilisateurId()
-                .orElse(null);
-        if (userId == null) {
-            return ResponseEntity.ok(Map.of("count", 0L));
+        try {
+            String userId = SecurityUtils.getCurrentUtilisateurId().orElse(null);
+            if (userId == null) {
+                return ResponseEntity.ok(Map.of("count", 0L));
+            }
+            long count = notificationService.countUnread(userId);
+            return ResponseEntity.ok(Map.of("count", count));
+        } catch (Exception e) {
+            log.warn("countUnread: erreur ignorée → {}", e.getMessage());
+            return ResponseEntity.ok(Map.of("count", 0L));  // jamais de 500 ici
         }
-        long count = notificationService.countUnread(userId);
-        return ResponseEntity.ok(Map.of("count", count));
-    }
-
+}
     @PutMapping("/{id}/read")
     @Operation(summary = "Marquer une notification comme lue")
     public ResponseEntity<Void> markAsRead(@PathVariable String id) {

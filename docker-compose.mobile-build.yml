@@ -1,0 +1,12 @@
+services:
+  apk-builder:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      target: android-builder
+      args:
+        ENV: ${ENV:-dev}
+        API_BASE_URL: ${API_BASE_URL:-}
+    container_name: at-ocp-mobile-apk-builder
+    volumes:
+      - ./mobile/output:/output

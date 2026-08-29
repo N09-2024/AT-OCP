@@ -63,6 +63,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     private final NotificationService notificationService;
     private final ATContextService atContextService;
     private final com.ocp.at.service.PermisDocumentService permisDocumentService;
+    private final com.ocp.at.service.InterventionReadinessService interventionReadinessService;
     
     private final AutorisationTravailMapper atMapper;
     private final HistoriqueATMapper historiqueMapper;
@@ -179,12 +180,18 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     @Override
     @Transactional(readOnly = true)
     public Page<AutorisationTravailResponse> findAll(Pageable pageable) {
-        return findAll(null, null, pageable);
+        return findAll(null, null, null, null, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<AutorisationTravailResponse> findAll(String statut, String search, Pageable pageable) {
+        return findAll(statut, search, null, null, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AutorisationTravailResponse> findAll(String statut, String search, Boolean mine, Boolean aValider, Pageable pageable) {
         Utilisateur currentUser = getCurrentUser();
 
         Specification<AutorisationTravail> spec = (root, query, cb) -> {
@@ -261,6 +268,40 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
                     // Défaut sécurisé : uniquement ses créations
                     predicates.add(cb.equal(root.get("proprietaireBrouillon").get("id"), currentUser.getId()));
                 }
+            }
+
+            // 1b. Filtre optionnel « Mes AT » (mine = true)
+            if (Boolean.TRUE.equals(mine)) {
+                predicates.add(cb.equal(root.get("proprietaireBrouillon").get("id"), currentUser.getId()));
+            }
+
+            // 1c. Filtre optionnel « À valider » (aValider = true)
+            if (Boolean.TRUE.equals(aValider)) {
+                jakarta.persistence.criteria.Subquery<Long> visaSubquery = query.subquery(Long.class);
+                jakarta.persistence.criteria.Root<Visa> visaRoot = visaSubquery.from(Visa.class);
+                visaSubquery.select(cb.literal(1L)).where(
+                    cb.equal(visaRoot.get("autorisationTravail"), root),
+                    cb.equal(visaRoot.get("utilisateur").get("id"), currentUser.getId()),
+                    cb.equal(visaRoot.get("statut"), StatutVisa.EN_ATTENTE)
+                );
+                Predicate pendingVisa = cb.exists(visaSubquery);
+
+                boolean isHcee = RoleUtils.userHasRolePattern(currentUser, "HCEE");
+                boolean isHcep = RoleUtils.userHasRolePattern(currentUser, "HCEP");
+                boolean isHc = RoleUtils.isHc(currentUser);
+                boolean isCeee = RoleUtils.isCeee(currentUser);
+
+                List<Predicate> aValiderList = new ArrayList<>();
+                aValiderList.add(pendingVisa);
+
+                if (isHcee || isHcep || isHc) {
+                    aValiderList.add(root.get("statutWorkflow").in(StatutAT.AT_REDIGEE, StatutAT.SOUMISE));
+                }
+                if (isCeee) {
+                    aValiderList.add(root.get("statutWorkflow").in(StatutAT.AT_VALIDEE, StatutAT.VALIDEE));
+                }
+
+                predicates.add(cb.or(aValiderList.toArray(new Predicate[0])));
             }
 
             // 2. Filtre par statut (avec support des statuts et alias OCP)
@@ -918,37 +959,112 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public com.ocp.at.dto.response.ReadinessCheckResponse getInterventionReadiness(String id) {
+        return interventionReadinessService.checkInterventionReadiness(id);
+    }
+
+    @Override
     @Transactional
     public AutorisationTravailResponse demarrerIntervention(String id) {
         AutorisationTravail at = getEntityById(id);
         StatutAT ancienStatut = statutEffectif(at);
         workflowService.verifierTransition(ancienStatut, TypeActionAT.DEBUT_INTERVENTION);
-        StatutAT nouvelEtat = StatutAT.INTERVENTION_EN_COURS;
 
+        // 1. Pré-check déterministe obligatoire
+        com.ocp.at.dto.response.ReadinessCheckResponse readiness = interventionReadinessService.checkInterventionReadiness(id);
+        if (!Boolean.TRUE.equals(readiness.getReady())) {
+            List<String> failedChecks = readiness.getChecks().stream()
+                    .filter(c -> Boolean.TRUE.equals(c.getBlocking()) && !Boolean.TRUE.equals(c.getPassed()))
+                    .map(c -> c.getLabel() + " : " + c.getMessage())
+                    .collect(Collectors.toList());
+            throw new BusinessException("Impossible de démarrer l'intervention : préconditions non satisfaites : " + String.join(", ", failedChecks));
+        }
+
+        // 2. Empêcher le double démarrage
+        if (at.getDateDemarrage() != null && ancienStatut == StatutAT.INTERVENTION_EN_COURS) {
+            throw new BusinessException("L'intervention a déjà été démarrée le " + at.getDateDemarrage());
+        }
+
+        // 3. Enregistrer l'utilisateur CEEE et le timestamp serveur réel
+        Utilisateur ceee = getCurrentUser();
+        LocalDateTime now = LocalDateTime.now();
+        at.setDateDemarrage(now);
+        at.setCeee(ceee);
+
+        StatutAT nouvelEtat = StatutAT.INTERVENTION_EN_COURS;
         at.setStatutWorkflow(nouvelEtat);
-        at.setStatut(StatutAT.VALIDEE);
+        at.setStatut(StatutAT.INTERVENTION_EN_COURS);
         AutorisationTravail savedAt = atRepository.save(at);
 
-        enregistrerHistorique(savedAt, TypeActionAT.DEBUT_INTERVENTION, ancienStatut, nouvelEtat, "§8 - Démarrage travaux (CEEE E, HCEE/HMEP G)");
-        notificationService.createNotification(at.getProprietaireBrouillon(), "Intervention Démarrée", "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré.", "INFO", "/at/" + savedAt.getId());
+        enregistrerHistorique(savedAt, TypeActionAT.DEBUT_INTERVENTION, ancienStatut, nouvelEtat, "§8 - Démarrage travaux par CEEE " + ceee.getNom() + " (garants HCEE/HMEE)");
+        if (at.getProprietaireBrouillon() != null) {
+            notificationService.createNotification(at.getProprietaireBrouillon(), "Intervention Démarrée", "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré le " + now + ".", "INFO", "/autorisations/" + savedAt.getId());
+        }
+        notificationService.sendNotificationToRole("CEEP", "Intervention Démarrée - AT " + savedAt.getNumero(), "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré.", "INFO", "/autorisations/" + savedAt.getId());
 
+        log.info("Intervention démarrée pour AT {} par CEEE {}", savedAt.getNumero(), ceee.getEmail());
         return mapToResponse(savedAt);
     }
 
     @Override
     @Transactional
     public AutorisationTravailResponse declarerFinTravaux(String id) {
+        return declarerFinTravaux(id, null);
+    }
+
+    @Override
+    @Transactional
+    public AutorisationTravailResponse declarerFinTravaux(String id, com.ocp.at.dto.request.EndInterventionRequest request) {
         AutorisationTravail at = getEntityById(id);
         StatutAT ancienStatut = statutEffectif(at);
         workflowService.verifierTransition(ancienStatut, TypeActionAT.DECLARATION_FIN);
-        StatutAT nouvelEtat = StatutAT.FIN_TRAVAUX_DECLAREE;
 
+        Utilisateur ceee = getCurrentUser();
+        LocalDateTime now = LocalDateTime.now();
+        at.setDateFinReelle(now);
+
+        StatutAT nouvelEtat = StatutAT.FIN_TRAVAUX_DECLAREE;
         at.setStatutWorkflow(nouvelEtat);
+        at.setStatut(StatutAT.FIN_TRAVAUX_DECLAREE);
+
+        // Mettre à jour ou initialiser l'entité ReceptionTravaux avec les données de fin de chantier
+        ReceptionTravaux reception = receptionRepository.findByAutorisationTravailId(at.getId()).orElse(null);
+        if (reception == null) {
+            reception = ReceptionTravaux.builder()
+                    .autorisationTravail(at)
+                    .responsable(ceee)
+                    .dateDebutTravauxReelle(at.getDateDemarrage())
+                    .dateFinTravauxReelle(now)
+                    .travauxRealises(request != null ? request.getTravauxRealises() : at.getObjet())
+                    .zoneNettoyee(request != null ? request.getZoneNettoyee() : true)
+                    .equipementRemisEnService(request != null ? request.getProtectionsRetablies() : true)
+                    .observations(request != null ? request.getObservations() : null)
+                    .build();
+        } else {
+            reception.setDateFinTravauxReelle(now);
+            if (request != null) {
+                reception.setTravauxRealises(request.getTravauxRealises());
+                reception.setZoneNettoyee(request.getZoneNettoyee());
+                reception.setEquipementRemisEnService(request.getProtectionsRetablies());
+                reception.setObservations(request.getObservations());
+            }
+        }
+        receptionRepository.save(reception);
+
         AutorisationTravail savedAt = atRepository.save(at);
 
-        enregistrerHistorique(savedAt, TypeActionAT.DECLARATION_FIN, ancienStatut, nouvelEtat, "§8.5 - Fin des travaux déclarée (CEEE E, CEEP I)");
-        notificationService.createNotification(at.getProprietaireBrouillon(), "Fin des Travaux Déclarée", "Le CEEE a déclaré la fin des travaux sur l'AT " + savedAt.getNumero() + ".", "ACTION", "/at/" + savedAt.getId());
+        String commHisto = request != null && request.getTravauxRealises() != null
+                ? "§8.5 - Fin des travaux déclarée par CEEE " + ceee.getNom() + " : " + request.getTravauxRealises()
+                : "§8.5 - Fin des travaux déclarée (CEEE E, CEEP I)";
+        enregistrerHistorique(savedAt, TypeActionAT.DECLARATION_FIN, ancienStatut, nouvelEtat, commHisto);
 
+        if (at.getProprietaireBrouillon() != null) {
+            notificationService.createNotification(at.getProprietaireBrouillon(), "Fin des Travaux Déclarée - AT " + savedAt.getNumero(), "Le CEEE a déclaré la fin des travaux sur l'AT " + savedAt.getNumero() + ". L'AT est prête pour réception conjointe.", "ACTION", "/autorisations/" + savedAt.getId());
+        }
+        notificationService.sendNotificationToRole("CEEP", "AT " + savedAt.getNumero() + " prête pour réception", "Le CEEE a déclaré la fin des travaux. Veuillez procéder à la réception conjointe.", "ACTION", "/receptions?atId=" + savedAt.getId());
+
+        log.info("Fin des travaux déclarée pour AT {} par CEEE {}", savedAt.getNumero(), ceee.getEmail());
         return mapToResponse(savedAt);
     }
 
@@ -1343,8 +1459,10 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
     private Utilisateur getCurrentUser() {
         return SecurityUtils.getCurrentUtilisateurId()
-                .flatMap(utilisateurRepository::findByEmail)
-                .orElseThrow(() -> new BusinessException("Utilisateur non authentifié"));
+                .flatMap(idOrEmail -> utilisateurRepository.findById(idOrEmail).or(() -> utilisateurRepository.findByEmail(idOrEmail)))
+                .orElseGet(() -> SecurityUtils.getCurrentUserLogin()
+                        .flatMap(utilisateurRepository::findByEmail)
+                        .orElseThrow(() -> new BusinessException("Utilisateur non authentifié")));
     }
 
     private void verifierVerrouEtProprietaire(AutorisationTravail at) {

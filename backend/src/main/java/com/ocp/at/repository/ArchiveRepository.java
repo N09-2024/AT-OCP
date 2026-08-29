@@ -23,6 +23,8 @@ public interface ArchiveRepository extends JpaRepository<ArchiveAT, String> {
 
     Optional<ArchiveAT> findTopByAutorisationTravailIdOrderByVersionDesc(String autorisationTravailId);
 
+    Optional<ArchiveAT> findTopByAutorisationTravailNumeroOrderByVersionDesc(String numero);
+
     @Query("SELECT a FROM ArchiveAT a WHERE " +
             "(:keyword IS NULL OR :keyword = '' OR " +
             "a.numeroArchive LIKE %:keyword% OR " +

@@ -374,11 +374,11 @@ export default function AutorisationDetailPage() {
 
     try {
       await interventionApi.end(id, {
-        rapportFinChantier: rapportFin.trim(),
-        materielEvacue,
-        zoneNettoyee,
-        consignationRetiree,
-      });
+  travauxRealises: rapportFin.trim(),    // "rapportFinChantier" → "travauxRealises"
+  materielRetire: materielEvacue,        // "materielEvacue" → "materielRetire"
+  zoneNettoyee,
+  protectionsRetablies: consignationRetiree,  // "consignationRetiree" → "protectionsRetablies"
+});
 
       setFinOpen(false);
 

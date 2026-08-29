@@ -25,6 +25,4 @@ public class BonTravailRequest {
 
     @NotBlank(message = "L'entreprise externe est obligatoire pour un Bon de Travail")
     private String entrepriseExterneId;
-
-    private String installationId;
 }

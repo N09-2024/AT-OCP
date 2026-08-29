@@ -27,8 +27,6 @@ public class OrdreTravailResponse {
 
     private String demandeurId;
     private String demandeurNomComplet;
-    private String installationId;
-    private String installationNom;
 
     private String visitePrealableId;
     private boolean visiteEffectuee;

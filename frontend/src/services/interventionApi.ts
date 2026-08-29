@@ -22,11 +22,15 @@ export interface StartInterventionRequest {
 }
 
 export interface EndInterventionRequest {
-  rapportFinChantier?: string;
-  materielEvacue?: boolean;
-  zoneNettoyee?: boolean;
-  consignationRetiree?: boolean;
-  remarques?: string;
+    travauxRealises: string;          // required — @NotBlank on backend
+    travauxNonRealises?: string;
+    anomalies?: string;
+    observations?: string;
+    zoneNettoyee?: boolean;
+    materielRetire?: boolean;
+    outilsRetires?: boolean;
+    protectionsRetablies?: boolean;
+    personnelEvacue?: boolean;
 }
 
 export const interventionApi = {

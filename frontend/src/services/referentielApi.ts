@@ -6,7 +6,6 @@ import type {
   EPI,
   TypePermis,
   Zone,
-  Installation,
   Equipement,
   EntrepriseExterne,
   Service
@@ -40,11 +39,6 @@ export const referentielApi = {
 
   getZones: async (): Promise<Zone[]> => {
     const res = await apiClient.get('/zones');
-    return Array.isArray(res.data) ? res.data : (res.data?.content || []);
-  },
-
-  getInstallations: async (): Promise<Installation[]> => {
-    const res = await apiClient.get('/installations');
     return Array.isArray(res.data) ? res.data : (res.data?.content || []);
   },
 

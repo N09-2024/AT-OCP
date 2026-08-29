@@ -1,0 +1,6 @@
+# Exemple de configuration de signature Android release
+# Copier vers key.properties et renseigner les valeurs réelles
+storePassword=ocp_at_2026
+keyPassword=ocp_at_2026
+keyAlias=ocp_at_release
+storeFile=release.keystore

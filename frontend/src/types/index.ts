@@ -86,20 +86,11 @@ export interface Service {
   zone?: Zone;
 }
 
-export interface Installation {
-  id: string;
-  nomInstallation: string;
-  codeInstallation: string;
-  descriptionInstallation?: string;
-  zone?: Zone;
-}
-
 export interface Equipement {
   id: string;
   nomEquipement: string;
   codeEquipement: string;
   descriptionEquipement?: string;
-  installation?: Installation;
 }
 
 export interface EntrepriseExterne {
@@ -150,7 +141,6 @@ export interface DemandeIntervention {
   statut: StatutDocument;
   dateCreation: string;
   equipement?: Equipement;
-  installation?: Installation;
   service?: Service;
   visitePrealable?: VisitePrealable;
   analyseRisque?: AnalyseRisque;
@@ -164,7 +154,6 @@ export interface OrdreTravail {
   statut: StatutDocument;
   dateCreation: string;
   equipement?: Equipement;
-  installation?: Installation;
   visitePrealable?: VisitePrealable;
   analyseRisque?: AnalyseRisque;
 }
@@ -177,7 +166,6 @@ export interface BonTravail {
   statut: StatutDocument;
   dateCreation: string;
   equipement?: Equipement;
-  installation?: Installation;
   visitePrealable?: VisitePrealable;
   analyseRisque?: AnalyseRisque;
 }

@@ -78,8 +78,10 @@ public class AutorisationTravailController {
     public ResponseEntity<Page<AutorisationTravailResponse>> findAll(
             @RequestParam(required = false) String statut,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean mine,
+            @RequestParam(required = false) Boolean aValider,
             Pageable pageable) {
-        return ResponseEntity.ok(atService.findAll(statut, search, pageable));
+        return ResponseEntity.ok(atService.findAll(statut, search, mine, aValider, pageable));
     }
 
     @GetMapping("/autorisations-travail/{id}")

@@ -10,6 +10,7 @@ import com.ocp.at.entity.FichierJoint;
 import com.ocp.at.entity.Permis;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -23,7 +24,13 @@ public class CrewAIProvider implements IAProvider {
     @Value("${ocp.ai.fastapi-url:http://localhost:8000}")
     private String fastapiUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+    public CrewAIProvider() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);   // 3s max pour se connecter
+        factory.setReadTimeout(60000);     // 60s max pour la réponse IA
+        this.restTemplate = new RestTemplate(factory);
+    }
 
     @Override
     public AnalyseIA analyserPermis(FichierJoint fichier, Permis permis) {

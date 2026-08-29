@@ -26,7 +26,4 @@ public class OrdreTravailRequest {
     private NiveauIntervention niveauIntervention;
 
     private LocalDateTime dateExecution;
-
-    /** ID de l'installation concernée */
-    private String installationId;
 }

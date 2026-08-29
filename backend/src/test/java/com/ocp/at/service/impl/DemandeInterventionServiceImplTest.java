@@ -11,7 +11,6 @@ import com.ocp.at.entity.enums.TypeIntervention;
 import com.ocp.at.mapper.DemandeInterventionMapper;
 import com.ocp.at.repository.DemandeInterventionRepository;
 import com.ocp.at.repository.EquipementRepository;
-import com.ocp.at.repository.InstallationRepository;
 import com.ocp.at.repository.UtilisateurRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,8 +34,6 @@ class DemandeInterventionServiceImplTest {
     private DemandeInterventionMapper mapper;
     @Mock
     private UtilisateurRepository utilisateurRepository;
-    @Mock
-    private InstallationRepository installationRepository;
     @Mock
     private EquipementRepository equipementRepository;
 

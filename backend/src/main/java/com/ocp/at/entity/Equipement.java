@@ -25,8 +25,4 @@ public class Equipement {
     private String codeEquipement;
 
     private String descriptionEquipement;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "installation_id")
-    private Installation installation;
 }

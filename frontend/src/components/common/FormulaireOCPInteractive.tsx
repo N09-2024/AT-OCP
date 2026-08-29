@@ -396,7 +396,7 @@ export default function FormulaireOCPInteractive({
         ot: docSourceType === 'OT' ? numDoc : prev.ot,
         bt: docSourceType === 'BT' ? numDoc : prev.bt,
         description: found.objet || found.description || prev.description,
-        lieu: found.equipement?.installation?.zone?.nomZone || found.installation?.zone?.nomZone || prev.lieu,
+        lieu: found.equipementNom || prev.lieu,
       };
       scheduleAutoSave(updated);
       onChange?.(updated);

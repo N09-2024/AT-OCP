@@ -25,9 +25,6 @@ public class DemandeInterventionRequest {
     @NotNull(message = "Le niveau d'intervention est obligatoire")
     private NiveauIntervention niveauIntervention;
 
-    /** ID de l'installation concernée */
-    private String installationId;
-
     /** ID de l'équipement concerné (optionnel) */
     private String equipementId;
 }

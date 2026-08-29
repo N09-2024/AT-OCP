@@ -50,15 +50,25 @@ public interface ReceptionTravauxService {
     ReceptionTravauxResponse signer(String id, String signaturePath);
 
     /**
+     * Valide la réception conjointe par le CEEP avec évaluation de conformité et visa électronique manuscrit.
+     */
+    ReceptionTravauxResponse validerReceptionCeep(String id, com.ocp.at.dto.request.ValidationReceptionCeepRequest request, org.springframework.web.multipart.MultipartFile signatureFile);
+
+    /**
+     * Vérifie de manière déterministe les conditions préalables à la clôture.
+     */
+    com.ocp.at.dto.response.ClosureReadinessResponse verifierCloture(String atId);
+
+    /**
      * Clôture l'AT associée à la réception.
      * Vérifie :
-     * - réception existante
+     * - réception existante et validée conjointement
      * - travaux conformes
      * - zone nettoyée
      * - consignation retirée
      * - équipement remis en service
      * - essais réalisés
-     * - signature présente
+     * - signatures CEEE et CEEP présentes
      */
     ReceptionTravauxResponse cloturerAT(String id);
 

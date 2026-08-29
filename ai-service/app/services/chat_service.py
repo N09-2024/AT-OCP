@@ -35,52 +35,122 @@ Réponds UNIQUEMENT sous forme d'un objet JSON strict :
 }}"""
 )
 
-
 class ChatService:
     @staticmethod
     def process_chat(request: ChatRequest) -> ChatResponse:
-        rag_context, sources = rag_retriever.get_context_and_sources(request.message, top_k=3)
-        
-        at_ctx_str = "Aucune AT spécifique sélectionnée."
-        if request.atContext:
-            at_ctx_str = (
-                f"AT ID : {request.atContext.get('atId', 'N/A')}, "
-                f"Description : {request.atContext.get('description', 'N/A')}, "
-                f"Installation : {request.atContext.get('installation', 'N/A')}, "
-                f"Statut : {request.atContext.get('statut', 'N/A')}"
-            )
-
-        llm = get_llm(temperature=0.2)
-        chain = CHAT_PROMPT | llm
-        data = {}
+        sources = []
 
         try:
-            result = chain.invoke({
-                "rag_context": rag_context or "Standard général S-HSE-SEC-31.",
-                "at_context": at_ctx_str,
-                "message": request.message,
-            })
-            data = extract_json_from_output(getattr(result, "content", str(result)))
+            # =========================
+            # 1. RAG
+            # =========================
+            try:
+                rag_context, sources = rag_retriever.get_context_and_sources(
+                    request.message,
+                    top_k=3
+                )
+            except Exception as rag_ex:
+                logger.exception(
+                    "Erreur RAG pendant le chat : %s",
+                    rag_ex
+                )
+                rag_context = ""
+                sources = ["Standard OCP S-HSE-SEC-31"]
+
+            # =========================
+            # 2. Contexte AT
+            # =========================
+            at_ctx_str = "Aucune AT spécifique sélectionnée."
+
+            if request.atContext:
+                at_ctx_str = (
+                    f"AT ID : {request.atContext.get('atId', 'N/A')}, "
+                    f"Description : {request.atContext.get('description', 'N/A')}, "
+                    f"Installation : {request.atContext.get('installation', 'N/A')}, "
+                    f"Statut : {request.atContext.get('statut', 'N/A')}"
+                )
+
+            # =========================
+            # 3. LLM
+            # =========================
+            llm = get_llm(temperature=0.2)
+            chain = CHAT_PROMPT | llm
+
+            try:
+                result = chain.invoke({
+                    "rag_context": (
+                        rag_context
+                        or "Standard général S-HSE-SEC-31."
+                    ),
+                    "at_context": at_ctx_str,
+                    "message": request.message,
+                })
+
+                content = getattr(result, "content", str(result))
+
+                data = extract_json_from_output(content)
+
+            except Exception as llm_ex:
+                logger.exception(
+                    "Erreur LLM pour le chat : %s",
+                    llm_ex
+                )
+
+                # =========================
+                # 4. Fallback Mock
+                # =========================
+                mock = MockChatModel()
+
+                res = mock.invoke([
+                    HumanMessage(content=request.message)
+                ])
+
+                data = extract_json_from_output(res.content)
+
+            # =========================
+            # 5. Réponse finale
+            # =========================
+            answer = data.get("answer") or (
+                "D'après les procédures OCP (Standard S-HSE-SEC-31), "
+                "chaque intervention doit faire l'objet d'une évaluation "
+                "des risques et des validations requises avant son démarrage."
+            )
+
+            sources_list = (
+                data.get("sources")
+                or sources
+                or ["Standard OCP S-HSE-SEC-31"]
+            )
+
+            suggested = data.get("suggestedQuestions") or [
+                "Quelles sont les étapes pour obtenir un permis de feu ?",
+                "Quel est le rôle exact du CEEP et du CEEE ?",
+                "Quels sont les EPI obligatoires pour un travail en hauteur ?"
+            ]
+
+            return ChatResponse(
+                answer=answer,
+                sources=sources_list,
+                confidence=data.get("confidence", "HIGH"),
+                suggestedQuestions=suggested,
+            )
+
         except Exception as ex:
-            logger.warning(f"Erreur lors de l'appel LLM pour le chat ({ex}). Repli sur le Mock RAG.")
-            mock = MockChatModel()
-            res = mock.invoke([HumanMessage(content=request.message)])
-            data = extract_json_from_output(res.content)
+            logger.exception(
+                "Erreur critique dans ChatService.process_chat : %s",
+                ex
+            )
 
-        answer = data.get("answer") or (
-            "D'après les procédures OCP (Standard S-HSE-SEC-31), chaque intervention doit faire l'objet "
-            "d'une visite préalable (étape 2) et de la validation des visas CEEP et CEEE avant tout commencement."
-        )
-        sources_list = data.get("sources") or sources or ["Standard OCP S-HSE-SEC-31"]
-        suggested = data.get("suggestedQuestions") or [
-            "Quelles sont les étapes pour obtenir un permis de feu ?",
-            "Quel est le rôle exact du CEEP et du CEEE ?",
-            "Quels sont les EPI obligatoires pour un travail en hauteur ?"
-        ]
-
-        return ChatResponse(
-            answer=answer,
-            sources=sources_list,
-            confidence=data.get("confidence", "HIGH"),
-            suggestedQuestions=suggested,
-        )
+            # Dernier filet de sécurité
+            return ChatResponse(
+                answer=(
+                    "L'assistant IA est momentanément indisponible. "
+                    "Veuillez réessayer dans quelques instants."
+                ),
+                sources=["Standard OCP S-HSE-SEC-31"],
+                confidence="LOW",
+                suggestedQuestions=[
+                    "Quel est le rôle du CEEP ?",
+                    "Quel est le rôle du CEEE ?"
+                ],
+            )

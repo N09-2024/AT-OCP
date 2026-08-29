@@ -26,6 +26,8 @@ public interface PermisRepository extends JpaRepository<Permis, String> {
 
     boolean existsByAutorisationTravailId(String atId);
 
+    boolean existsByAutorisationTravailIdAndStatutVerification(String atId, StatutPermis statut);
+
     // ============================================
     // OPTIMISATIONS N+1 - EntityGraph
     // ============================================

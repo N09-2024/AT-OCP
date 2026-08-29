@@ -93,18 +93,26 @@ public class VisaServiceImpl implements VisaService {
         Utilisateur currentUser = utilisateurRepository.findById(currentUserId)
                 .or(() -> utilisateurRepository.findByEmail(currentUserId))
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
-        if (!visa.getUtilisateur().getId().equals(currentUser.getId())) {
-            throw new BusinessException("Vous n'êtes pas autorisé à signer ce visa");
-        }
 
         if (visa.getStatut() != StatutVisa.EN_ATTENTE) {
             throw new BusinessException("Ce visa n'est pas en attente de signature");
         }
 
+        // Permettre au signataire habilité effectif d'apposer son visa même si le visa en attente a été créé par un tiers
+        if (!visa.getUtilisateur().getId().equals(currentUser.getId())) {
+            boolean hasSignPerm = currentUser.getRoles() != null && currentUser.getRoles().stream()
+                    .anyMatch(r -> r.getPermissions() != null && r.getPermissions().stream()
+                            .anyMatch(p -> "SIGN_AT".equals(p.getNom()) || "VALIDATE_AT".equals(p.getNom())));
+            if (RoleUtils.userHasRolePattern(currentUser, "ADMIN") || hasSignPerm) {
+                visa.setUtilisateur(currentUser);
+            } else {
+                throw new BusinessException("Vous n'êtes pas autorisé à signer ce visa");
+            }
+        }
+
         if (signature == null || signature.isEmpty()) {
             throw new BusinessException("La signature est obligatoire");
         }
-
 
         AutorisationTravail at = visa.getAutorisationTravail();
         List<Visa> existingVisas = visaRepository.findByAutorisationTravailId(at.getId());
@@ -163,7 +171,6 @@ public class VisaServiceImpl implements VisaService {
             }
         }
 
-
         String contentType = signature.getContentType();
         String originalName = signature.getOriginalFilename();
         boolean isPng = (contentType != null && "image/png".equalsIgnoreCase(contentType))
@@ -211,6 +218,11 @@ public class VisaServiceImpl implements VisaService {
         visa.setNavigateur(req.getHeader("User-Agent"));
 
         visa = visaRepository.save(visa);
+
+        if ("CEEE".equals(targetRole) && at.getDateReceptionCeee() == null) {
+            at.setDateReceptionCeee(LocalDateTime.now());
+            atRepository.save(at);
+        }
 
         auditService.logAction("SIGN_VISA", "SUCCES", visa.getUtilisateur(), req.getRemoteAddr(),
                 req.getHeader("User-Agent"));

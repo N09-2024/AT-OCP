@@ -46,6 +46,23 @@ public class AutorisationTravail {
 
     private LocalDateTime dateReceptionCeee;
 
+    @Column(name = "date_demarrage")
+    private LocalDateTime dateDemarrage;
+
+    @Column(name = "date_fin_reelle")
+    private LocalDateTime dateFinReelle;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ceee_id")
+    @ToString.Exclude
+    private Utilisateur ceee;
+
+    @OneToMany(mappedBy = "autorisationTravail", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @BatchSize(size = 50)
+    @Builder.Default
+    @ToString.Exclude
+    private List<Reconduction> reconductions = new ArrayList<>();
+
     @Column(nullable = false, unique = true, length = 30)
     private String numero; // AT-2026-000001 (futur)
 

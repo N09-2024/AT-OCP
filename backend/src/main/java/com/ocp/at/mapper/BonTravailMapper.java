@@ -15,7 +15,6 @@ public interface BonTravailMapper {
     @Mapping(target = "statut", ignore = true)
     @Mapping(target = "entrepriseExterne", ignore = true)
     @Mapping(target = "demandeur", ignore = true)
-    @Mapping(target = "installation", ignore = true)
     @Mapping(target = "visitePrealable", ignore = true)
     BonTravail toEntity(BonTravailRequest request);
 
@@ -23,8 +22,6 @@ public interface BonTravailMapper {
     @Mapping(source = "entrepriseExterne.nomEntreprise", target = "entrepriseExterneNom")
     @Mapping(source = "demandeur.id", target = "demandeurId")
     @Mapping(target = "demandeurNomComplet", expression = "java(entity.getDemandeur() != null ? entity.getDemandeur().getNom() + \" \" + entity.getDemandeur().getPrenom() : null)")
-    @Mapping(source = "installation.id", target = "installationId")
-    @Mapping(source = "installation.nomInstallation", target = "installationNom")
     @Mapping(source = "visitePrealable.id", target = "visitePrealableId")
     @Mapping(source = "visitePrealable.effectuee", target = "visiteEffectuee", defaultValue = "false")
     @Mapping(target = "atCreable", ignore = true) // Calculé dynamiquement dans le service

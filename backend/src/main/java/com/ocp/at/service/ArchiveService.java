@@ -70,6 +70,22 @@ public interface ArchiveService {
     byte[] downloadArchive(String id);
 
     /**
+     * Vérifie de manière déterministe si une AT est prête pour l'archivage officiel.
+     *
+     * @param atId l'ID de l'autorisation de travail
+     * @return la réponse contenant le statut et la checklist
+     */
+    com.ocp.at.dto.response.ArchiveReadinessResponse getArchiveReadiness(String atId);
+
+    /**
+     * Vérifie les informations d'un dossier archivé via son QR Code.
+     *
+     * @param numeroAT le numéro d'AT ou numéro d'archive
+     * @return les données vérifiées du dossier archivé
+     */
+    com.ocp.at.dto.response.VerificationQrResponse verifyQrCode(String numeroAT);
+
+    /**
      * Vérifie l'intégrité d'une archive en comparant le hash stocké avec le hash calculé du fichier PDF.
      *
      * @param id l'ID de l'archive

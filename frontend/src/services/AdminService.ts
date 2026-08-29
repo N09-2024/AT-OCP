@@ -101,15 +101,6 @@ export interface Service {
   zone?: Zone;
 }
 
-export interface Installation {
-  id: string;
-  nomInstallation: string;
-  codeInstallation: string;
-  atelier?: string;
-  localisation?: string;
-  service?: Service;
-}
-
 // -------------------------------------------------------
 // User-related API calls
 // -------------------------------------------------------
@@ -412,57 +403,5 @@ export const AdminService = {
       codeService: s.codeService,
       zone: s.zone,
     }));
-  },
-
-  // --- Installations (Referentiels) ---
-  listInstallations: async (search?: string): Promise<{ content: Installation[]; totalElements: number; totalPages: number; number: number }> => {
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    const res = await apiClient.get(`/installations?${params}`);
-    const raw: any[] = Array.isArray(res.data) ? res.data : (res.data.content ?? []);
-    return {
-      content: raw.map((i: any) => ({
-        id: i.id,
-        nomInstallation: i.nomInstallation,
-        codeInstallation: i.codeInstallation,
-        atelier: i.atelier,
-        localisation: i.localisation,
-        service: i.service,
-      })),
-      totalElements: res.data.totalElements ?? raw.length,
-      totalPages: res.data.totalPages ?? 1,
-      number: res.data.number ?? 0,
-    };
-  },
-
-  getInstallation: async (id: string): Promise<Installation> => {
-    const res = await apiClient.get<Installation>(`/installations/${id}`);
-    return res.data;
-  },
-
-  createInstallation: async (data: { nomInstallation: string; codeInstallation: string; atelier?: string; localisation?: string; serviceId?: string }): Promise<Installation> => {
-    const res = await apiClient.post('/installations', {
-      nomInstallation: data.nomInstallation,
-      codeInstallation: data.codeInstallation,
-      atelier: data.atelier,
-      localisation: data.localisation,
-      serviceId: data.serviceId,
-    });
-    return res.data;
-  },
-
-  updateInstallation: async (id: string, data: { nomInstallation?: string; codeInstallation?: string; atelier?: string; localisation?: string; serviceId?: string }): Promise<Installation> => {
-    const res = await apiClient.put(`/installations/${id}`, {
-      nomInstallation: data.nomInstallation,
-      codeInstallation: data.codeInstallation,
-      atelier: data.atelier,
-      localisation: data.localisation,
-      serviceId: data.serviceId,
-    });
-    return res.data;
-  },
-
-  deleteInstallation: async (id: string): Promise<void> => {
-    await apiClient.delete(`/installations/${id}`);
   },
 };

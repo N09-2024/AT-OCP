@@ -14,6 +14,5 @@ public class EquipementResponse {
     private String nomEquipement;
     private String codeEquipement;
     private String descriptionEquipement;
-    private InstallationResponse installation;
 }
 

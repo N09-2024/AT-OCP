@@ -7,6 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EquipementRepository extends JpaRepository<Equipement, String>, JpaSpecificationExecutor<Equipement> {
-    boolean existsByInstallationId(String installationId);
 }
 

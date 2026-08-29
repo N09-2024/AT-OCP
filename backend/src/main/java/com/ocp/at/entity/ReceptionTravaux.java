@@ -91,6 +91,21 @@ public class ReceptionTravaux {
 
     private Boolean installationRemiseEnEtat;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resultat_reception", length = 30)
+    @Builder.Default
+    private com.ocp.at.entity.enums.ResultatReception resultatReception = com.ocp.at.entity.enums.ResultatReception.CONFORME;
+
+    @Column(name = "reserves_description", columnDefinition = "TEXT")
+    private String reservesDescription;
+
+    @Column(name = "actions_correctives", columnDefinition = "TEXT")
+    private String actionsCorrectives;
+
+    @Column(name = "reception_conjointe_validee")
+    @Builder.Default
+    private Boolean receptionConjointeValidee = false;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

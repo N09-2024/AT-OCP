@@ -35,7 +35,7 @@ public class ReceptionTravauxController {
     // =====================================================================
 
     @GetMapping
-    @PreAuthorize("hasAuthority('VIEW_RECEPTION')")
+    @PreAuthorize("hasAuthority('VIEW_RECEPTION') or hasAuthority('READ_AT')")
     @Operation(summary = "Lister toutes les réceptions", description = "Retourne la liste paginée de toutes les réceptions des travaux")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Liste retournée avec succès"),
@@ -52,7 +52,7 @@ public class ReceptionTravauxController {
     // =====================================================================
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('VIEW_RECEPTION')")
+    @PreAuthorize("hasAuthority('VIEW_RECEPTION') or hasAuthority('READ_AT')")
     @Operation(summary = "Récupérer une réception par ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Réception trouvée"),
@@ -71,7 +71,7 @@ public class ReceptionTravauxController {
     // =====================================================================
 
     @GetMapping("/at/{atId}")
-    @PreAuthorize("hasAuthority('VIEW_RECEPTION')")
+    @PreAuthorize("hasAuthority('VIEW_RECEPTION') or hasAuthority('READ_AT')")
     @Operation(summary = "Récupérer la réception d'une AT", description = "Retourne la réception associée à l'Autorisation de Travail")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Réception trouvée"),
@@ -88,10 +88,10 @@ public class ReceptionTravauxController {
     // =====================================================================
 
     @PostMapping
-    @PreAuthorize("hasAuthority('CREATE_RECEPTION')")
+    @PreAuthorize("hasAuthority('CREATE_RECEPTION') or hasAuthority('RECEIVE_AT') or hasAuthority('CREATE_AT') or hasAuthority('CLOSE_AT')")
     @Operation(
             summary = "Créer une réception des travaux",
-            description = "L'AT doit être en statut VALIDÉE, tous les visas validés, tous les permis conformes. Une seule réception par AT est autorisée."
+            description = "L'AT doit être en statut VALIDÉE ou FIN_TRAVAUX_DECLAREE. Une seule réception par AT est autorisée."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Réception créée avec succès"),
@@ -111,7 +111,7 @@ public class ReceptionTravauxController {
     // =====================================================================
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
+    @PreAuthorize("hasAuthority('EDIT_RECEPTION') or hasAuthority('RECEIVE_AT') or hasAuthority('EDIT_AT')")
     @Operation(summary = "Mettre à jour une réception", description = "Impossible de modifier une réception d'une AT clôturée")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Réception mise à jour"),
@@ -129,7 +129,7 @@ public class ReceptionTravauxController {
     // =====================================================================
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('DELETE_RECEPTION')")
+    @PreAuthorize("hasAuthority('DELETE_RECEPTION') or hasAuthority('ADMIN')")
     @Operation(summary = "Supprimer une réception", description = "Impossible de supprimer une réception d'une AT clôturée")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Réception supprimée"),
@@ -146,7 +146,7 @@ public class ReceptionTravauxController {
     // =====================================================================
 
     @PutMapping("/{id}/signer")
-    @PreAuthorize("hasAuthority('SIGN_RECEPTION')")
+    @PreAuthorize("hasAuthority('SIGN_RECEPTION') or hasAuthority('SIGN_AT') or hasAuthority('RECEIVE_AT')")
     @Operation(
             summary = "Signer la réception",
             description = "Ajoute la signature manuscrite du responsable. Réutilise le système de signature du Module 8."
@@ -164,12 +164,29 @@ public class ReceptionTravauxController {
         return ResponseEntity.ok(receptionService.signer(id, signaturePath));
     }
 
+    @PostMapping(value = "/{id}/evaluer-ceep", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('SIGN_RECEPTION') or hasAuthority('RECEIVE_AT') or hasRole('CEEP') or hasRole('CE') or hasRole('ADMIN')")
+    @Operation(summary = "Étape 7 - Évaluer et signer la réception conjointe par le CEEP (avec visa électronique)")
+    public ResponseEntity<ReceptionTravauxResponse> validerReceptionCeep(
+            @PathVariable String id,
+            @RequestPart("data") @Valid com.ocp.at.dto.request.ValidationReceptionCeepRequest request,
+            @RequestPart(value = "signature", required = false) org.springframework.web.multipart.MultipartFile signatureFile) {
+        return ResponseEntity.ok(receptionService.validerReceptionCeep(id, request, signatureFile));
+    }
+
+    @GetMapping("/verification-cloture/{atId}")
+    @PreAuthorize("hasAuthority('READ_AT') or isAuthenticated()")
+    @Operation(summary = "Vérifier préalablement les conditions de clôture d'une AT")
+    public ResponseEntity<com.ocp.at.dto.response.ClosureReadinessResponse> verifierCloture(@PathVariable String atId) {
+        return ResponseEntity.ok(receptionService.verifierCloture(atId));
+    }
+
     // =====================================================================
     // CLOTURE AT
     // =====================================================================
 
     @PutMapping("/{id}/cloturer")
-    @PreAuthorize("hasAuthority('CLOSE_AT')")
+    @PreAuthorize("hasAuthority('CLOSE_AT') or hasAuthority('RECEIVE_AT')")
     @Operation(
             summary = "Clôturer l'AT",
             description = "Clôture l'AT associée à la réception. Conditions requises : travaux conformes, zone nettoyée, consignation retirée, équipement remis en service, essais réalisés, signature présente."
@@ -190,7 +207,7 @@ public class ReceptionTravauxController {
     // =====================================================================
 
     @GetMapping("/{id}/photos")
-    @PreAuthorize("hasAuthority('VIEW_RECEPTION')")
+    @PreAuthorize("hasAuthority('VIEW_RECEPTION') or hasAuthority('READ_AT')")
     @Operation(summary = "Lister les photos d'une réception")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Liste des photos retournée"),
@@ -203,7 +220,7 @@ public class ReceptionTravauxController {
     }
 
     @PostMapping("/{id}/photos")
-    @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
+    @PreAuthorize("hasAuthority('EDIT_RECEPTION') or hasAuthority('RECEIVE_AT') or hasAuthority('EDIT_AT')")
     @Operation(summary = "Ajouter une photo à une réception")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Photo ajoutée"),
@@ -219,7 +236,7 @@ public class ReceptionTravauxController {
     }
 
     @DeleteMapping("/{id}/photos/{photoId}")
-    @PreAuthorize("hasAuthority('EDIT_RECEPTION')")
+    @PreAuthorize("hasAuthority('EDIT_RECEPTION') or hasAuthority('RECEIVE_AT') or hasAuthority('EDIT_AT')")
     @Operation(summary = "Supprimer une photo")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Photo supprimée"),

@@ -30,6 +30,10 @@ public class Visa {
 
     private String commentaire;
 
+    @Column(name = "type_visa", length = 50)
+    @Builder.Default
+    private String typeVisa = "STANDARD";
+
     private Integer ordre;
 
     // Signature manuscrite électronique

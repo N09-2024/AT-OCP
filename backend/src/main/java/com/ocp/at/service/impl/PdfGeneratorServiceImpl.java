@@ -361,15 +361,6 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
             if (di.getDemandeur() != null) {
                 ajouterLigneCellule(table, "Demandeur DI :", di.getDemandeur().getPrenom() + " " + di.getDemandeur().getNom(), fl, fv);
             }
-            if (di.getInstallation() != null) {
-                ajouterLigneCellule(table, "Installation :", di.getInstallation().getNomInstallation() + " (" + di.getInstallation().getCodeInstallation() + ")", fl, fv);
-                if (di.getInstallation().getLocalisation() != null) {
-                    ajouterLigneCellule(table, "Localisation :", di.getInstallation().getLocalisation(), fl, fv);
-                }
-                if (di.getInstallation().getAtelier() != null) {
-                    ajouterLigneCellule(table, "Atelier :", di.getInstallation().getAtelier(), fl, fv);
-                }
-            }
             if (di.getEquipement() != null) {
                 ajouterLigneCellule(table, "Équipement :", di.getEquipement().getNomEquipement() + " (" + di.getEquipement().getCodeEquipement() + ")", fl, fv);
                 if (di.getEquipement().getDescriptionEquipement() != null) {
@@ -387,9 +378,6 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
             if (ot.getDemandeur() != null) {
                 ajouterLigneCellule(table, "Demandeur OT :", ot.getDemandeur().getPrenom() + " " + ot.getDemandeur().getNom(), fl, fv);
             }
-            if (ot.getInstallation() != null) {
-                ajouterLigneCellule(table, "Installation :", ot.getInstallation().getNomInstallation() + " (" + ot.getInstallation().getCodeInstallation() + ")", fl, fv);
-            }
 
         } else if (at.getBonTravail() != null) {
             BonTravail bt = at.getBonTravail();
@@ -406,9 +394,6 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
                 if (bt.getEntrepriseExterne().getResponsable() != null) {
                     ajouterLigneCellule(table, "Responsable :", bt.getEntrepriseExterne().getResponsable(), fl, fv);
                 }
-            }
-            if (bt.getInstallation() != null) {
-                ajouterLigneCellule(table, "Installation :", bt.getInstallation().getNomInstallation() + " (" + bt.getInstallation().getCodeInstallation() + ")", fl, fv);
             }
         } else {
             ajouterLigneCellule(table, "Document source :", "Aucun document source associé", fl, fv);

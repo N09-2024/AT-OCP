@@ -7,19 +7,20 @@ import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.NotificationMapper;
 import com.ocp.at.repository.NotificationRepository;
 import com.ocp.at.repository.UtilisateurRepository;
-import com.ocp.at.security.RoleUtils;
 import com.ocp.at.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +31,30 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final NotificationMapper mapper;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private void broadcastNotification(String userId, NotificationResponse response) {
+        if (messagingTemplate != null && userId != null) {
+            try {
+                messagingTemplate.convertAndSend("/topic/notifications/" + userId, response);
+                long unread = countUnread(userId);
+                messagingTemplate.convertAndSend("/topic/notifications/" + userId + "/count", Map.of("count", unread));
+            } catch (Exception e) {
+                log.debug("Erreur envoi websocket notification: {}", e.getMessage());
+            }
+        }
+    }
+
+    private void broadcastCount(String userId) {
+        if (messagingTemplate != null && userId != null) {
+            try {
+                long unread = countUnread(userId);
+                messagingTemplate.convertAndSend("/topic/notifications/" + userId + "/count", Map.of("count", unread));
+            } catch (Exception e) {
+                log.debug("Erreur envoi websocket count: {}", e.getMessage());
+            }
+        }
+    }
 
     @Override
     @Transactional
@@ -48,8 +73,9 @@ public class NotificationServiceImpl implements NotificationService {
                 .lien(lien)
                 .build();
 
-        notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
         log.info("Notification créée pour {} (ID: {}) : {}", utilisateur.getNom(), utilisateur.getId(), titre);
+        broadcastNotification(utilisateur.getId(), mapper.toResponse(saved));
     }
 
     @Override
@@ -57,10 +83,7 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendNotificationToRole(String roleName, String titre, String message, String type, String lien) {
         if (roleName == null || roleName.isBlank()) return;
 
-        List<Utilisateur> allUsers = utilisateurRepository.findAll();
-        List<Utilisateur> users = allUsers.stream()
-                .filter(u -> u != null && !u.isCompteVerrouille() && u.isActif() && RoleUtils.userHasRolePattern(u, roleName))
-                .collect(Collectors.toList());
+        List<Utilisateur> users = utilisateurRepository.findActiveByRoleFragment(roleName);
 
         for (Utilisateur u : users) {
             createNotification(u, titre, message, type, lien);
@@ -98,7 +121,10 @@ public class NotificationServiceImpl implements NotificationService {
 
         notif.setLu(true);
         notif.setDateLecture(LocalDateTime.now());
-        notificationRepository.save(notif);
+        Notification saved = notificationRepository.save(notif);
+        if (saved.getUtilisateur() != null) {
+            broadcastCount(saved.getUtilisateur().getId());
+        }
     }
 
     @Override
@@ -107,6 +133,7 @@ public class NotificationServiceImpl implements NotificationService {
         if (utilisateurId == null || utilisateurId.isBlank()) return;
         int updated = notificationRepository.markAllReadByUtilisateurId(utilisateurId);
         log.info("markAllAsRead: {} notification(s) marquée(s) comme lues pour userId={}", updated, utilisateurId);
+        broadcastCount(utilisateurId);
     }
 
     @Override
@@ -115,3 +142,4 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.countByUtilisateurIdAndLuFalse(utilisateurId);
     }
 }
+

@@ -8,7 +8,6 @@ import com.ocp.at.entity.enums.NiveauIntervention;
 import com.ocp.at.entity.enums.StatutDocument;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.OrdreTravailMapper;
-import com.ocp.at.repository.InstallationRepository;
 import com.ocp.at.repository.OrdreTravailRepository;
 import com.ocp.at.repository.UtilisateurRepository;
 import com.ocp.at.service.OrdreTravailService;
@@ -29,7 +28,6 @@ public class OrdreTravailServiceImpl implements OrdreTravailService {
     private final OrdreTravailRepository repository;
     private final OrdreTravailMapper mapper;
     private final UtilisateurRepository utilisateurRepository;
-    private final InstallationRepository installationRepository;
 
     @Override
     @Transactional
@@ -48,11 +46,6 @@ public class OrdreTravailServiceImpl implements OrdreTravailService {
             Utilisateur demandeur = utilisateurRepository.findById(demandeurId)
                     .orElseThrow(() -> new ResourceNotFoundException("Demandeur non trouvé"));
             ot.setDemandeur(demandeur);
-        }
-
-        if (request.getInstallationId() != null) {
-            ot.setInstallation(installationRepository.findById(request.getInstallationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Installation non trouvée")));
         }
 
         ot = repository.save(ot);
@@ -74,13 +67,6 @@ public class OrdreTravailServiceImpl implements OrdreTravailService {
         ot.setTypeIntervention(request.getTypeIntervention());
         ot.setNiveauIntervention(request.getNiveauIntervention());
         ot.setDateExecution(request.getDateExecution());
-
-        if (request.getInstallationId() != null) {
-            ot.setInstallation(installationRepository.findById(request.getInstallationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Installation non trouvée")));
-        } else {
-            ot.setInstallation(null);
-        }
 
         ot = repository.save(ot);
         return calculateAtCreable(mapper.toResponse(ot), ot);

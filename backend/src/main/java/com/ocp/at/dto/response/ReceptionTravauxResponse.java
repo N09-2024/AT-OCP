@@ -34,6 +34,10 @@ public class ReceptionTravauxResponse {
     private String commentaireResponsable;
     private String signatureResponsable;
     private LocalDateTime dateSignature;
+    private com.ocp.at.entity.enums.ResultatReception resultatReception;
+    private String reservesDescription;
+    private String actionsCorrectives;
+    private Boolean receptionConjointeValidee;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<PhotoReceptionResponse> photos;

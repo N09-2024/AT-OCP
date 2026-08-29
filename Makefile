@@ -74,3 +74,17 @@ shell-postgres: ## Shell into PostgreSQL container
 # Rebuild without cache
 rebuild: ## Rebuild images without cache
 	docker-compose build --no-cache
+
+# Build and start Mobile Web (Flutter Web)
+mobile-web: ## Build and run Flutter Web container
+	@echo "$(YELLOW)Starting Flutter Web on http://localhost:3000...$(NC)"
+	docker-compose up -d --build mobile-web
+
+# Build Android APK in Docker and export to ./mobile/output
+build-apk: ## Build Android release APK in Docker container
+	@echo "$(YELLOW)Building Android APK inside Docker container...$(NC)"
+	docker-compose -f docker-compose.mobile-build.yml run --rm apk-builder
+
+# View mobile web logs
+logs-mobile: ## View mobile web logs
+	docker-compose logs -f mobile-web

@@ -56,8 +56,14 @@ public class ArchiveServiceImpl implements ArchiveService {
         log.info("Archivage de l'AT : {}", atId);
         AutorisationTravail at = getEntityById(atId);
 
-        if (at.getStatut() != StatutAT.CLOTUREE) {
-            throw new BusinessException("Seule une Autorisation de Travail clôturée peut être archivée. Statut actuel : " + at.getStatut());
+        StatutAT st = at.getStatut();
+        StatutAT stW = at.getStatutWorkflow();
+        boolean isArchivable = st == StatutAT.CLOTUREE || st == StatutAT.TRAVAUX_RECEPTIONES || st == StatutAT.ARCHIVEE
+                || stW == StatutAT.TRAVAUX_RECEPTIONES || stW == StatutAT.RECEPTIONEES
+                || stW == StatutAT.CLOTUREE || stW == StatutAT.ARCHIVEE;
+
+        if (!isArchivable) {
+            throw new BusinessException("Seule une Autorisation de Travail clôturée ou réceptionnée peut être archivée. Statut actuel : " + at.getStatut());
         }
 
         // Déterminer la version suivante
@@ -127,6 +133,11 @@ public class ArchiveServiceImpl implements ArchiveService {
         } catch (Exception e) {
             log.warn("Impossible de mettre à jour le QR Code après sauvegarde", e);
         }
+
+        // Mettre à jour le statut AT
+        at.setStatut(StatutAT.ARCHIVEE);
+        at.setStatutWorkflow(StatutAT.ARCHIVEE);
+        atRepository.save(at);
 
         // Historique AT
         creerHistoriqueAT(at, TypeActionAT.EXPORT_PDF, StatutAT.ARCHIVEE,
@@ -267,6 +278,133 @@ public class ArchiveServiceImpl implements ArchiveService {
         } catch (IOException e) {
             throw new BusinessException("Erreur lors de la vérification de l'archive: " + e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.ocp.at.dto.response.ArchiveReadinessResponse getArchiveReadiness(String atId) {
+        AutorisationTravail at = getEntityById(atId);
+        List<String> blockingReasons = new ArrayList<>();
+        List<com.ocp.at.dto.response.ReadinessCheckItem> checklist = new ArrayList<>();
+
+        // 1. Statut clôturé / réceptionné
+        StatutAT st = at.getStatut();
+        StatutAT stW = at.getStatutWorkflow();
+        boolean isCloturee = st == StatutAT.CLOTUREE || st == StatutAT.TRAVAUX_RECEPTIONES
+                || stW == StatutAT.TRAVAUX_RECEPTIONES || stW == StatutAT.RECEPTIONEES || stW == StatutAT.ARCHIVEE;
+
+        checklist.add(com.ocp.at.dto.response.ReadinessCheckItem.builder()
+                .code("AT_CLOSED")
+                .label("Autorisation clôturée / réceptionnée")
+                .passed(isCloturee)
+                .blocking(true)
+                .message(isCloturee ? "L'AT est clôturée suite à la réception des travaux" : "L'AT n'est pas encore clôturée (statut actuel : " + (stW != null ? stW : st) + ")")
+                .build());
+        if (!isCloturee) {
+            blockingReasons.add("L'autorisation de travail doit être préalablement clôturée pour être archivée.");
+        }
+
+        // 2. Visas obligatoires complets
+        List<com.ocp.at.entity.Visa> visas = at.getVisas();
+        boolean hasVisas = visas != null && !visas.isEmpty();
+        checklist.add(com.ocp.at.dto.response.ReadinessCheckItem.builder()
+                .code("VISAS_COMPLETE")
+                .label("Visas et signatures obligatoires")
+                .passed(hasVisas)
+                .blocking(true)
+                .message(hasVisas ? "Ensemble des visas et signatures réglementaires présents" : "Des visas obligatoires sont manquants")
+                .details((visas != null ? visas.size() : 0) + " visa(s) rattaché(s)")
+                .build());
+        if (!hasVisas) {
+            blockingReasons.add("Le dossier ne comporte pas les visas et signatures obligatoires.");
+        }
+
+        // 3. Réception des travaux complète
+        com.ocp.at.entity.ReceptionTravaux reception = at.getReceptionTravaux();
+        boolean hasReception = reception != null && (Boolean.TRUE.equals(reception.getTravauxConformes())
+                || reception.getResultatReception() == com.ocp.at.entity.enums.ResultatReception.CONFORME
+                || reception.getResultatReception() == com.ocp.at.entity.enums.ResultatReception.CONFORME_AVEC_RESERVES);
+        checklist.add(com.ocp.at.dto.response.ReadinessCheckItem.builder()
+                .code("RECEPTION_COMPLETE")
+                .label("Réception conjointe des travaux")
+                .passed(hasReception)
+                .blocking(true)
+                .message(hasReception ? "Réception conjointe validée et conforme" : "Réception conjointe non validée ou absente")
+                .build());
+        if (!hasReception) {
+            blockingReasons.add("La réception des travaux n'a pas été validée conjointement.");
+        }
+
+        // 4. Permis complémentaires conformes
+        List<com.ocp.at.entity.Permis> permis = at.getPermis();
+        boolean permisOk = permis == null || permis.stream().noneMatch(p -> p.getStatutVerification() == com.ocp.at.entity.enums.StatutPermis.INVALIDE);
+        checklist.add(com.ocp.at.dto.response.ReadinessCheckItem.builder()
+                .code("PERMITS_CONFORM")
+                .label("Conformité des permis associés")
+                .passed(permisOk)
+                .blocking(true)
+                .message(permisOk ? "Tous les permis associés sont conformes" : "Certains permis associés sont invalides")
+                .build());
+        if (!permisOk) {
+            blockingReasons.add("Certains permis rattachés sont invalides.");
+        }
+
+        boolean ready = blockingReasons.isEmpty();
+
+        return com.ocp.at.dto.response.ArchiveReadinessResponse.builder()
+                .readyForArchive(ready)
+                .blockingReasons(blockingReasons)
+                .checklist(checklist)
+                .atNumero(at.getNumero())
+                .statut((stW != null ? stW : st).name())
+                .hasCloture(isCloturee)
+                .hasVisasComplets(hasVisas)
+                .hasReceptionConjointe(hasReception)
+                .hasPermisConformes(permisOk)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.ocp.at.dto.response.VerificationQrResponse verifyQrCode(String numero) {
+        if (numero == null || numero.isBlank()) {
+            return com.ocp.at.dto.response.VerificationQrResponse.builder()
+                    .valide(false)
+                    .message("Numéro d'AT ou d'archive manquant")
+                    .build();
+        }
+
+        ArchiveAT archive = archiveRepository.findByNumeroArchive(numero)
+                .orElseGet(() -> archiveRepository.findTopByAutorisationTravailNumeroOrderByVersionDesc(numero)
+                        .orElse(null));
+
+        if (archive == null) {
+            return com.ocp.at.dto.response.VerificationQrResponse.builder()
+                    .valide(false)
+                    .numeroAT(numero)
+                    .message("Aucun dossier archivé officiel correspondant à la référence " + numero)
+                    .build();
+        }
+
+        AutorisationTravail at = archive.getAutorisationTravail();
+        String installation = at != null && at.getDemandeIntervention() != null && at.getDemandeIntervention().getEquipement() != null
+                ? at.getDemandeIntervention().getEquipement().getNomEquipement() : "Installation OCP";
+        String zone = at != null && at.getZoneProprietaire() != null ? at.getZoneProprietaire().getNomZone() : "Zone OCP";
+        String archiviste = archive.getArchivePar() != null
+                ? archive.getArchivePar().getPrenom() + " " + archive.getArchivePar().getNom() : "Archiviste OCP";
+
+        return com.ocp.at.dto.response.VerificationQrResponse.builder()
+                .valide(true)
+                .numeroAT(at != null ? at.getNumero() : numero)
+                .numeroArchive(archive.getNumeroArchive())
+                .statut(archive.getArchiveStatus().name())
+                .dateArchivage(archive.getDateArchivage())
+                .archiveParNomComplet(archiviste)
+                .hashSHA256(archive.getHashSHA256())
+                .installation(installation)
+                .zone(zone)
+                .message("Dossier officiel authentifié et conforme aux référentiels OCP S-HSE-SEC-31.")
+                .build();
     }
 
     // =========================================================================

@@ -29,8 +29,6 @@ public class DemandeInterventionResponse {
     // Sous-objets résumés
     private String demandeurId;
     private String demandeurNomComplet;
-    private String installationId;
-    private String installationNom;
     private String equipementId;
     private String equipementNom;
 

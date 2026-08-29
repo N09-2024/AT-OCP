@@ -21,6 +21,8 @@ public interface AutorisationTravailService {
 
     Page<AutorisationTravailResponse> findAll(String statut, String search, Pageable pageable);
 
+    Page<AutorisationTravailResponse> findAll(String statut, String search, Boolean mine, Boolean aValider, Pageable pageable);
+
     AutorisationTravailResponse findById(String id);
     
     AutorisationTravailResponse accuserReceptionCeee(String id);
@@ -51,7 +53,11 @@ public interface AutorisationTravailService {
 
     AutorisationTravailResponse demarrerIntervention(String id);
 
+    com.ocp.at.dto.response.ReadinessCheckResponse getInterventionReadiness(String id);
+
     AutorisationTravailResponse declarerFinTravaux(String id);
+
+    AutorisationTravailResponse declarerFinTravaux(String id, com.ocp.at.dto.request.EndInterventionRequest request);
 
     AutorisationTravailResponse marquerVisiteRealisee(String id);
 

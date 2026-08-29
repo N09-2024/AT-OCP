@@ -9,6 +9,7 @@ import com.ocp.at.entity.enums.StatutVisa;
 import com.ocp.at.exception.BusinessException;
 import com.ocp.at.mapper.VisaMapper;
 import com.ocp.at.repository.AutorisationTravailRepository;
+import com.ocp.at.repository.UtilisateurRepository;
 import com.ocp.at.repository.VisaRepository;
 import com.ocp.at.security.SecurityUtils;
 import com.ocp.at.service.AuditService;
@@ -39,11 +40,15 @@ class VisaServiceImplTest {
     @Mock
     private AutorisationTravailRepository atRepository;
     @Mock
+    private UtilisateurRepository utilisateurRepository;
+    @Mock
     private VisaMapper visaMapper;
     @Mock
     private StorageService storageService;
     @Mock
     private AuditService auditService;
+    @Mock
+    private com.ocp.at.service.NotificationService notificationService;
 
     @InjectMocks
     private VisaServiceImpl visaService;
@@ -58,18 +63,23 @@ class VisaServiceImplTest {
         request.addHeader("User-Agent", "TestBrowser");
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
+        Role ceepRole = Role.builder().nom("CEEP").permissions(Set.of()).build();
         utilisateur = new Utilisateur();
         utilisateur.setId("user-123");
+        utilisateur.setEmail("user123@ocp.ma");
         utilisateur.setNom("Doe");
+        utilisateur.setRoles(Set.of(ceepRole));
 
         AutorisationTravail at = new AutorisationTravail();
         at.setId("at-123");
+        at.setNumero("AT-2026-000001");
 
         visa = new Visa();
         visa.setId("visa-123");
         visa.setUtilisateur(utilisateur);
         visa.setAutorisationTravail(at);
         visa.setStatut(StatutVisa.EN_ATTENTE);
+        visa.setCommentaire("Visa CEEP");
     }
 
     @Test
@@ -77,7 +87,8 @@ class VisaServiceImplTest {
         try (org.mockito.MockedStatic<SecurityUtils> utilities = org.mockito.Mockito.mockStatic(SecurityUtils.class)) {
             when(visaRepository.findById("visa-123")).thenReturn(Optional.of(visa));
             utilities.when(SecurityUtils::getCurrentUtilisateurId).thenReturn(Optional.of("user-123"));
-            when(storageService.saveSignature(any(), any())).thenReturn("signatures/test.png");
+            when(utilisateurRepository.findById("user-123")).thenReturn(Optional.of(utilisateur));
+            when(storageService.saveSignatureBytes(any(), any())).thenReturn("signatures/test.png");
             when(visaRepository.save(any(Visa.class))).thenReturn(visa);
             
             VisaResponse mockResponse = new VisaResponse();
@@ -90,15 +101,21 @@ class VisaServiceImplTest {
     
             assertNotNull(response);
             assertEquals(StatutVisa.VALIDE, response.getStatut());
-            verify(auditService).logAction(eq("SIGN_VISA"), eq("SUCCESS"), any(), anyString(), anyString());
+            verify(auditService).logAction(eq("SIGN_VISA"), eq("SUCCES"), any(), anyString(), anyString());
         }
     }
 
     @Test
     void signVisa_WrongUser_ThrowsException() {
         try (org.mockito.MockedStatic<SecurityUtils> utilities = org.mockito.Mockito.mockStatic(SecurityUtils.class)) {
+            Utilisateur otherUser = new Utilisateur();
+            otherUser.setId("other-user");
+            otherUser.setEmail("other@ocp.ma");
+            otherUser.setRoles(Set.of());
+
             when(visaRepository.findById("visa-123")).thenReturn(Optional.of(visa));
             utilities.when(SecurityUtils::getCurrentUtilisateurId).thenReturn(Optional.of("other-user"));
+            when(utilisateurRepository.findById("other-user")).thenReturn(Optional.of(otherUser));
     
             MockMultipartFile file = new MockMultipartFile("signature", "sign.png", "image/png", "dummy-image-data".getBytes());
             
@@ -112,6 +129,7 @@ class VisaServiceImplTest {
             visa.setStatut(StatutVisa.VALIDE);
             when(visaRepository.findById("visa-123")).thenReturn(Optional.of(visa));
             utilities.when(SecurityUtils::getCurrentUtilisateurId).thenReturn(Optional.of("user-123"));
+            when(utilisateurRepository.findById("user-123")).thenReturn(Optional.of(utilisateur));
     
             MockMultipartFile file = new MockMultipartFile("signature", "sign.png", "image/png", "dummy-image-data".getBytes());
             

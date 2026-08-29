@@ -2,10 +2,8 @@ package com.ocp.at.service.impl;
 
 import com.ocp.at.dto.request.ServiceRequest;
 import com.ocp.at.dto.response.ServiceResponse;
-import com.ocp.at.exception.BusinessException;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.ServiceMapper;
-import com.ocp.at.repository.InstallationRepository;
 import com.ocp.at.repository.ServiceRepository;
 import com.ocp.at.service.ServiceService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +24,6 @@ public class ServiceServiceImpl implements ServiceService {
 
     private final ServiceRepository repository;
     private final ServiceMapper mapper;
-    private final InstallationRepository installationRepository;
 
     @Override
     @Transactional
@@ -87,9 +84,6 @@ public class ServiceServiceImpl implements ServiceService {
         com.ocp.at.entity.Service entity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service non trouvé(e)"));
 
-        if (installationRepository.existsByServiceId(id)) {
-            throw new BusinessException("Impossible de supprimer un Service qui contient des Installations.");
-        }
         repository.delete(entity);
     }
 }

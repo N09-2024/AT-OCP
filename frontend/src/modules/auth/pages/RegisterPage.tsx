@@ -282,7 +282,7 @@ export default function RegisterPage() {
 
                     <FormField label="EMAIL">
                       <TextField
-                        placeholder="prenom.nom@ocp.ma"
+                        placeholder="prenom.nom@ocpgroup.ma"
                         type="email"
                         variant="outlined"
                         fullWidth

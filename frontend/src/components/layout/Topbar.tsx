@@ -54,7 +54,6 @@ export default function Topbar() {
     inscriptions: 'Inscriptions',
     audit: "Journal d'audit",
     parametres: 'Paramètres',
-    installations: 'Installations',
     zones: 'Zones',
     equipements: 'Équipements',
     risques: 'Risques',

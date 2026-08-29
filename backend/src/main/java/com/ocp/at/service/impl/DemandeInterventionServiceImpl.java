@@ -9,7 +9,6 @@ import com.ocp.at.entity.enums.StatutDocument;
 import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.DemandeInterventionMapper;
 import com.ocp.at.repository.DemandeInterventionRepository;
-import com.ocp.at.repository.InstallationRepository;
 import com.ocp.at.repository.EquipementRepository;
 import com.ocp.at.repository.UtilisateurRepository;
 import com.ocp.at.service.DemandeInterventionService;
@@ -30,7 +29,6 @@ public class DemandeInterventionServiceImpl implements DemandeInterventionServic
     private final DemandeInterventionRepository repository;
     private final DemandeInterventionMapper mapper;
     private final UtilisateurRepository utilisateurRepository;
-    private final InstallationRepository installationRepository;
     private final EquipementRepository equipementRepository;
 
     @Override
@@ -52,11 +50,6 @@ public class DemandeInterventionServiceImpl implements DemandeInterventionServic
             Utilisateur demandeur = utilisateurRepository.findById(demandeurId)
                     .orElseThrow(() -> new ResourceNotFoundException("Demandeur non trouvé"));
             di.setDemandeur(demandeur);
-        }
-
-        if (request.getInstallationId() != null) {
-            di.setInstallation(installationRepository.findById(request.getInstallationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Installation non trouvée")));
         }
 
         if (request.getEquipementId() != null) {
@@ -83,13 +76,6 @@ public class DemandeInterventionServiceImpl implements DemandeInterventionServic
         di.setPriorite(request.getPriorite());
         di.setTypeIntervention(request.getTypeIntervention());
         di.setNiveauIntervention(request.getNiveauIntervention());
-
-        if (request.getInstallationId() != null) {
-            di.setInstallation(installationRepository.findById(request.getInstallationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Installation non trouvée")));
-        } else {
-            di.setInstallation(null);
-        }
 
         if (request.getEquipementId() != null) {
             di.setEquipement(equipementRepository.findById(request.getEquipementId())

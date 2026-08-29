@@ -10,7 +10,6 @@ import com.ocp.at.exception.ResourceNotFoundException;
 import com.ocp.at.mapper.BonTravailMapper;
 import com.ocp.at.repository.BonTravailRepository;
 import com.ocp.at.repository.EntrepriseExterneRepository;
-import com.ocp.at.repository.InstallationRepository;
 import com.ocp.at.repository.UtilisateurRepository;
 import com.ocp.at.service.BonTravailService;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +29,6 @@ public class BonTravailServiceImpl implements BonTravailService {
     private final BonTravailRepository repository;
     private final BonTravailMapper mapper;
     private final UtilisateurRepository utilisateurRepository;
-    private final InstallationRepository installationRepository;
     private final EntrepriseExterneRepository entrepriseExterneRepository;
 
     @Override
@@ -55,11 +53,6 @@ public class BonTravailServiceImpl implements BonTravailService {
         bt.setEntrepriseExterne(entrepriseExterneRepository.findById(request.getEntrepriseExterneId())
                 .orElseThrow(() -> new ResourceNotFoundException("Entreprise externe non trouvée")));
 
-        if (request.getInstallationId() != null) {
-            bt.setInstallation(installationRepository.findById(request.getInstallationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Installation non trouvée")));
-        }
-
         bt = repository.save(bt);
         return calculateAtCreable(mapper.toResponse(bt), bt);
     }
@@ -81,13 +74,6 @@ public class BonTravailServiceImpl implements BonTravailService {
 
         bt.setEntrepriseExterne(entrepriseExterneRepository.findById(request.getEntrepriseExterneId())
                 .orElseThrow(() -> new ResourceNotFoundException("Entreprise externe non trouvée")));
-
-        if (request.getInstallationId() != null) {
-            bt.setInstallation(installationRepository.findById(request.getInstallationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Installation non trouvée")));
-        } else {
-            bt.setInstallation(null);
-        }
 
         bt = repository.save(bt);
         return calculateAtCreable(mapper.toResponse(bt), bt);

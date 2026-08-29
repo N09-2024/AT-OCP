@@ -16,6 +16,5 @@ public class EquipementRequest {
     @NotBlank(message = "Le champ codeEquipement est obligatoire")
     private String codeEquipement;
     private String descriptionEquipement;
-    private String installationId;
 }
 

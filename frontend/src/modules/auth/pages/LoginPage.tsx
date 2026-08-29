@@ -185,7 +185,7 @@ export default function LoginPage() {
                     EMAIL
                   </Typography>
                   <TextField
-                    placeholder="prenom.nom@ocp.ma"
+                    placeholder="prenom.nom@ocpgroup.ma"
                     variant="outlined"
                     fullWidth
                     {...register('email')}

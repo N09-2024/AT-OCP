@@ -1,0 +1,88 @@
+# Phase 2 -- Initialization
+name: ocp_at_mobile
+description: Application mobile de gestion des Autorisations de Travail OCP
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.9.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Localisation FR (dates/heures natives)
+  flutter_localizations:
+    sdk: flutter
+
+  flutter_riverpod: ^2.6.1
+  dio: ^5.7.0
+  go_router: ^14.6.2
+  flutter_secure_storage: ^9.2.2
+  image_picker: ^1.1.2
+  file_picker: ^8.1.4
+  signature: ^5.5.0
+  intl: ^0.20.3
+  connectivity_plus: ^6.1.0
+  cached_network_image: ^3.4.1
+  flutter_pdfview: ^1.3.2
+
+  # Répertoires système (PDF temporaire)
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.14
+  mockito: ^5.4.5
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
+
+# Icône de lancement — remplacer assets/images/app_icon.png par la version
+# définitive OCP puis exécuter : dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: 'assets/images/app_icon.png'
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  adaptive_icon_background: '#1F4D3E'
+  adaptive_icon_foreground: 'assets/images/app_icon.png'
+
+# Splash natif — dart run flutter_native_splash:create
+flutter_native_splash:
+  color: '#F7FAF8'
+  color_dark: '#0E2A21'
+  image: 'assets/images/app_icon.png'
+  android_12:
+    color: '#F7FAF8'
+    image: 'assets/images/app_icon.png'
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/fonts/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Regular.ttf
+        - asset: assets/fonts/SpaceGrotesk-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/SpaceGrotesk-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/SpaceGrotesk-Bold.ttf
+          weight: 700
+

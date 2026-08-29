@@ -57,11 +57,6 @@ public class OrdreTravail {
     @ToString.Exclude
     private Utilisateur demandeur;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "installation_id")
-    @ToString.Exclude
-    private Installation installation;
-
     /**
      * Lien vers la visite préalable.
      * La VisitePrealable est attachée au document source, pas à l'AT.
