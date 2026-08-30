@@ -170,7 +170,7 @@ class AtPhotosPage extends ConsumerWidget {
       final file = source == ImageSourceChoice.camera
           ? await picker.prendrePhotoCamera()
           : await picker.choisirPhotoGalerie();
-      if (file == null) return;
+      if (file == null || !context.mounted) return;
 
       final legende = await _askLegende(context);
       final api = ref.read(photoApiProvider);

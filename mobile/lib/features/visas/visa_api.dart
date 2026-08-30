@@ -23,8 +23,8 @@ class VisaApi {
       '/visa',
       body: {
         'autorisationTravailId': autorisationTravailId,
-        if (commentaire != null) 'commentaire': commentaire,
-        if (ordre != null) 'ordre': ordre,
+        'commentaire': ?commentaire,
+        'ordre': ?ordre,
       },
     );
     return Visa.fromJson(response.data!);

@@ -110,7 +110,7 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
 
     return PopScope(
       canPop: true,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) return;
         // Sauvegarde finale + libération du verrou en quittant l'écran.
         ref.read(atFormProvider(widget.atId).notifier).releaseLockAndFlush();
@@ -375,8 +375,6 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
     );
   }
 
-  static const List<String> _referentielSteps = ['B', 'C', 'D']; // ordre des sections OCP
-
   // ------------------------------------------------------------------
   // Étape permis complémentaires
   // ------------------------------------------------------------------
@@ -623,7 +621,7 @@ class _ZoneDropdown extends StatelessWidget {
       if (z.id == valueId) value = z;
     }
     return DropdownButtonFormField<String>(
-      value: valueId,
+      initialValue: valueId,
       isExpanded: true,
       decoration: InputDecoration(labelText: label),
       items: [

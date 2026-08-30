@@ -120,7 +120,7 @@ class _AtListPageState extends ConsumerState<AtListPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               scrollDirection: Axis.horizontal,
               itemCount: _statuts.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final statut = _statuts[index];
                 final selected = notifier.statut == statut;

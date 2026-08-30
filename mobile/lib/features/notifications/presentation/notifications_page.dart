@@ -91,7 +91,7 @@ class NotificationsPage extends ConsumerWidget {
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final n = items[index];
                     return _NotificationTile(

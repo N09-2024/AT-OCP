@@ -41,7 +41,7 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 /// Notifie GoRouter quand l'état d'auth change (login/logout/expiration).
 class _AuthRefreshListenable extends ChangeNotifier {
   _AuthRefreshListenable(Ref ref) {
-    ref.listen<AuthState>(authControllerProvider, (_, __) => notifyListeners());
+    ref.listen<AuthState>(authControllerProvider, (_, _) => notifyListeners());
   }
 }
 

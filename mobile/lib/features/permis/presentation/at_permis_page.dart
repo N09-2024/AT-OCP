@@ -62,7 +62,7 @@ class AtPermisPage extends ConsumerWidget {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) => _PermisTile(
                     permis: items[index],
                     onUpload: canManage ? () => _uploadFichier(context, ref, items[index]) : null,
@@ -76,7 +76,8 @@ class AtPermisPage extends ConsumerWidget {
 
   Future<void> _ajouterPermis(BuildContext context, WidgetRef ref) async {
     final types = await ref.read(typesPermisProvider.future);
-    if (!context.mounted || types.isEmpty) {
+    if (!context.mounted) return;
+    if (types.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Aucun type de permis disponible au référentiel.')),
       );
@@ -96,7 +97,7 @@ class AtPermisPage extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: typeChoisi,
+                initialValue: typeChoisi,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Type de permis'),
                 items: types.map((t) => DropdownMenuItem(value: t.id, child: Text(t.libelle))).toList(),

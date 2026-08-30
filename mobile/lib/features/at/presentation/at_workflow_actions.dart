@@ -83,6 +83,7 @@ class AtWorkflowActions extends ConsumerWidget {
         if (perm('SUBMIT_AT')) {
           b.add(_primaire(context, Icons.send_rounded, 'Soumettre pour validation', () async {
             if (!await _confirmer(context, 'Soumettre cette AT pour validation ?')) return;
+            if (!context.mounted) return;
             await _executer(context, ref, (api) => api.soumettre(at.id), 'AT soumise.');
           }),);
         }
@@ -120,6 +121,7 @@ class AtWorkflowActions extends ConsumerWidget {
           b.add(_primaire(context, Icons.task_alt_rounded, 'Déclarer la fin des travaux',
               () async {
             if (!await _confirmer(context, 'Confirmer la fin des travaux ?')) return;
+            if (!context.mounted) return;
             await _executer(
                 context, ref, (api) => api.declarerFin(at.id), 'Fin des travaux déclarée.',);
           }),);
@@ -137,6 +139,7 @@ class AtWorkflowActions extends ConsumerWidget {
           b.add(_primaire(context, Icons.handshake_rounded,
               'Réception conjointe des travaux', () async {
             if (!await _confirmer(context, 'Effectuer la réception conjointe ?')) return;
+            if (!context.mounted) return;
             await _executer(context, ref, (api) => api.receptionStandard(at.id),
                 'Réception enregistrée.',);
           }),);
@@ -149,6 +152,7 @@ class AtWorkflowActions extends ConsumerWidget {
           b.add(_primaire(context, Icons.lock_clock_rounded,
               "Clôturer définitivement l'AT", () async {
             if (!await _confirmer(context, 'Clôturer définitivement cette AT ?')) return;
+            if (!context.mounted) return;
             await _executer(context, ref, (api) => api.cloturer(at.id), 'AT clôturée.');
           }),);
         }

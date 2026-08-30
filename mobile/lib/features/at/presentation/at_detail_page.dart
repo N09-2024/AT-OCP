@@ -272,22 +272,5 @@ class _AtDetailContent extends ConsumerWidget {
           ],
         ),
       );
-
-  Widget _text(String value) => Text(
-        value,
-        style: const TextStyle(fontSize: 13, color: OcpColors.ink, height: 1.4),
-      );
-
-  Widget _chipsRow(String label, int count, IconData icon) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: OcpColors.moss),
-            const SizedBox(width: 8),
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
-            Text('$count sélectionné${count > 1 ? 's' : ''}',
-                style: const TextStyle(fontSize: 13, color: OcpColors.slate),),
-          ],
-        ),
-      );
 }
+

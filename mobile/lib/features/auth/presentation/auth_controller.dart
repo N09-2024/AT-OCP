@@ -51,11 +51,11 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController(this._api, this._tokens, this._client) : super(const AuthInitial()) {
     // Déconnexion complète quand le refresh token échoue (intercepteur 401) :
     // purge des tokens + retour à l'écran de connexion.
-    _client.onSessionExpired = () async {
-      await _tokens.deleteAll();
+    _client.onSessionExpired = () {
       if (state is! AuthUnauthenticated) {
         state = const AuthUnauthenticated();
       }
+      _tokens.deleteAll();
     };
   }
 
