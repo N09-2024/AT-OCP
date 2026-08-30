@@ -37,6 +37,7 @@ const ADMIN_MENU = {
         { text: 'Tableau de bord Admin', path: '/dashboard/admin', icon: <HomeIcon width={20} /> },
         { text: 'Statistiques & KPI', path: '/administration/statistiques', icon: <DocumentMagnifyingGlassIcon width={20} /> },
         { text: 'Vue globale AT', path: '/dashboard/global', icon: <ClipboardDocumentCheckIcon width={20} /> },
+        { text: 'Notifications', path: '/notifications', icon: <BellIcon width={20} /> },
       ],
     },
 

@@ -8,6 +8,8 @@
 /// Ne jamais hardcoder une URL de backend ailleurs dans l'application.
 library;
 
+import 'package:flutter/foundation.dart';
+
 enum AppEnv { dev, staging, prod }
 
 class AppConfig {
@@ -28,6 +30,10 @@ class AppConfig {
   static String get baseUrl {
     const raw = String.fromEnvironment('API_BASE_URL');
     if (raw.isNotEmpty) return raw;
+    if (kIsWeb) {
+      // Sur le web, chemin relatif pour s'appuyer sur le reverse proxy nginx ou dev server
+      return '';
+    }
     switch (environment) {
       case AppEnv.prod:
         return 'https://at-ocp.ocp.ma';
@@ -35,8 +41,10 @@ class AppConfig {
         return 'https://staging-at-ocp.ocp.ma';
       case AppEnv.dev:
         // 10.0.2.2 : hote local vu depuis l'emulateur Android.
-        // iOS simulateur : utiliser http://localhost:8080
-        return 'http://10.0.2.2:8080';
+        // iOS simulateur / desktop : utiliser http://localhost:8080
+        return defaultTargetPlatform == TargetPlatform.android
+            ? 'http://10.0.2.2:8080'
+            : 'http://localhost:8080';
     }
   }
 

@@ -54,6 +54,7 @@ public class AuthServiceImpl implements AuthService {
     private final UtilisateurMapper utilisateurMapper;
     private final RoleRepository roleRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.ocp.at.service.NotificationService notificationService;
 
     @Value("${app.jwt.refresh-expiration-ms:604800000}")
     private long refreshExpirationMs;
@@ -90,6 +91,15 @@ public class AuthServiceImpl implements AuthService {
             if (echecs >= maxLoginAttempts) {
                 utilisateur.setCompteVerrouille(true);
                 logger.warn("Compte verrouillé après {} tentatives échouées: {}", maxLoginAttempts, request.getEmail());
+                try {
+                    notificationService.sendNotificationToRole("ADMIN",
+                            "Compte utilisateur verrouillé",
+                            "Le compte de " + utilisateur.getPrenom() + " " + utilisateur.getNom() + " (" + utilisateur.getEmail() + ") a été verrouillé après " + maxLoginAttempts + " tentatives de connexion échouées.",
+                            "WARNING",
+                            "/administration/utilisateurs");
+                } catch (Exception ex) {
+                    logger.warn("Erreur envoi notification admin compte verrouille: {}", ex.getMessage());
+                }
             }
             utilisateurRepository.save(utilisateur);
             logger.warn("Échec de connexion ({}/{}) pour: {}", echecs, maxLoginAttempts, request.getEmail());
@@ -216,11 +226,21 @@ public class AuthServiceImpl implements AuthService {
                 .roles(java.util.Set.of(roleCE))
                 .build();
 
-        utilisateurRepository.save(utilisateur);
+        Utilisateur saved = utilisateurRepository.save(utilisateur);
         logger.info("Nouvelle inscription en attente de validation: {} <{}>", 
                 request.getPrenom() + " " + request.getNom(), request.getEmail());
 
-        return utilisateurMapper.toResponse(utilisateur);
+        try {
+            notificationService.sendNotificationToRole("ADMIN",
+                    "Nouvelle inscription en attente",
+                    "L'utilisateur " + request.getPrenom() + " " + request.getNom() + " (" + request.getEmail() + ") a demandé la création d'un compte et attend validation.",
+                    "ACTION",
+                    "/administration/inscriptions");
+        } catch (Exception ex) {
+            logger.warn("Erreur envoi notification admin inscription: {}", ex.getMessage());
+        }
+
+        return utilisateurMapper.toResponse(saved);
     }
 
     @Override

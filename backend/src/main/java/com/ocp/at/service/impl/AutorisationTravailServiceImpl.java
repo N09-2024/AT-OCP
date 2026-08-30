@@ -1157,6 +1157,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             notificationService.createNotification(at.getProprietaireBrouillon(), "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + ". Nouvelle visite requise.", "WARNING", "/autorisations/" + savedAt.getId());
         }
         notificationService.sendNotificationToRole("CEEE", "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + ".", "WARNING", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRole("ADMIN", "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + (motif != null ? " : " + motif : "") + ".", "WARNING", "/autorisations/" + savedAt.getId());
         return mapToResponse(savedAt);
     }
 

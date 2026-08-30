@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import {
-  PlusIcon, PencilSquareIcon, TrashIcon,
+  EyeIcon,
   MagnifyingGlassIcon, ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { AdminService } from '../../../services/AdminService';
@@ -45,16 +45,6 @@ export default function RolesListPage() {
     loadRoles();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Confirmer la suppression de ce rôle ?')) return;
-    try {
-      await AdminService.deleteRole(id);
-      setRoles((prev) => prev.filter((r) => r.id !== id));
-    } catch (err) {
-      console.error('Erreur suppression rôle', err);
-    }
-  };
-
   const filtered = useMemo(() => {
     return roles.filter(r =>
       !search ||
@@ -83,23 +73,21 @@ export default function RolesListPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 'bold' }} color="text.primary">
-            Rôles & Permissions
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }} color="text.primary">
+              Rôles & Permissions
+            </Typography>
+            <Chip
+              label="Standard S-HSE-SEC-31 (Lecture seule)"
+              color="default"
+              size="small"
+              sx={{ fontWeight: 600, fontSize: 11, bgcolor: '#EDF2EE', color: '#1F4D3E', border: '1px solid #7FC8A9' }}
+            />
+          </Box>
           <Typography variant="body2" color="text.secondary">
-            {roles.length} rôles enregistrés dans le système
+            {roles.length} rôles standardisés définis par la politique de sécurité OCP
           </Typography>
         </Box>
-        <Button
-          component={Link}
-          to="/administration/roles/nouveau"
-          variant="contained"
-          color="success"
-          startIcon={<PlusIcon width={18} />}
-          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-        >
-          Nouveau rôle
-        </Button>
       </Box>
 
       <Paper sx={{ borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
@@ -204,16 +192,10 @@ export default function RolesListPage() {
                         component={Link}
                         to={`/administration/roles/${role.id}`}
                         size="small"
-                        sx={{ color: '#1F4D3E', mr: 0.5, '&:hover': { bgcolor: '#EDF2EE' } }}
+                        title="Consulter les permissions"
+                        sx={{ color: '#1F4D3E', '&:hover': { bgcolor: '#EDF2EE' } }}
                       >
-                        <PencilSquareIcon width={18} />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        sx={{ color: '#9A3D2F', '&:hover': { bgcolor: '#FBEAE3' } }}
-                        onClick={() => handleDelete(role.id)}
-                      >
-                        <TrashIcon width={18} />
+                        <EyeIcon width={18} />
                       </IconButton>
                     </TableCell>
                   </TableRow>

@@ -119,40 +119,37 @@ export default function RoleFormPage() {
           startIcon={<ArrowLeftIcon width={18} />}
           sx={{ textTransform: 'none', fontWeight: 500, color: 'text.secondary' }}
         >
-          Retour
+          Retour aux rôles
         </Button>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }} color="text.primary">
-          {isEdit ? 'Modifier le rôle' : 'Nouveau rôle'}
+          Détails du rôle standard
         </Typography>
+        <Chip
+          label="Norme S-HSE-SEC-31 (Protégé)"
+          size="small"
+          sx={{ bgcolor: '#EDF2EE', color: '#1F4D3E', fontWeight: 600, border: '1px solid #7FC8A9' }}
+        />
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
-          {success}
-        </Alert>
-      )}
+      <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+        Ce rôle fait partie du référentiel normatif OCP <strong>S-HSE-SEC-31</strong>. La structure des rôles et leurs permissions sont fixées par la gouvernance HSE pour garantir l'intégrité du cycle de validation et ne peuvent pas être modifiées ou supprimées.
+      </Alert>
 
       <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Left: Role details */}
         <Paper sx={{ flex: '1 1 380px', borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', p: 4 }}>
-          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <TextField
               label="Nom du rôle"
               value={form.nom}
-              onChange={handleChange('nom')}
-              required
+              slotProps={{ input: { readOnly: true } }}
               fullWidth
               size="small"
             />
             <TextField
               label="Description"
-              value={form.description}
-              onChange={handleChange('description')}
+              value={form.description || 'Rôle standard de sécurité'}
+              slotProps={{ input: { readOnly: true } }}
               multiline
               rows={3}
               fullWidth
@@ -160,25 +157,16 @@ export default function RoleFormPage() {
             />
 
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
-              {form.permissionIds.length} permission(s) sélectionnée(s)
+              {form.permissionIds.length} permission(s) attribuée(s)
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="success"
-                disabled={loading}
-                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-              >
-                {loading ? <CircularProgress size={20} color="inherit" /> : isEdit ? 'Enregistrer' : 'Créer'}
-              </Button>
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
               <Button
                 variant="outlined"
                 onClick={() => navigate('/administration/roles')}
-                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500 }}
+                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
               >
-                Annuler
+                Retour à la liste
               </Button>
             </Box>
           </Box>
@@ -187,7 +175,7 @@ export default function RoleFormPage() {
         {/* Right: Permissions */}
         <Paper sx={{ flex: '2 1 0', borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-            Permissions
+            Permissions associées
           </Typography>
           {Object.entries(groupedPermissions).map(([categorie, perms]) => (
             <Box key={categorie} sx={{ mb: 2.5 }}>
@@ -202,8 +190,12 @@ export default function RoleFormPage() {
                     control={
                       <Checkbox
                         checked={form.permissionIds.includes(perm.id)}
-                        onChange={() => togglePermission(perm.id)}
+                        disabled
                         size="small"
+                        sx={{
+                          '&.Mui-checked': { color: '#1F4D3E' },
+                          '&.Mui-disabled': { color: form.permissionIds.includes(perm.id) ? '#1F4D3E' : undefined }
+                        }}
                       />
                     }
                     label={

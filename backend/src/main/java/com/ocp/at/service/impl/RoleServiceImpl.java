@@ -41,13 +41,7 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional
     public RoleResponse creer(RoleRequest request) {
-        if (roleRepository.existsByNom(request.getNom())) {
-            throw new BusinessException("Un rôle avec le nom '" + request.getNom() + "' existe déjà");
-        }
-        Role role = roleMapper.toEntity(request);
-        Role saved = roleRepository.save(role);
-        logger.info("Rôle créé: {}", saved.getNom());
-        return enrichRoleResponse(roleMapper.toResponse(saved), saved);
+        throw new BusinessException("La création de rôles est strictement interdite : les rôles sont régis par le référentiel normatif OCP S-HSE-SEC-31.");
     }
 
     @Override
@@ -77,18 +71,13 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional
     public RoleResponse modifier(String id, RoleRequest request) {
-        Role role = findRoleById(id);
-        role.setNom(request.getNom());
-        role.setDescription(request.getDescription());
-        return roleMapper.toResponse(roleRepository.save(role));
+        throw new BusinessException("La modification de rôles est strictement interdite : les rôles sont régis par le référentiel normatif OCP S-HSE-SEC-31.");
     }
 
     @Override
     @Transactional
     public void supprimer(String id) {
-        Role role = findRoleById(id);
-        roleRepository.delete(role);
-        logger.info("Rôle supprimé: {}", role.getNom());
+        throw new BusinessException("La suppression de rôles est strictement interdite : les rôles sont régis par le référentiel normatif OCP S-HSE-SEC-31.");
     }
 
     @Override

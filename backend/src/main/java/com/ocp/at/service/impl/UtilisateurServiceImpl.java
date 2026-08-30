@@ -41,6 +41,7 @@ public class UtilisateurServiceImpl implements UtilisateurService {
     private final UtilisateurMapper utilisateurMapper;
     private final RoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final com.ocp.at.service.NotificationService notificationService;
 
     @Override
     @Transactional
@@ -237,6 +238,15 @@ public class UtilisateurServiceImpl implements UtilisateurService {
         utilisateur.setEnAttenteValidation(false);
         Utilisateur saved = utilisateurRepository.save(utilisateur);
         logger.info("Inscription approuvée: {} <{}>", saved.getEmail(), saved.getId());
+        try {
+            notificationService.createNotification(saved,
+                    "Compte activé",
+                    "Votre compte a été approuvé et activé par l'administrateur. Bienvenue sur la plateforme AT System.",
+                    "SUCCESS",
+                    "/");
+        } catch (Exception ex) {
+            logger.warn("Erreur envoi notification approbation: {}", ex.getMessage());
+        }
         return utilisateurMapper.toResponse(saved);
     }
 

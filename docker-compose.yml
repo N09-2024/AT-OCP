@@ -118,7 +118,7 @@ services:
       dockerfile: Dockerfile
       target: serve
       args:
-        ENV: ${MOBILE_ENV:-prod}
+        ENV: ${MOBILE_ENV:-dev}
         API_BASE_URL: ${MOBILE_API_BASE_URL:-}
     container_name: at-ocp-mobile-web
     restart: unless-stopped
