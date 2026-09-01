@@ -34,6 +34,7 @@ class AtFormData {
   final TimeOfDay? heureDebut;
   final TimeOfDay? heureFin;
   final String servicesIntervenants;
+  final String? serviceIntervenantId;
   final String entreprisesIntervenantes;
   final String mesuresSecuriteExecutant;
   final String? zoneProprietaireId;
@@ -56,6 +57,7 @@ class AtFormData {
     this.heureDebut,
     this.heureFin,
     this.servicesIntervenants = '',
+    this.serviceIntervenantId,
     this.entreprisesIntervenantes = '',
     this.mesuresSecuriteExecutant = '',
     this.zoneProprietaireId,
@@ -79,6 +81,7 @@ class AtFormData {
     TimeOfDay? heureDebut,
     TimeOfDay? heureFin,
     String? servicesIntervenants,
+    String? serviceIntervenantId,
     String? entreprisesIntervenantes,
     String? mesuresSecuriteExecutant,
     String? zoneProprietaireId,
@@ -103,6 +106,7 @@ class AtFormData {
         heureDebut: heureDebut ?? this.heureDebut,
         heureFin: heureFin ?? this.heureFin,
         servicesIntervenants: servicesIntervenants ?? this.servicesIntervenants,
+        serviceIntervenantId: serviceIntervenantId ?? this.serviceIntervenantId,
         entreprisesIntervenantes: entreprisesIntervenantes ?? this.entreprisesIntervenantes,
         mesuresSecuriteExecutant: mesuresSecuriteExecutant ?? this.mesuresSecuriteExecutant,
         zoneProprietaireId: zoneProprietaireId ?? this.zoneProprietaireId,
@@ -127,6 +131,7 @@ class AtFormData {
         if (heureDebut != null) 'heureDebut': _isoTime(heureDebut!),
         if (heureFin != null) 'heureFin': _isoTime(heureFin!),
         'servicesIntervenants': servicesIntervenants,
+        if (serviceIntervenantId != null) 'serviceIntervenantId': serviceIntervenantId,
         'entreprisesIntervenantes': entreprisesIntervenantes,
         'mesuresSecuriteExecutant': mesuresSecuriteExecutant,
         'zoneProprietaireId': zoneProprietaireId,
@@ -343,7 +348,8 @@ class AtFormNotifier extends StateNotifier<AtFormState> {
 
     var donePayload = payload;
     try {
-      while (true) {
+      int maxLoops = 10;
+      while (maxLoops-- > 0) {
         await _api.autoSave(atId, jsonDecode(donePayload) as Map<String, dynamic>);
         _lastSavedJson = donePayload;
         if (!_dirtyAfterCurrentSave) break;

@@ -18,6 +18,25 @@ final zonesProvider = FutureProvider.autoDispose<List<Zone>>((ref) async {
   }
 });
 
+/// Tous les services OCP (GET /services).
+final servicesProvider = FutureProvider.autoDispose<List<ServiceOcp>>((ref) async {
+  try {
+    return await ref.watch(referentielApiProvider).services();
+  } catch (_) {
+    throw Exception('Services indisponibles');
+  }
+});
+
+/// Entreprises extérieures (GET /entreprises-externes).
+final entreprisesExternesProvider =
+    FutureProvider.autoDispose<List<EntrepriseExterne>>((ref) async {
+  try {
+    return await ref.watch(referentielApiProvider).entreprisesExternes();
+  } catch (_) {
+    throw Exception('Entreprises externes indisponibles');
+  }
+});
+
 /// Services filtrés par zone (GET /zones/{id}/services).
 final servicesByZoneProvider = FutureProvider.autoDispose
     .family<List<ServiceOcp>, String>((ref, zoneId) async {

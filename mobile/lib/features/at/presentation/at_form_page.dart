@@ -220,12 +220,14 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
   }
 
   // ------------------------------------------------------------------
-  // Étape 1 : informations générales
+  // Étape 1 : informations générales & entreprises intervenantes
   // ------------------------------------------------------------------
 
   Step _stepGeneral(bool readOnly) {
     final data = widget.state.data;
     AtFormNotifier notifier() => ref.read(atFormProvider(widget.atId).notifier);
+    final entreprisesAsync = ref.watch(entreprisesExternesProvider);
+
     return Step(
       isActive: _step >= 0,
       title: const Text('Général'),
@@ -247,19 +249,22 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
             decoration: const InputDecoration(labelText: 'Description des travaux'),
             onChanged: (v) => notifier().update((d) => d.copyWith(descriptionTravaux: v)),
           ),
-          const SizedBox(height: 10),
-          TextFormField(
-            enabled: !readOnly,
-            initialValue: data.servicesIntervenants,
-            decoration: const InputDecoration(labelText: 'Services intervenants'),
-            onChanged: (v) => notifier().update((d) => d.copyWith(servicesIntervenants: v)),
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            enabled: !readOnly,
-            initialValue: data.entreprisesIntervenantes,
-            decoration: const InputDecoration(labelText: 'Entreprises intervenantes'),
-            onChanged: (v) => notifier().update((d) => d.copyWith(entreprisesIntervenantes: v)),
+          const SizedBox(height: 12),
+          entreprisesAsync.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (_, __) => TextFormField(
+              enabled: !readOnly,
+              initialValue: data.entreprisesIntervenantes,
+              decoration: const InputDecoration(labelText: 'Entreprises intervenantes (Tiers)'),
+              onChanged: (v) => notifier().update((d) => d.copyWith(entreprisesIntervenantes: v)),
+            ),
+            data: (entreprisesList) => _EntrepriseDropdown(
+              label: 'Entreprise extérieure (Tiers / Sous-traitant)',
+              entreprises: entreprisesList,
+              value: data.entreprisesIntervenantes,
+              enabled: !readOnly,
+              onChanged: (val) => notifier().update((d) => d.copyWith(entreprisesIntervenantes: val)),
+            ),
           ),
         ],
       ),
@@ -317,48 +322,165 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
   }
 
   // ------------------------------------------------------------------
-  // Étape 3 : localisation (zones P/E du référentiel backend)
+  // Étape 3 : localisation & services (zones P/E et services P/E)
   // ------------------------------------------------------------------
 
   Step _stepLocalisation(bool readOnly) {
     final data = widget.state.data;
     AtFormNotifier notifier() => ref.read(atFormProvider(widget.atId).notifier);
-    final zones = ref.watch(zonesProvider);
+    final zonesAsync = ref.watch(zonesProvider);
+    final servicesAsync = ref.watch(servicesProvider);
+    final session = ref.watch(sessionProvider);
+    final userProprietaireService = session?.utilisateur.service;
+
+    final isSameService = userProprietaireService != null &&
+        ((data.serviceIntervenantId != null && data.serviceIntervenantId == userProprietaireService.id) ||
+            (data.servicesIntervenants.isNotEmpty &&
+                data.servicesIntervenants.toLowerCase().trim() ==
+                    userProprietaireService.nomService.toLowerCase().trim()));
 
     return Step(
       isActive: _step >= 2,
-      title: const Text('Localisation'),
-      content: zones.when(
-        loading: () => const LoadingState(message: 'Chargement des zones...'),
+      title: const Text('Localisation & Services'),
+      content: zonesAsync.when(
+        loading: () => const LoadingState(message: 'Chargement des référentiels...'),
         error: (e, _) => ErrorState(
-            message: 'Zones indisponibles.',
-            onRetry: () => ref.invalidate(zonesProvider),),
+          message: 'Référentiels indisponibles.',
+          onRetry: () {
+            ref.invalidate(zonesProvider);
+            ref.invalidate(servicesProvider);
+          },
+        ),
         data: (list) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 1. Zone propriétaire (P)
             _ZoneDropdown(
-              label: 'Zone propriétaire (P)',
+              label: 'Zone propriétaire (P) *',
               zones: list,
               valueId: data.zoneProprietaireId,
               fallbackName: data.zoneProprietaireNom,
               enabled: !readOnly,
-              onChanged: (z) => notifier().update((d) => d.copyWith(
-                  zoneProprietaireId: z.id, zoneProprietaireNom: z.nomZone,),),
+              onChanged: (z) => notifier().update(
+                (d) => d.copyWith(
+                  zoneProprietaireId: z.id,
+                  zoneProprietaireNom: z.nomZone,
+                ),
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
+
+            // 2. Zone exécutante / intervenante (E)
             _ZoneDropdown(
-              label: 'Zone exécutante (E)',
+              label: 'Zone intervenante / exécutante (E) *',
               zones: list,
               valueId: data.zoneExecutanteId,
               fallbackName: data.zoneExecutanteNom,
               enabled: !readOnly,
-              onChanged: (z) => notifier().update((d) => d.copyWith(
-                  zoneExecutanteId: z.id, zoneExecutanteNom: z.nomZone,),),
+              onChanged: (z) => notifier().update(
+                (d) => d.copyWith(
+                  zoneExecutanteId: z.id,
+                  zoneExecutanteNom: z.nomZone,
+                ),
+              ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 14),
+
+            // 3. Service demandeur / propriétaire (P)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: OcpColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: OcpColors.divider),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.business_rounded, size: 20, color: OcpColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Service demandeur / propriétaire (P)',
+                          style: TextStyle(fontSize: 11, color: OcpColors.slate),
+                        ),
+                        Text(
+                          userProprietaireService?.nomService ?? 'Non renseigné (compte utilisateur)',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: OcpColors.ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 4. Service intervenant / exécutant (E) — Liste déroulante
+            servicesAsync.when(
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => TextFormField(
+                enabled: !readOnly,
+                initialValue: data.servicesIntervenants,
+                decoration: const InputDecoration(
+                  labelText: 'Service intervenant / exécutant (E) *',
+                ),
+                onChanged: (v) => notifier().update((d) => d.copyWith(servicesIntervenants: v)),
+              ),
+              data: (servicesList) => _ServiceDropdown(
+                label: 'Service intervenant / exécutant (E) *',
+                services: servicesList,
+                valueId: data.serviceIntervenantId,
+                valueNom: data.servicesIntervenants,
+                forbiddenServiceId: userProprietaireService?.id,
+                enabled: !readOnly,
+                onChanged: (s) => notifier().update(
+                  (d) => d.copyWith(
+                    serviceIntervenantId: s.id,
+                    servicesIntervenants: s.nomService ?? s.id,
+                  ),
+                ),
+              ),
+            ),
+
+            // 5. Alerte d'incompatibilité de services
+            if (isSameService) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: OcpColors.errorSoft.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: OcpColors.errorSoft),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, size: 20, color: OcpColors.errorSoft),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Le service propriétaire (${userProprietaireService?.nomService}) doit être différent du service intervenant (règle de séparation des rôles CEEP / CEEE).',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: OcpColors.errorSoft,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 8),
             const Text(
-              'La position Propriétaire/Exécutant est déterminée automatiquement '
-              'par le backend selon votre service.',
+              'Le service intervenant (E) désigné recevra l\'autorisation pour signature/visa du Chef d\'Équipe Exécutant (CEEE).',
               style: TextStyle(fontSize: 11, color: OcpColors.slate),
             ),
           ],
@@ -467,7 +589,17 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
   Step _stepRecapitulatif(bool readOnly) {
     final d = widget.state.data;
     final hasSubmit = ref.watch(hasPermissionProvider)('SUBMIT_AT');
+    final session = ref.watch(sessionProvider);
+    final userProprietaireService = session?.utilisateur.service;
+
+    final isSameService = userProprietaireService != null &&
+        ((d.serviceIntervenantId != null && d.serviceIntervenantId == userProprietaireService.id) ||
+            (d.servicesIntervenants.isNotEmpty &&
+                d.servicesIntervenants.toLowerCase().trim() ==
+                    userProprietaireService.nomService.toLowerCase().trim()));
+
     final canSubmit = hasSubmit &&
+        !isSameService &&
         (widget.state.at.statut == StatutAt.brouillon ||
             widget.state.at.statut == StatutAt.demandeCreee);
 
@@ -483,8 +615,12 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
           _recapRow('Objet', d.objet),
           _recapRow('Période',
               '${_fr(d.dateDebut)} → ${_fr(d.dateFin)} (${_h(d.heureDebut)} - ${_h(d.heureFin)})',),
-          _recapRow('Zone propriétaire', d.zoneProprietaireNom),
-          _recapRow('Zone exécutante', d.zoneExecutanteNom),
+          _recapRow('Zone propriétaire (P)', d.zoneProprietaireNom),
+          _recapRow('Zone exécutante / intervenante (E)', d.zoneExecutanteNom),
+          _recapRow('Service demandeur / propriétaire (P)', userProprietaireService?.nomService),
+          _recapRow('Service intervenant / exécutant (E)', d.servicesIntervenants.isNotEmpty ? d.servicesIntervenants : null),
+          if (d.entreprisesIntervenantes.isNotEmpty)
+            _recapRow('Entreprise extérieure', d.entreprisesIntervenantes),
           _recapRow(listInfo('Risques (A)', d.risquesIds), null),
           _recapRow(listInfo('Mesures (B)', d.mesuresIds), null),
           _recapRow(listInfo('Moyens d\'accès (C)', d.moyensAccesIds), null),
@@ -492,6 +628,29 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
           _recapRow(listInfo('Permis (E)', d.permisIds), null),
           if (d.mesuresSecuriteExecutant.isNotEmpty)
             _recapRow('Mesures exécutant (F)', d.mesuresSecuriteExecutant),
+          if (isSameService) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: OcpColors.errorSoft.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: OcpColors.errorSoft),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: OcpColors.errorSoft, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Soumission impossible : le service propriétaire et le service intervenant doivent obligatoirement être différents.',
+                      style: TextStyle(fontSize: 12, color: OcpColors.errorSoft, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           if (!readOnly && canSubmit)
             FilledButton.icon(
@@ -503,9 +662,11 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
               label: const Text('Soumettre pour validation'),
             )
           else
-            const Text(
-              'Soumission non disponible avec vos permissions actuelles.',
-              style: TextStyle(fontSize: 12, color: OcpColors.slate),
+            Text(
+              isSameService
+                  ? 'Veuillez corriger le service intervenant à l\'étape 3 avant de soumettre.'
+                  : 'Soumission non disponible avec vos permissions actuelles.',
+              style: const TextStyle(fontSize: 12, color: OcpColors.slate),
             ),
         ],
       ),
@@ -515,6 +676,28 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
   bool _submitting = false;
 
   Future<void> _submit() async {
+    final session = ref.read(sessionProvider);
+    final userProprietaireService = session?.utilisateur.service;
+    final d = widget.state.data;
+
+    final isSameService = userProprietaireService != null &&
+        ((d.serviceIntervenantId != null && d.serviceIntervenantId == userProprietaireService.id) ||
+            (d.servicesIntervenants.isNotEmpty &&
+                d.servicesIntervenants.toLowerCase().trim() ==
+                    userProprietaireService.nomService.toLowerCase().trim()));
+
+    if (isSameService) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: OcpColors.errorSoft,
+          content: Text(
+            'Le service propriétaire (${userProprietaireService?.nomService}) doit être différent du service intervenant.',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
     final notifier = ref.read(atFormProvider(widget.atId).notifier);
     try {
@@ -609,11 +792,18 @@ class _DateTile extends StatelessWidget {
           trailing: enabled ? const Icon(Icons.edit_calendar_rounded, size: 20) : null,
           onTap: enabled
               ? () async {
+                  final now = DateTime.now();
+                  final minDate = firstDate ?? DateTime(now.year - 1, 1, 1);
+                  final maxDate = DateTime(now.year + 2, 12, 31);
+                  DateTime initDate = value ?? now;
+                  if (initDate.isBefore(minDate)) initDate = minDate;
+                  if (initDate.isAfter(maxDate)) initDate = maxDate;
+
                   final picked = await showDatePicker(
                     context: context,
-                    initialDate: value ?? DateTime.now(),
-                    firstDate: firstDate ?? DateTime.now().subtract(const Duration(days: 365)),
-                    lastDate: DateTime.now().add(const Duration(days: 730)),
+                    initialDate: initDate,
+                    firstDate: minDate,
+                    lastDate: maxDate,
                   );
                   if (picked != null) onPick(picked);
                 }
@@ -676,22 +866,172 @@ class _ZoneDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     Zone? value;
     for (final z in zones) {
-      if (z.id == valueId) value = z;
+      if (z.id == valueId || (fallbackName != null && z.nomZone == fallbackName)) {
+        value = z;
+        break;
+      }
     }
+    final selectedKey = value?.id ?? valueId;
+
     return DropdownButtonFormField<String>(
-      initialValue: valueId,
+      value: selectedKey,
       isExpanded: true,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
+      ),
+      hint: const Text('Sélectionner une zone'),
       items: [
         ...zones.map((z) => DropdownMenuItem(value: z.id, child: Text(z.libelle))),
         // Zone connue mais absente du référentiel : la conserver affichée.
-        if (value == null && valueId != null)
+        if (value == null && (valueId != null || fallbackName != null))
           DropdownMenuItem(
-            value: valueId,
+            value: valueId ?? fallbackName,
             child: Text(fallbackName ?? valueId!, overflow: TextOverflow.ellipsis),
           ),
       ],
-      onChanged: enabled ? (id) { final z = zones.firstWhere((z) => z.id == id); onChanged(z); } : null,
+      onChanged: enabled
+          ? (id) {
+              if (id == null) return;
+              final found = zones.where((z) => z.id == id).firstOrNull;
+              if (found != null) onChanged(found);
+            }
+          : null,
     );
   }
 }
+
+class _ServiceDropdown extends StatelessWidget {
+  final String label;
+  final List<ServiceOcp> services;
+  final String? valueId;
+  final String? valueNom;
+  final String? forbiddenServiceId;
+  final ValueChanged<ServiceOcp> onChanged;
+  final bool enabled;
+
+  const _ServiceDropdown({
+    required this.label,
+    required this.services,
+    required this.valueId,
+    required this.valueNom,
+    this.forbiddenServiceId,
+    required this.onChanged,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    ServiceOcp? selected;
+    for (final s in services) {
+      if (s.id == valueId || (valueNom != null && valueNom!.isNotEmpty && s.nomService == valueNom)) {
+        selected = s;
+        break;
+      }
+    }
+
+    final selectedKey = selected?.id ?? valueId;
+
+    return DropdownButtonFormField<String>(
+      value: selectedKey,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.engineering_outlined, size: 20),
+      ),
+      hint: const Text('Sélectionner le service intervenant'),
+      items: [
+        ...services.map((s) {
+          final isForbidden = forbiddenServiceId != null && s.id == forbiddenServiceId;
+          return DropdownMenuItem<String>(
+            value: s.id,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    s.libelle,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isForbidden ? OcpColors.errorSoft : null,
+                      fontWeight: isForbidden ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+                if (isForbidden)
+                  const Text(
+                    ' (Service propriétaire)',
+                    style: TextStyle(fontSize: 10, color: OcpColors.errorSoft),
+                  ),
+              ],
+            ),
+          );
+        }),
+        if (selected == null && (valueId != null || (valueNom != null && valueNom!.isNotEmpty)))
+          DropdownMenuItem<String>(
+            value: valueId ?? valueNom,
+            child: Text(valueNom ?? valueId!, overflow: TextOverflow.ellipsis),
+          ),
+      ],
+      onChanged: enabled
+          ? (id) {
+              if (id == null) return;
+              final found = services.where((s) => s.id == id).firstOrNull;
+              if (found != null) {
+                onChanged(found);
+              }
+            }
+          : null,
+    );
+  }
+}
+
+class _EntrepriseDropdown extends StatelessWidget {
+  final String label;
+  final List<EntrepriseExterne> entreprises;
+  final String? value;
+  final ValueChanged<String> onChanged;
+  final bool enabled;
+
+  const _EntrepriseDropdown({
+    required this.label,
+    required this.entreprises,
+    required this.value,
+    required this.onChanged,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentVal = (value == null || value!.isEmpty) ? '' : value;
+
+    return DropdownButtonFormField<String>(
+      value: (currentVal == '' || entreprises.any((e) => e.libelle == currentVal)) ? currentVal : null,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.handyman_outlined, size: 20),
+      ),
+      items: [
+        const DropdownMenuItem<String>(
+          value: '',
+          child: Text('Aucune (Régie interne OCP)', style: TextStyle(fontStyle: FontStyle.italic)),
+        ),
+        ...entreprises.map((e) => DropdownMenuItem<String>(
+              value: e.libelle,
+              child: Text(e.libelle, overflow: TextOverflow.ellipsis),
+            )),
+        if (currentVal != '' && !entreprises.any((e) => e.libelle == currentVal))
+          DropdownMenuItem<String>(
+            value: currentVal,
+            child: Text(currentVal!, overflow: TextOverflow.ellipsis),
+          ),
+      ],
+      onChanged: enabled
+          ? (val) {
+              onChanged(val ?? '');
+            }
+          : null,
+    );
+  }
+}
+
