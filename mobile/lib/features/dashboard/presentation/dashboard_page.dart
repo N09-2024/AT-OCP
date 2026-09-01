@@ -24,6 +24,11 @@ class DashboardPage extends ConsumerWidget {
         title: const Text('Tableau de bord'),
         actions: [
           IconButton(
+            tooltip: 'Assistant IA HSE',
+            onPressed: () => context.push('/assistant'),
+            icon: const Icon(Icons.psychology_alt_rounded, color: Color(0xFF7FC8A9)),
+          ),
+          IconButton(
             onPressed: () => context.push('/notifications'),
             icon: Badge(
               isLabelVisible: unreadCount > 0,
@@ -187,6 +192,13 @@ class DashboardPage extends ConsumerWidget {
                     label: 'Notifications',
                     badge: unreadCount,
                     onTap: () => context.go('/notifications'),
+                  ),
+                  const SizedBox(height: 8),
+                  _quickAction(
+                    context,
+                    icon: Icons.psychology_alt_rounded,
+                    label: 'Assistant IA HSE (RAG)',
+                    onTap: () => context.push('/assistant'),
                   ),
                   if (hasPermission('CREATE_AT')) ...[
                     const SizedBox(height: 8),

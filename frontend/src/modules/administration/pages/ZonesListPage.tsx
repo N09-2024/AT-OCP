@@ -11,6 +11,8 @@ import {
   MagnifyingGlassIcon, ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { AdminService } from '../../../services/AdminService';
+import { usePopin } from '../../../contexts/PopinContext';
+
 
 interface Zone {
   id: string;
@@ -20,6 +22,7 @@ interface Zone {
 }
 
 export default function ZonesListPage() {
+  const popin = usePopin();
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,12 +48,21 @@ export default function ZonesListPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Confirmer la suppression de cette zone ?')) return;
+    const ok = await popin.confirm({
+      title: 'Suppression de zone',
+      message: 'Êtes-vous sûr de vouloir supprimer cette zone ?',
+      severity: 'error',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+    });
+    if (!ok) return;
     try {
       await AdminService.deleteZone(id);
       setZones((prev) => prev.filter((z) => z.id !== id));
+      popin.toast({ message: 'Zone supprimée avec succès.', severity: 'success' });
     } catch (err) {
       console.error('Erreur suppression zone', err);
+      popin.toast({ message: 'Erreur lors de la suppression de la zone.', severity: 'error' });
     }
   };
 

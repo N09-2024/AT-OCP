@@ -12,6 +12,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_date.dart';
 import '../../../core/widgets/states.dart';
 import '../../../core/widgets/statut_chip.dart';
+import '../../../core/widgets/workflow_stepper.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/models/autorisation_travail.dart';
 import 'at_providers.dart';
@@ -28,6 +29,27 @@ class AtDetailPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(detail.valueOrNull?.numero ?? 'Détail AT'),
+        actions: [
+          IconButton(
+            tooltip: 'Consulter l\'Assistant IA sur cette AT',
+            icon: const Icon(Icons.psychology_alt_rounded, color: Color(0xFF7FC8A9)),
+            onPressed: () {
+              final at = detail.valueOrNull;
+              context.push(
+                '/assistant',
+                extra: at == null
+                    ? null
+                    : {
+                        'id': at.id,
+                        'numero': at.numero,
+                        'objet': at.objet,
+                        'descriptionTravaux': at.descriptionTravaux,
+                        'statut': at.statut,
+                      },
+              );
+            },
+          ),
+        ],
       ),
       body: detail.when(
         loading: () => const LoadingState(message: 'Chargement de l\'AT...'),
@@ -65,6 +87,12 @@ class _AtDetailContent extends ConsumerWidget {
                 ),
             ],
           ),
+        ),
+
+        // --- Workflow Stepper S-HSE-SEC-31 ---
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: WorkflowStepper(statut: at.statut),
         ),
 
         // --- Verrou d'édition ---
@@ -209,6 +237,12 @@ class _AtDetailContent extends ConsumerWidget {
                 onPressed: () => context.push('/at/$atId/visas'),
                 icon: const Icon(Icons.draw_rounded),
                 label: const Text('Visas & signatures'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/at/$atId/reception'),
+                icon: const Icon(Icons.verified_outlined),
+                label: const Text('Réception des travaux'),
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(

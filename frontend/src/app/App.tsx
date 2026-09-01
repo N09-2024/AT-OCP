@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import theme from '../theme';
 import AppRoutes from '../routes';
+import { PopinProvider } from '../contexts/PopinContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,9 +20,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <PopinProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </PopinProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

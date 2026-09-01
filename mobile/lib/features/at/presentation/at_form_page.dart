@@ -28,7 +28,28 @@ class AtFormPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(form.at.numero ?? 'AT'),
-        actions: [_SaveStatusIndicator(state: form)],
+        actions: [
+          IconButton(
+            tooltip: 'Aide Assistant IA HSE',
+            icon: const Icon(Icons.psychology_alt_rounded, color: Color(0xFF7FC8A9)),
+            onPressed: () {
+              context.push(
+                '/assistant',
+                extra: {
+                  'id': form.at.id,
+                  'numero': form.at.numero,
+                  'objet': form.data.objet,
+                  'descriptionTravaux': form.data.descriptionTravaux,
+                  'risques': form.data.risquesIds.toList(),
+                  'mesures': form.data.mesuresIds.toList(),
+                  'epis': form.data.episIds.toList(),
+                  'permis': form.data.permisIds.toList(),
+                },
+              );
+            },
+          ),
+          _SaveStatusIndicator(state: form),
+        ],
       ),
       body: switch (form.loadError) {
         null => _AtFormStepper(atId: atId, state: form),
@@ -135,7 +156,7 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
                     )
                   else
                     const SizedBox.shrink(),
-                  if (_step < 8 && !readOnly)
+                  if (_step < 9 && !readOnly)
                     ElevatedButton(
                       onPressed: details.onStepContinue,
                       child: const Text('Suivant'),
@@ -168,16 +189,6 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
                 readOnly: readOnly,
               ),
               _stepReferentiel(
-                title: 'D. Équipements de protection (EPI)',
-                items: ref.watch(episProvider),
-                selected: widget.state.data.episIds,
-                onToggle: (id) =>
-                    ref.read(atFormProvider(widget.atId).notifier).toggleEpi(id),
-                searchHint: 'Rechercher un EPI…',
-                emptyMessage: 'Aucun EPI au référentiel.',
-                readOnly: readOnly,
-              ),
-              _stepReferentiel(
                 title: 'C. Moyens d\'accès',
                 items: ref.watch(moyensAccesProvider),
                 selected: widget.state.data.moyensAccesIds,
@@ -187,7 +198,18 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
                 emptyMessage: 'Aucun moyen d\'accès au référentiel.',
                 readOnly: readOnly,
               ),
+              _stepReferentiel(
+                title: 'D. Équipements de protection (EPI)',
+                items: ref.watch(episProvider),
+                selected: widget.state.data.episIds,
+                onToggle: (id) =>
+                    ref.read(atFormProvider(widget.atId).notifier).toggleEpi(id),
+                searchHint: 'Rechercher un EPI…',
+                emptyMessage: 'Aucun EPI au référentiel.',
+                readOnly: readOnly,
+              ),
               _stepPermis(readOnly),
+              _stepMesuresExecutant(readOnly),
               _stepRecapitulatif(readOnly),
             ],
           ),
@@ -405,6 +427,40 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
   }
 
   // ------------------------------------------------------------------
+  // Étape 8 : Section F — Mesures exécutant
+  // ------------------------------------------------------------------
+
+  Step _stepMesuresExecutant(bool readOnly) {
+    final data = widget.state.data;
+    AtFormNotifier notifier() => ref.read(atFormProvider(widget.atId).notifier);
+
+    return Step(
+      isActive: true,
+      title: const Text('F. Mesures exécutant'),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Mesures de sécurité complémentaires et précautions particulières prises par l\'exécutant.',
+            style: TextStyle(fontSize: 12, color: OcpColors.slate),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            enabled: !readOnly,
+            initialValue: data.mesuresSecuriteExecutant,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Mesures exécutant (Section F)',
+              hintText: 'Préciser les consignes spécifiques, balisage, surveillant...',
+            ),
+            onChanged: (v) => notifier().update((d) => d.copyWith(mesuresSecuriteExecutant: v)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------------
   // Étape 9 : récapitulatif + soumission
   // ------------------------------------------------------------------
 
@@ -429,11 +485,13 @@ class _AtFormStepperState extends ConsumerState<_AtFormStepper> {
               '${_fr(d.dateDebut)} → ${_fr(d.dateFin)} (${_h(d.heureDebut)} - ${_h(d.heureFin)})',),
           _recapRow('Zone propriétaire', d.zoneProprietaireNom),
           _recapRow('Zone exécutante', d.zoneExecutanteNom),
-          _recapRow(listInfo('Risques', d.risquesIds), null),
-          _recapRow(listInfo('Mesures', d.mesuresIds), null),
-          _recapRow(listInfo('EPI', d.episIds), null),
-          _recapRow(listInfo('Moyens d\'accès', d.moyensAccesIds), null),
-          _recapRow(listInfo('Permis', d.permisIds), null),
+          _recapRow(listInfo('Risques (A)', d.risquesIds), null),
+          _recapRow(listInfo('Mesures (B)', d.mesuresIds), null),
+          _recapRow(listInfo('Moyens d\'accès (C)', d.moyensAccesIds), null),
+          _recapRow(listInfo('EPI (D)', d.episIds), null),
+          _recapRow(listInfo('Permis (E)', d.permisIds), null),
+          if (d.mesuresSecuriteExecutant.isNotEmpty)
+            _recapRow('Mesures exécutant (F)', d.mesuresSecuriteExecutant),
           const SizedBox(height: 14),
           if (!readOnly && canSubmit)
             FilledButton.icon(

@@ -20,11 +20,13 @@ import SignaturePad from '../../../components/common/SignaturePad';
 import { receptionApi, type ReceptionTravauxRequest } from '../../../services/receptionApi';
 import { autorisationTravailApi } from '../../../services/autorisationTravailApi';
 import type { AutorisationTravail, ReceptionTravaux } from '../../../types';
+import { usePopin } from '../../../contexts/PopinContext';
 
 export default function ReceptionTravauxPage() {
   const [searchParams] = useSearchParams();
   const atId = searchParams.get('atId');
   const navigate = useNavigate();
+  const popin = usePopin();
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -43,56 +45,58 @@ export default function ReceptionTravauxPage() {
     autorisationTravailId: atId || '',
     dateDebutTravauxReelle: todayStr,
     dateFinTravauxReelle: todayStr,
-    travauxConformes: true,
-    zoneNettoyee: true,
-    consignationRetiree: true,
-    equipementRemisEnService: true,
-    installationRemiseEnEtat: true,
-    essaisEffectues: true,
-    essaisConformes: true,
     travauxRealises: '',
+    travauxConformes: false,
+    equipementRemisEnService: false,
+    zoneNettoyee: false,
+    consignationRetiree: false,
+    installationRemiseEnEtat: false,
+    essaisEffectues: false,
+    essaisConformes: false,
+    resultatEssais: '',
+    observations: '',
     commentaireResponsable: '',
   });
 
-  // Signature state
-  const [_signatureBlob, setSignatureBlob] = useState<Blob | null>(null);
+  // Visa Signature state
+  const [signatureBlob, setSignatureBlob] = useState<Blob | null>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [visaRecorded, setVisaRecorded] = useState(false);
 
   useEffect(() => {
     if (!atId) return;
     setLoading(true);
-
-    const loadData = async () => {
-      try {
-        const atData = await autorisationTravailApi.findById(atId);
+    Promise.all([
+      autorisationTravailApi.getById(atId),
+      receptionApi.getByAtId(atId).catch(() => null),
+    ])
+      .then(([atData, recData]) => {
         setAt(atData);
-        const rec = await receptionApi.getByAtId(atId).catch(() => null);
-        if (rec) {
-          setExistingReception(rec);
+        if (recData) {
+          setExistingReception(recData);
           setForm({
             autorisationTravailId: atId,
-            dateDebutTravauxReelle: formatDateInput(rec.dateDebutTravauxReelle || (atData as any)?.dateDebutReelle || todayStr),
-            dateFinTravauxReelle: formatDateInput(rec.dateFinTravauxReelle || (atData as any)?.dateFinReelle || todayStr),
-            travauxConformes: rec.travauxConformes ?? true,
-            zoneNettoyee: rec.zoneNettoyee ?? true,
-            consignationRetiree: rec.consignationRetiree ?? true,
-            equipementRemisEnService: rec.equipementRemisEnService ?? true,
-            installationRemiseEnEtat: rec.installationRemiseEnEtat ?? true,
-            essaisEffectues: rec.essaisEffectues ?? true,
-            essaisConformes: rec.essaisConformes ?? true,
-            travauxRealises: rec.travauxRealises || '',
-            commentaireResponsable: rec.commentaireResponsable || '',
+            dateDebutTravauxReelle: formatDateInput(recData.dateDebutTravauxReelle),
+            dateFinTravauxReelle: formatDateInput(recData.dateFinTravauxReelle),
+            travauxRealises: recData.travauxRealises || '',
+            travauxConformes: Boolean(recData.travauxConformes),
+            equipementRemisEnService: Boolean(recData.equipementRemisEnService),
+            zoneNettoyee: Boolean(recData.zoneNettoyee),
+            consignationRetiree: Boolean(recData.consignationRetiree),
+            installationRemiseEnEtat: Boolean(recData.installationRemiseEnEtat),
+            essaisEffectues: Boolean(recData.essaisEffectues),
+            essaisConformes: Boolean(recData.essaisConformes),
+            resultatEssais: recData.resultatEssais || '',
+            observations: recData.observations || '',
+            commentaireResponsable: recData.commentaireResponsable || '',
           });
+          if (recData.signaturePath || recData.signatureDate) {
+            setVisaRecorded(true);
+          }
         }
-      } catch (err) {
-        console.error('Erreur chargement AT/Réception:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
   }, [atId]);
 
   const handleCheckbox = (field: keyof ReceptionTravauxRequest) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +107,6 @@ export default function ReceptionTravauxPage() {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  // Check mandatory conditions
   const isChecklistComplete =
     form.travauxConformes &&
     form.zoneNettoyee &&
@@ -116,11 +119,19 @@ export default function ReceptionTravauxPage() {
   const handleSubmitAndClose = async () => {
     if (!atId || !at) return;
     if (!isChecklistComplete) {
-      alert('Toutes les conditions obligatoires de la checklist doivent être validées pour pouvoir réceptionner et clôturer.');
+      popin.alert({
+        title: 'Checklist incomplète',
+        message: 'Toutes les conditions obligatoires de la checklist doivent être validées pour pouvoir réceptionner et clôturer.',
+        severity: 'warning',
+      });
       return;
     }
     if (!visaRecorded) {
-      alert('Le visa avec signature manuscrite est obligatoire pour la réception.');
+      popin.alert({
+        title: 'Signature requise',
+        message: 'Le visa avec signature manuscrite est obligatoire pour la réception des travaux.',
+        severity: 'warning',
+      });
       return;
     }
 
@@ -140,11 +151,18 @@ export default function ReceptionTravauxPage() {
       // Clôturer l'AT
       await receptionApi.cloturer(recId);
 
-      alert('Réception des travaux enregistrée et Autorisation de Travail clôturée avec succès !');
+      popin.toast({
+        message: 'Réception des travaux enregistrée et Autorisation de Travail clôturée avec succès !',
+        severity: 'success',
+      });
       navigate('/autorisations');
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Erreur lors de la réception des travaux.');
+      popin.alert({
+        title: 'Erreur',
+        message: err.response?.data?.message || 'Erreur lors de la réception des travaux.',
+        severity: 'error',
+      });
     } finally {
       setSubmitting(false);
     }

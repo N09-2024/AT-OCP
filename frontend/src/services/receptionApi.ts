@@ -12,6 +12,8 @@ export interface ReceptionTravauxRequest {
   installationRemiseEnEtat: boolean;
   essaisEffectues: boolean;
   essaisConformes: boolean;
+  resultatEssais?: string;
+  observations?: string;
   travauxRealises?: string;
   commentaireResponsable?: string;
 }
@@ -20,6 +22,10 @@ export const receptionApi = {
   getByAtId: async (atId: string): Promise<ReceptionTravaux> => {
     const response = await apiClient.get<ReceptionTravaux>(`/receptions/at/${atId}`);
     return response.data;
+  },
+
+  getByAT: async (atId: string): Promise<ReceptionTravaux> => {
+    return receptionApi.getByAtId(atId);
   },
 
   getById: async (id: string): Promise<ReceptionTravaux> => {

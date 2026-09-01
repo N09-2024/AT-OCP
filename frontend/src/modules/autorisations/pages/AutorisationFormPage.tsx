@@ -24,9 +24,11 @@ import { autorisationTravailApi } from '../../../services/autorisationTravailApi
 import { visaApi } from '../../../services/visaApi';
 import { iaApi } from '../../../services/iaApi';
 import { useAuthStore } from '../../../store/authStore';
+import { usePopin } from '../../../contexts/PopinContext';
 
 export default function AutorisationFormPage() {
   const navigate = useNavigate();
+  const popin = usePopin();
   const { id: draftId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const currentUser = useAuthStore((s) => s.user);
@@ -189,11 +191,16 @@ export default function AutorisationFormPage() {
         sectionFRenseignee: !!(data?.sectionF || data?.mesuresSecuriteExecutant),
       });
       if (!ctrl.complet && ctrl.alertes?.length) {
-        const ok = window.confirm(
-          'Contrôle IA - alertes :\n\n' +
-          ctrl.alertes.join('\n') +
-          '\n\nSoumettre quand même ?'
-        );
+        const ok = await popin.confirm({
+          title: 'Contrôle IA — Alertes de complétude',
+          message:
+            'Le contrôle de complétude par IA a identifié les points suivants :\n\n' +
+            ctrl.alertes.map((a: string) => `• ${a}`).join('\n') +
+            '\n\nSouhaitez-vous quand même soumettre l\'Autorisation de Travail ?',
+          severity: 'ai',
+          confirmText: 'Soumettre quand même',
+          cancelText: 'Compléter le formulaire',
+        });
         if (!ok) return;
       }
     } catch {

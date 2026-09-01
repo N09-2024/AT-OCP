@@ -9,6 +9,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { reconductionApi, type ReconductionResponse } from '../../services/reconductionApi';
 import { useNavigate } from 'react-router-dom';
+import { usePopin } from '../../contexts/PopinContext';
 
 const statutColor: Record<string, 'warning' | 'success' | 'error' | 'default'> = {
   REQUESTED: 'warning',
@@ -26,6 +27,7 @@ const statutLabel: Record<string, string> = {
 
 export default function ReconductionDecisionPage() {
   const navigate = useNavigate();
+  const popin = usePopin();
   const [loading, setLoading] = useState(true);
   const [reconductions, setReconductions] = useState<ReconductionResponse[]>([]);
   const [selected, setSelected] = useState<ReconductionResponse | null>(null);
@@ -51,6 +53,7 @@ export default function ReconductionDecisionPage() {
   const handleOpenApprove = (r: ReconductionResponse) => {
     setSelected(r);
     setCommentaire('');
+    setMotifRefus('');
     setDialogMode('approve');
   };
 
@@ -64,7 +67,11 @@ export default function ReconductionDecisionPage() {
   const handleSubmit = async () => {
     if (!selected) return;
     if (dialogMode === 'reject' && !motifRefus.trim()) {
-      alert('Le motif de refus est obligatoire.');
+      popin.alert({
+        title: 'Motif obligatoire',
+        message: 'Le motif de refus est obligatoire.',
+        severity: 'warning',
+      });
       return;
     }
     setSubmitLoading(true);
@@ -76,12 +83,20 @@ export default function ReconductionDecisionPage() {
       });
       setDialogMode(null);
       setSelected(null);
-      alert(dialogMode === 'approve'
-        ? '✅ Reconduction approuvée. L\'AT a été prolongée et le CEEE notifié.'
-        : '❌ Reconduction refusée. Le CEEE a été notifié avec le motif de refus.');
+      popin.toast({
+        message:
+          dialogMode === 'approve'
+            ? 'Reconduction approuvée. L\'AT a été prolongée et le CEEE notifié.'
+            : 'Reconduction refusée. Le CEEE a été notifié avec le motif de refus.',
+        severity: dialogMode === 'approve' ? 'success' : 'warning',
+      });
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la décision.');
+      popin.alert({
+        title: 'Erreur',
+        message: err.response?.data?.message || 'Erreur lors de la décision.',
+        severity: 'error',
+      });
     } finally {
       setSubmitLoading(false);
     }

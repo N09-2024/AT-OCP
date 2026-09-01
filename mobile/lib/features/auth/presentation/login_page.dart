@@ -69,7 +69,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         'assets/images/logo-ocp.png',
                         height: 130,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           width: 84,
                           height: 84,
                           decoration: BoxDecoration(

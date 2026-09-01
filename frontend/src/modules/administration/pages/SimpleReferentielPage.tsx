@@ -11,6 +11,8 @@ import {
   MagnifyingGlassIcon, ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { apiClient } from '../../../services/apiClient';
+import { usePopin } from '../../../contexts/PopinContext';
+
 
 interface SimpleItem {
   id: string;
@@ -49,6 +51,7 @@ export default function SimpleReferentielPage({
   searchPlaceholder,
   fields = [],
 }: SimpleReferentielPageProps) {
+  const popin = usePopin();
   const [items, setItems] = useState<SimpleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,12 +81,21 @@ export default function SimpleReferentielPage({
   useEffect(() => { load(); }, [apiPath]);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm(`Confirmer la suppression ?`)) return;
+    const ok = await popin.confirm({
+      title: `Suppression — ${title}`,
+      message: 'Êtes-vous sûr de vouloir supprimer cet élément du référentiel ?',
+      severity: 'error',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+    });
+    if (!ok) return;
     try {
       await apiClient.delete(`${apiPath}/${id}`);
       setItems((prev) => prev.filter((i) => i.id !== id));
+      popin.toast({ message: 'Élément supprimé avec succès.', severity: 'success' });
     } catch {
       setError('Erreur lors de la suppression');
+      popin.toast({ message: 'Erreur lors de la suppression.', severity: 'error' });
     }
   };
 

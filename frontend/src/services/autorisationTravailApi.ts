@@ -46,6 +46,10 @@ export const autorisationTravailApi = {
     return response.data;
   },
 
+  getById: async (id: string): Promise<AutorisationTravail> => {
+    return autorisationTravailApi.findById(id);
+  },
+
   // Création à partir d'un document source (DI, OT, BT)
   createFromDocument: async (type: 'DI' | 'OT' | 'BT', documentId: string): Promise<AutorisationTravail> => {
     const response = await apiClient.post<AutorisationTravail>(`/documents/${type}/${documentId}/creer-at`);

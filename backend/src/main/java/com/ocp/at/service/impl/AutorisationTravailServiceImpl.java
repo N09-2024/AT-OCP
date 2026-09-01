@@ -782,8 +782,11 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
             notificationService.sendNotificationToRoleForAt("HCEP", savedAt, "AT soumise (info HCEP)",
                     "L'AT " + savedAt.getNumero() + " a été soumise dans votre périmètre.",
                     "INFO", lienAt);
+            notificationService.sendNotificationToRole("ADMIN", "AT Soumise - " + savedAt.getNumero(),
+                    "Une nouvelle AT " + savedAt.getNumero() + " (" + (savedAt.getObjet() != null ? savedAt.getObjet() : "") + ") a été soumise.",
+                    "INFO", lienAt);
         } catch (Exception e) {
-            log.warn("Notif HC: {}", e.getMessage());
+            log.warn("Notif HC/ADMIN: {}", e.getMessage());
         }
 
         try {
@@ -830,7 +833,8 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         AutorisationTravail savedAt = atRepository.save(at);
 
         enregistrerHistorique(savedAt, TypeActionAT.VALIDATION, ancienStatut, nouvelEtat, "AT validée - §8.3 VALIDEE");
-        notificationService.createNotification(at.getProprietaireBrouillon(), "AT Validée", "Votre AT " + savedAt.getNumero() + " a été validée.", "SUCCESS", "/at/" + savedAt.getId());
+        notificationService.createNotification(at.getProprietaireBrouillon(), "AT Validée", "Votre AT " + savedAt.getNumero() + " a été validée.", "SUCCESS", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRole("ADMIN", "AT Validée - " + savedAt.getNumero(), "L'AT " + savedAt.getNumero() + " a été validée.", "SUCCESS", "/autorisations/" + savedAt.getId());
 
         return mapToResponse(savedAt);
     }
@@ -858,7 +862,8 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         AutorisationTravail savedAt = atRepository.save(at);
         
         enregistrerHistorique(savedAt, TypeActionAT.REFUS, ancienStatut, StatutAT.REJETEE, "AT refusée : " + request.getCommentaire());
-        notificationService.createNotification(at.getProprietaireBrouillon(), "AT Refusée", "Votre AT " + savedAt.getNumero() + " a été refusée.", "ERROR", "/at/" + savedAt.getId());
+        notificationService.createNotification(at.getProprietaireBrouillon(), "AT Refusée", "Votre AT " + savedAt.getNumero() + " a été refusée.", "ERROR", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRole("ADMIN", "AT Refusée - " + savedAt.getNumero(), "L'AT " + savedAt.getNumero() + " a été refusée (" + request.getCommentaire() + ").", "ERROR", "/autorisations/" + savedAt.getId());
 
         return mapToResponse(savedAt);
     }
@@ -932,7 +937,8 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         AutorisationTravail savedAt = atRepository.save(at);
         
         enregistrerHistorique(savedAt, TypeActionAT.RECEPTION_CONJOINTE, ancienStatut, StatutAT.TRAVAUX_RECEPTIONES, "§8.5 - Clôture / réception AT");
-        notificationService.createNotification(at.getProprietaireBrouillon(), "AT Clôturée", "Votre AT " + savedAt.getNumero() + " a été clôturée.", "INFO", "/at/" + savedAt.getId());
+        notificationService.createNotification(at.getProprietaireBrouillon(), "AT Clôturée", "Votre AT " + savedAt.getNumero() + " a été clôturée.", "INFO", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRole("ADMIN", "AT Clôturée - " + savedAt.getNumero(), "L'AT " + savedAt.getNumero() + " a été clôturée.", "INFO", "/autorisations/" + savedAt.getId());
         
         return mapToResponse(savedAt);
     }

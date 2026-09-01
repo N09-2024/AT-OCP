@@ -2,6 +2,7 @@
 /// (`frontend/src/components/dashboard/AtTable.tsx` → STATUT_CONFIG :
 /// couple { bg, color }), étendue aux statuts du workflow standard
 /// S-HSE-SEC-31 absents du tableau web, dans le même langage visuel.
+library;
 
 import 'package:flutter/material.dart';
 import '../../features/at/data/models/autorisation_travail.dart';

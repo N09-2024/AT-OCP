@@ -1,34 +1,21 @@
-import { Box, Typography, IconButton, Avatar, Badge, Menu, MenuItem, Breadcrumbs, Divider, TextField, InputAdornment } from '@mui/material';
-import { BellIcon, ChevronDownIcon, ChevronRightIcon, UserCircleIcon, LockClosedIcon, ArrowRightOnRectangleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { useState, useEffect } from 'react';
+import { Box, Typography, IconButton, Avatar, Badge, Menu, MenuItem, Breadcrumbs, Divider } from '@mui/material';
+import { BellIcon, ChevronDownIcon, ChevronRightIcon, UserCircleIcon, LockClosedIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { NotificationService } from '../../services/NotificationService';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function Topbar() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+  const { unreadCount } = useNotifications();
 
   const prenom = user?.prenom ?? 'Utilisateur';
   const nom = user?.nom ?? '';
   const role = user?.roles?.[0]?.nom ?? 'Utilisateur';
-
-  // Load unread notification count with 30s real-time polling
-  useEffect(() => {
-    const fetchUnread = () => {
-      NotificationService.countUnread()
-        .then((count) => setUnreadCount(count))
-        .catch(() => setUnreadCount(0));
-    };
-
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, [location.pathname]);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);

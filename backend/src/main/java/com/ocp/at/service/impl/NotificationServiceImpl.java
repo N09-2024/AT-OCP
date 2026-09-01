@@ -79,12 +79,38 @@ public class NotificationServiceImpl implements NotificationService {
         broadcastNotification(utilisateur.getId(), mapper.toResponse(saved));
     }
 
+    private List<String> getMatchingRoleNames(String roleName) {
+        if (roleName == null) return List.of();
+        String role = roleName.trim().toUpperCase();
+        List<String> targetRoles = new java.util.ArrayList<>();
+        targetRoles.add(role);
+
+        if ("HCEP".equals(role) || "HCEE".equals(role) || "HC".equals(role)) {
+            if (!targetRoles.contains("HCEP")) targetRoles.add("HCEP");
+            if (!targetRoles.contains("HCEE")) targetRoles.add("HCEE");
+            if (!targetRoles.contains("HC")) targetRoles.add("HC");
+        } else if ("HMEP".equals(role) || "HMEE".equals(role) || "HM".equals(role)) {
+            if (!targetRoles.contains("HMEP")) targetRoles.add("HMEP");
+            if (!targetRoles.contains("HMEE")) targetRoles.add("HMEE");
+            if (!targetRoles.contains("HM")) targetRoles.add("HM");
+        } else if ("CEEP".equals(role) || "CEEE".equals(role) || "CE".equals(role)) {
+            if (!targetRoles.contains("CEEP")) targetRoles.add("CEEP");
+            if (!targetRoles.contains("CEEE")) targetRoles.add("CEEE");
+            if (!targetRoles.contains("CE")) targetRoles.add("CE");
+        }
+        return targetRoles;
+    }
+
     @Override
     @Transactional
     public void sendNotificationToRole(String roleName, String titre, String message, String type, String lien) {
         if (roleName == null || roleName.isBlank()) return;
+        List<String> targetRoles = getMatchingRoleNames(roleName);
 
-        List<Utilisateur> users = utilisateurRepository.findActiveByRoleFragment(roleName);
+        List<Utilisateur> users = utilisateurRepository.findActiveByRoleNames(targetRoles);
+        if (users.isEmpty()) {
+            users = utilisateurRepository.findActiveByRoleFragment(roleName);
+        }
 
         for (Utilisateur u : users) {
             createNotification(u, titre, message, type, lien);
@@ -106,6 +132,7 @@ public class NotificationServiceImpl implements NotificationService {
                                             String titre, String message, String type, String lien) {
         if (roleName == null || roleName.isBlank() || at == null) return;
         String role = roleName.trim().toUpperCase();
+        List<String> targetRoles = getMatchingRoleNames(role);
 
         // Résolution de la zone de l'AT pour ce rôle (logique P/E contextuelle).
         String zoneId = null;
@@ -118,29 +145,33 @@ public class NotificationServiceImpl implements NotificationService {
             rolePe = false; // ADMIN, RESPONSABLE_EXTERIEUR... hors logique P/E
         }
 
-        // Rôles hors P/E, ou AT sans zone : diffusion globale (comportement antérieur).
+        // Rôles hors P/E, ou AT sans zone : diffusion globale
         if (!rolePe || zoneId == null) {
             sendNotificationToRole(role, titre, message, type, lien);
             return;
         }
 
-        java.util.LinkedHashSet<Utilisateur> destinataires = new java.util.LinkedHashSet<>(
-                utilisateurRepository.findActiveByRoleNomAndZoneId(role, zoneId));
+        java.util.LinkedHashSet<Utilisateur> destinataires = new java.util.LinkedHashSet<>();
 
-        // L'acteur désigné de l'AT est toujours inclus s'il porte ce rôle,
-        // même si son service appartient à une autre zone.
-        if ("CEEP".equals(role) && hasRole(at.getProprietaireBrouillon(), role)) {
+        // 1. Recherche ciblée par zone
+        List<Utilisateur> zoneUsers = utilisateurRepository.findActiveByRoleNamesAndZoneId(targetRoles, zoneId);
+        destinataires.addAll(zoneUsers);
+
+        // 2. Si aucun utilisateur n'est assigné à cette zone spécifique, fallback sur les utilisateurs portant ce rôle
+        if (destinataires.isEmpty()) {
+            destinataires.addAll(utilisateurRepository.findActiveByRoleNames(targetRoles));
+        }
+
+        // 3. L'acteur désigné de l'AT est toujours inclus s'il porte ce rôle
+        if (targetRoles.contains("CEEP") && at.getProprietaireBrouillon() != null && hasAnyRole(at.getProprietaireBrouillon(), targetRoles)) {
             destinataires.add(at.getProprietaireBrouillon());
         }
-        if ("CEEE".equals(role) && hasRole(at.getCeee(), role)) {
+        if (targetRoles.contains("CEEE") && at.getCeee() != null && hasAnyRole(at.getCeee(), targetRoles)) {
             destinataires.add(at.getCeee());
         }
 
         if (destinataires.isEmpty()) {
-            // Personne ne détient ce rôle sur le territoire de l'AT : on n'envoie
-            // PAS en diffusion globale — c'est la garantie d'isolation demandée.
-            log.info("sendNotificationToRoleForAt '{}': aucun destinataire sur l'AT {} (zone {})",
-                    role, at.getNumero(), zoneId);
+            log.info("sendNotificationToRoleForAt '{}': aucun destinataire trouvé pour l'AT {}", role, at.getNumero());
             return;
         }
 
@@ -151,9 +182,9 @@ public class NotificationServiceImpl implements NotificationService {
                 destinataires.size(), at.getNumero());
     }
 
-    private boolean hasRole(Utilisateur u, String roleNom) {
+    private boolean hasAnyRole(Utilisateur u, List<String> roleNoms) {
         if (u == null || u.getRoles() == null) return false;
-        return u.getRoles().stream().anyMatch(r -> roleNom.equalsIgnoreCase(r.getNom()));
+        return u.getRoles().stream().anyMatch(r -> roleNoms.stream().anyMatch(rn -> rn.equalsIgnoreCase(r.getNom())));
     }
 
     @Override

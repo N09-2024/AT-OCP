@@ -51,6 +51,7 @@ import { AIAssistantDrawer } from '../ia/AIAssistantDrawer';
 import { apiClient } from '../../services/apiClient';
 import { iaApi } from '../../services/iaApi';
 import { autorisationTravailApi } from '../../services/autorisationTravailApi';
+import { usePopin } from '../../contexts/PopinContext';
 import {
   type PermisDocumentResponse,
   initialiserPermis,
@@ -90,6 +91,7 @@ export default function FormulaireOCPInteractive({
 }: FormulaireOCPInteractiveProps) {
   // Guard: if parent passes null explicitly (AT not yet loaded), treat as empty object
   const initialData = rawInitialData ?? {};
+  const popin = usePopin();
   const currentUser = useAuthStore((s) => s.user);
   const containerRef = useRef<HTMLDivElement>(null);
   const atStatut = initialData?.statut || initialData?.statutWorkflow || '';
@@ -202,7 +204,11 @@ export default function FormulaireOCPInteractive({
         setGpsLoading(false);
       },
       () => {
-        alert("Impossible d'accéder à la géolocalisation GPS. Veuillez autoriser l'accès GPS.");
+        popin.alert({
+          title: 'Géolocalisation GPS',
+          message: "Impossible d'accéder à la position GPS. Veuillez autoriser l'accès GPS dans les paramètres de votre navigateur.",
+          severity: 'warning',
+        });
         setGpsLoading(false);
       }
     );
@@ -412,7 +418,11 @@ export default function FormulaireOCPInteractive({
     const userServiceId = currentUser?.service?.id;
 
     if ((found?.id && userServiceId && found.id === userServiceId) || (nomService && userNomService && nomService.toLowerCase().trim() === userNomService.toLowerCase().trim())) {
-      alert(`⚠️ Une Autorisation de Travail ne peut pas être établie au sein d'un même service. Le service demandeur/propriétaire (${userNomService || 'votre service'}) et le service exécutant doivent être différents.`);
+      popin.alert({
+        title: 'Règle HSE — Séparation des entités',
+        message: `Une Autorisation de Travail ne peut pas être établie au sein d'un même service.\n\nLe service demandeur/propriétaire (${userNomService || 'votre service'}) et le service exécutant doivent être distincts.`,
+        severity: 'error',
+      });
       return;
     }
 
@@ -486,7 +496,11 @@ export default function FormulaireOCPInteractive({
   const lancerAnalyseIA = async () => {
     const desc = (formData.description || '').trim();
     if (!desc) {
-      alert("Veuillez renseigner une description des travaux avant de lancer l'analyse IA.");
+      popin.alert({
+        title: 'Description requise',
+        message: "Veuillez renseigner une description des travaux dans le formulaire avant de lancer l'analyse IA.",
+        severity: 'info',
+      });
       return;
     }
     setIaLoading(true);
@@ -608,7 +622,7 @@ export default function FormulaireOCPInteractive({
   const exportPDFServer = async () => {
     const atId = initialData?.id || formData.numero;
     if (!atId) {
-      alert("Aucun ID d'AT disponible pour l'export PDF serveur.");
+      popin.toast({ message: "Aucun ID d'AT disponible pour l'export PDF serveur.", severity: 'error' });
       return;
     }
     try {
@@ -618,27 +632,39 @@ export default function FormulaireOCPInteractive({
       a.href = url;
       a.download = `${formData.numero || 'AT'}.pdf`;
       a.click();
+      popin.toast({ message: 'Export PDF officiel généré avec succès !', severity: 'success' });
     } catch (err: any) {
-      alert(err.response?.data?.message || err.message || "Export PDF refusé ou indisponible.");
+      popin.alert({
+        title: 'Export PDF officiel',
+        message: err.response?.data?.message || err.message || "Export PDF refusé ou indisponible.",
+        severity: 'warning',
+      });
     }
   };
 
   const handleSignerEtTransmettre = async () => {
     // §8.2 OCP S-HSE-SEC-31 - Visite Préalable Obligatoire
     if (!preventionEnPlace) {
-      alert(
-        '⛔ Visite Préalable obligatoire (§8.2)\n\n' +
-        'Vous devez effectuer la visite conjointe de chantier, cocher la confirmation des mesures de prévention, ' +
-        'puis signer avant de transmettre l\'Autorisation de Travail.'
-      );
+      popin.alert({
+        title: 'Visite Préalable obligatoire (§8.2)',
+        message:
+          'Vous devez effectuer la visite conjointe de chantier, cocher la confirmation des mesures de prévention, ' +
+          'puis signer avant de pouvoir transmettre l\'Autorisation de Travail.',
+        severity: 'warning',
+      });
       return;
     }
 
     const complet = await controlerAvantSoumission();
     if (!complet) {
-      const confirmer = window.confirm(
-        "L'IA signale des éléments potentiellement manquants (voir le bandeau ci-dessus). Transmettre quand même ?"
-      );
+      const confirmer = await popin.confirm({
+        title: 'Contrôle IA — Éléments potentiellement manquants',
+        message:
+          "L'analyse IA signale des éléments potentiellement manquants (voir le bandeau du formulaire).\n\nSouhaitez-vous quand même transmettre l'Autorisation de Travail ?",
+        severity: 'ai',
+        confirmText: 'Transmettre quand même',
+        cancelText: 'Vérifier le formulaire',
+      });
       if (!confirmer) return;
     }
 
@@ -683,7 +709,10 @@ export default function FormulaireOCPInteractive({
           : [...prev, updated]
       );
     } catch (e: any) {
-      alert('Erreur upload : ' + (e?.response?.data?.message || e?.message || 'Erreur inconnue'));
+      popin.toast({
+        message: 'Erreur upload : ' + (e?.response?.data?.message || e?.message || 'Erreur inconnue'),
+        severity: 'error',
+      });
     } finally {
       setPermisUploading(false);
     }

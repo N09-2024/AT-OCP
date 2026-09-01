@@ -24,10 +24,12 @@ import { autorisationTravailApi } from '../../../services/autorisationTravailApi
 import { visaApi } from '../../../services/visaApi';
 import type { AutorisationTravail, Visa } from '../../../types';
 import { useAuthStore } from '../../../store/authStore'; // user kept for future role display
+import { usePopin } from '../../../contexts/PopinContext';
 
 export default function ValidationOCPPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const popin = usePopin();
   const _user = useAuthStore((s) => s.user); // reserved for future display
 
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,11 @@ export default function ValidationOCPPage() {
   const handleValider = async () => {
     if (!id || !at) return;
     if (!signatureBlob) {
-      alert('Votre signature manuscrite est obligatoire pour valider l\'AT.');
+      popin.alert({
+        title: 'Signature requise',
+        message: "Votre signature manuscrite est obligatoire pour valider l'AT.",
+        severity: 'warning',
+      });
       return;
     }
 
@@ -107,11 +113,18 @@ export default function ValidationOCPPage() {
       // 2. Valider l'AT
       await autorisationTravailApi.valider(id);
 
-      alert(`Visa ${targetRoleTag} apposé et Autorisation de Travail mise à jour avec succès !`);
+      popin.toast({
+        message: `Visa ${targetRoleTag} apposé et Autorisation de Travail mise à jour avec succès !`,
+        severity: 'success',
+      });
       navigate('/autorisations');
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Erreur lors de la validation.');
+      popin.alert({
+        title: 'Erreur de validation',
+        message: err.response?.data?.message || 'Erreur lors de la validation.',
+        severity: 'error',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -120,7 +133,11 @@ export default function ValidationOCPPage() {
   const handleRefuser = async () => {
     if (!id || !at) return;
     if (!motifRejet.trim()) {
-      alert('Le motif du refus est obligatoire.');
+      popin.alert({
+        title: 'Motif obligatoire',
+        message: 'Le motif du refus est obligatoire.',
+        severity: 'warning',
+      });
       return;
     }
 
@@ -132,12 +149,16 @@ export default function ValidationOCPPage() {
       }
 
       await autorisationTravailApi.refuser(id, motifRejet);
-      alert('Autorisation de Travail rejetée.');
+      popin.toast({ message: 'Autorisation de Travail rejetée.', severity: 'warning' });
       setRejectOpen(false);
       navigate('/autorisations');
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Erreur lors du refus.');
+      popin.alert({
+        title: 'Erreur',
+        message: err.response?.data?.message || 'Erreur lors du refus.',
+        severity: 'error',
+      });
     } finally {
       setSubmitting(false);
     }

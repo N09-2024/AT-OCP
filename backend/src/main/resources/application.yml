@@ -37,6 +37,11 @@ gemini:
 
 server:
   port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
 
 management:
   endpoints:

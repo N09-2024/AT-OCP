@@ -21,9 +21,13 @@ interface User {
   actived: boolean;
   roles: { id: string; nom: string }[];
   derniereConnexion?: string;
+  matricule?: string;
 }
 
+import { usePopin } from '../../../contexts/PopinContext';
+
 export default function UsersListPage() {
+  const popin = usePopin();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,14 +56,22 @@ export default function UsersListPage() {
 
   const handleToggleActive = async (user: User) => {
     const action = user.actived ? 'désactiver' : 'réactiver';
-    if (!window.confirm(`Confirmer : ${action} le compte de ${user.prenom} ${user.nom} ?`)) return;
+    const ok = await popin.confirm({
+      title: 'Gestion des utilisateurs',
+      message: `Souhaitez-vous réellement ${action} le compte de ${user.prenom} ${user.nom} (${user.matricule || user.id}) ?`,
+      severity: user.actived ? 'warning' : 'info',
+      confirmText: action === 'désactiver' ? 'Désactiver' : 'Réactiver',
+    });
+    if (!ok) return;
     try {
       const updated = user.actived
         ? await AdminService.deactivateUser(user.id)
         : await AdminService.activateUser(user.id);
       setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, actived: updated.actived } : u)));
+      popin.toast({ message: `Compte ${action === 'désactiver' ? 'désactivé' : 'réactivé'} avec succès.`, severity: 'success' });
     } catch (err) {
       console.error('Erreur changement de statut utilisateur', err);
+      popin.toast({ message: 'Erreur lors de la mise à jour du compte.', severity: 'error' });
     }
   };
 

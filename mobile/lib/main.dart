@@ -86,7 +86,7 @@ class _SplashScreen extends StatelessWidget {
               'assets/images/logo-ocp.png',
               height: 110,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(

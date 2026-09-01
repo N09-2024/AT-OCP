@@ -27,7 +27,9 @@ import '../features/at/presentation/at_form_page.dart';
 import '../features/at/presentation/at_historique_page.dart';
 import '../features/at/presentation/at_list_page.dart';
 import '../features/at/presentation/at_pdf_page.dart';
+import '../features/at/presentation/at_reception_page.dart';
 import '../features/at/presentation/at_visas_page.dart';
+import '../features/assistant/presentation/assistant_page.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
@@ -150,6 +152,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             AtVisasPage(atId: state.pathParameters['id']!),
       ),
       GoRoute(
+        path: '/at/:id/reception',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) =>
+            AtReceptionPage(atId: state.pathParameters['id']!),
+      ),
+      GoRoute(
         path: '/at/:id/historique',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) =>
@@ -160,6 +168,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) =>
             AtPdfPage(atId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/assistant',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra;
+          return AssistantPage(
+            atContext: extra is Map<String, dynamic> ? extra : null,
+          );
+        },
       ),
     ],
   );

@@ -7,6 +7,8 @@ import {
 } from '@mui/material';
 import { CheckIcon, XMarkIcon, MagnifyingGlassIcon, FunnelIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { AdminService } from '../../../services/AdminService';
+import { usePopin } from '../../../contexts/PopinContext';
+
 
 interface PendingUser {
   id: string;
@@ -19,14 +21,15 @@ interface PendingUser {
 }
 
 export default function PendingUsersPage() {
+  const popin = usePopin();
   const [users, setUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
 
   // Pagination
   const [page, setPage] = useState(0);
@@ -34,9 +37,10 @@ export default function PendingUsersPage() {
 
   const loadPending = async () => {
     try {
-      setError('');
+      setLoading(true);
+      setError(null);
       const res = await AdminService.listPendingUsers();
-      setUsers(Array.isArray(res) ? res : []);
+      setUsers(Array.isArray(res) ? res : (res?.content ?? []));
     } catch (err) {
       console.error('Erreur chargement inscriptions', err);
       setError('Impossible de charger les inscriptions en attente');
@@ -48,28 +52,46 @@ export default function PendingUsersPage() {
   useEffect(() => { loadPending(); }, []);
 
   const handleApprove = async (id: string) => {
-    if (!window.confirm('Approuver cette inscription ?')) return;
+    const ok = await popin.confirm({
+      title: 'Validation d\'inscription',
+      message: 'Souhaitez-vous approuver cette demande d\'inscription ? L\'utilisateur recevra l\'accès au système.',
+      severity: 'success',
+      confirmText: 'Approuver',
+      cancelText: 'Annuler',
+    });
+    if (!ok) return;
     setActionLoading(id);
     try {
       await AdminService.approveUser(id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
+      popin.toast({ message: 'Inscription approuvée avec succès !', severity: 'success' });
     } catch (err) {
       console.error('Erreur approbation', err);
       setError("Erreur lors de l'approbation");
+      popin.toast({ message: "Erreur lors de l'approbation de l'inscription.", severity: 'error' });
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleReject = async (id: string) => {
-    if (!window.confirm('Rejeter cette inscription ? Le compte sera supprimé.')) return;
+    const ok = await popin.confirm({
+      title: 'Rejet d\'inscription',
+      message: 'Êtes-vous sûr de vouloir rejeter cette inscription ? Le compte utilisateur sera supprimé.',
+      severity: 'error',
+      confirmText: 'Rejeter et supprimer',
+      cancelText: 'Annuler',
+    });
+    if (!ok) return;
     setActionLoading(id);
     try {
       await AdminService.rejectUser(id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
+      popin.toast({ message: 'Inscription rejetée.', severity: 'warning' });
     } catch (err) {
       console.error('Erreur rejet', err);
       setError('Erreur lors du rejet');
+      popin.toast({ message: 'Erreur lors du rejet de l\'inscription.', severity: 'error' });
     } finally {
       setActionLoading(null);
     }

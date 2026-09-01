@@ -53,10 +53,12 @@ import type {
 
 import FormulaireOCPViewer from '../../../components/common/FormulaireOCPViewer';
 import { useAuthStore } from '../../../store/authStore';
+import { usePopin } from '../../../contexts/PopinContext';
 
 export default function AutorisationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const popin = usePopin();
 
   const user = useAuthStore((s) => s.user);
 
@@ -183,10 +185,11 @@ export default function AutorisationDetailPage() {
 
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(
-        err?.response?.data?.message ||
-          'Erreur lors de la génération du PDF.'
-      );
+      popin.alert({
+        title: 'Export PDF',
+        message: err?.response?.data?.message || 'Erreur lors de la génération du PDF officiel.',
+        severity: 'warning',
+      });
     } finally {
       setPdfLoading(false);
     }
@@ -204,17 +207,14 @@ export default function AutorisationDetailPage() {
 
     try {
       await archiveApi.archiverAT(id);
-
-      alert(
-        'AT archivée officiellement avec succès (Étape 8).'
-      );
-
+      popin.toast({ message: 'AT archivée officiellement avec succès (Étape 8).', severity: 'success' });
       await loadDetails();
     } catch (err: any) {
-      alert(
-        err?.response?.data?.message ||
-          "Erreur lors de l'archivage."
-      );
+      popin.alert({
+        title: 'Archivage',
+        message: err?.response?.data?.message || "Erreur lors de l'archivage.",
+        severity: 'error',
+      });
     }
   };
 
@@ -265,18 +265,17 @@ export default function AutorisationDetailPage() {
       });
 
       setReadinessOpen(false);
-
-      alert(
-        'Démarrage des travaux enregistré avec succès. ' +
-          'Statut : INTERVENTION EN COURS.'
-      );
-
+      popin.toast({
+        message: 'Démarrage des travaux enregistré avec succès. Statut : INTERVENTION EN COURS.',
+        severity: 'success',
+      });
       await loadDetails();
     } catch (err: any) {
-      alert(
-        err?.response?.data?.message ||
-          'Erreur lors du démarrage des travaux.'
-      );
+      popin.alert({
+        title: 'Démarrage des travaux',
+        message: err?.response?.data?.message || 'Erreur lors du démarrage des travaux.',
+        severity: 'error',
+      });
     } finally {
       setActionLoading(false);
     }
@@ -302,10 +301,11 @@ export default function AutorisationDetailPage() {
       !reconductionDate ||
       !reconductionMotif.trim()
     ) {
-      alert(
-        'Veuillez renseigner la nouvelle date de fin et le motif de la reconduction.'
-      );
-
+      popin.alert({
+        title: 'Champs requis',
+        message: 'Veuillez renseigner la nouvelle date de fin et le motif de la reconduction.',
+        severity: 'warning',
+      });
       return;
     }
 
@@ -319,18 +319,17 @@ export default function AutorisationDetailPage() {
       });
 
       setReconductionOpen(false);
-
-      alert(
-        'Demande de reconduction soumise au HMEP ' +
-          '(Responsable OCP). Vous serez notifié de la décision.'
-      );
-
+      popin.toast({
+        message: 'Demande de reconduction soumise au HMEP. Vous serez notifié de la décision.',
+        severity: 'success',
+      });
       await loadDetails();
     } catch (err: any) {
-      alert(
-        err?.response?.data?.message ||
-          'Erreur lors de la demande de reconduction.'
-      );
+      popin.alert({
+        title: 'Reconduction',
+        message: err?.response?.data?.message || 'Erreur lors de la demande de reconduction.',
+        severity: 'error',
+      });
     } finally {
       setReconductionLoading(false);
     }
@@ -363,10 +362,11 @@ export default function AutorisationDetailPage() {
       !zoneNettoyee ||
       !consignationRetiree
     ) {
-      alert(
-        'Veuillez confirmer toutes les vérifications de fin de chantier avant de déclarer la fin.'
-      );
-
+      popin.alert({
+        title: 'Vérifications obligatoires',
+        message: 'Veuillez confirmer toutes les vérifications de fin de chantier avant de déclarer la fin des travaux.',
+        severity: 'warning',
+      });
       return;
     }
 
@@ -374,25 +374,24 @@ export default function AutorisationDetailPage() {
 
     try {
       await interventionApi.end(id, {
-  travauxRealises: rapportFin.trim(),    // "rapportFinChantier" → "travauxRealises"
-  materielRetire: materielEvacue,        // "materielEvacue" → "materielRetire"
-  zoneNettoyee,
-  protectionsRetablies: consignationRetiree,  // "consignationRetiree" → "protectionsRetablies"
-});
+        travauxRealises: rapportFin.trim(),
+        materielRetire: materielEvacue,
+        zoneNettoyee,
+        protectionsRetablies: consignationRetiree,
+      });
 
       setFinOpen(false);
-
-      alert(
-        'Fin des travaux déclarée par le CEEE avec succès. ' +
-          'Prêt pour réception conjointe.'
-      );
-
+      popin.toast({
+        message: 'Fin des travaux déclarée par le CEEE avec succès. Prêt pour réception conjointe.',
+        severity: 'success',
+      });
       await loadDetails();
     } catch (err: any) {
-      alert(
-        err?.response?.data?.message ||
-          'Erreur lors de la déclaration de fin.'
-      );
+      popin.alert({
+        title: 'Déclaration de fin',
+        message: err?.response?.data?.message || 'Erreur lors de la déclaration de fin.',
+        severity: 'error',
+      });
     } finally {
       setFinLoading(false);
     }

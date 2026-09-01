@@ -10,6 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/errors/error_mapper.dart';
 import '../../../core/errors/failures.dart';
 import '../../../core/theme/app_colors.dart';
@@ -42,7 +43,7 @@ class AtWorkflowActions extends ConsumerWidget {
               const Icon(Icons.route_rounded, size: 16, color: OcpColors.forest),
               const SizedBox(width: 6),
               Expanded(
-                child: Text('Étape suivante (${StatutAt.libelle(at.statut)})',
+                child: Text('Actions logigramme (${StatutAt.libelle(at.statut)})',
                     style: const TextStyle(
                         fontFamily: 'SpaceGrotesk',
                         fontWeight: FontWeight.w700,
@@ -66,20 +67,23 @@ class AtWorkflowActions extends ConsumerWidget {
       case StatutAt.enVisiteRedaction:
         if (perm('CREATE_VISITE')) {
           b.add(_secondaire(context, Icons.directions_walk_rounded,
-              'Marquer la visite effectuée', () => _marquerVisite(context, ref),),);
+              'Étape 2 : Marquer la visite préalable effectuée', () => _marquerVisite(context, ref),),);
         }
         if (perm('SIGN_AT') || perm('VALIDATE_AT')) {
-          b.add(_secondaire(context, Icons.edit_note_rounded, "Rédiger l'AT", () => _rediger(context, ref)));
+          b.add(_secondaire(context, Icons.edit_note_rounded, "Étape 3 : Rédiger l'AT", () => _rediger(context, ref)));
         }
         break;
 
       case StatutAt.visiteRealisee:
         if (perm('SIGN_AT') || perm('VALIDATE_AT')) {
-          b.add(_secondaire(context, Icons.edit_note_rounded, "Rédiger l'AT", () => _rediger(context, ref)));
+          b.add(_primaire(context, Icons.edit_note_rounded, "Étape 3 : Rédiger l'AT", () => _rediger(context, ref)));
         }
         break;
 
       case StatutAt.atRedigee:
+        b.add(_secondaire(context, Icons.draw_rounded, 'Consulter & signer les visas', () async {
+          context.push('/at/${at.id}/visas');
+        }));
         if (perm('SUBMIT_AT')) {
           b.add(_primaire(context, Icons.send_rounded, 'Soumettre pour validation', () async {
             if (!await _confirmer(context, 'Soumettre cette AT pour validation ?')) return;
@@ -90,6 +94,9 @@ class AtWorkflowActions extends ConsumerWidget {
         break;
 
       case StatutAt.soumise:
+        b.add(_secondaire(context, Icons.draw_rounded, 'Consulter les visas requis', () async {
+          context.push('/at/${at.id}/visas');
+        }));
         if (perm('VALIDATE_AT')) {
           b.add(_primaire(context, Icons.check_circle_rounded, "Valider l'AT", () async {
             await _executer(context, ref, (api) => api.valider(at.id), 'AT validée.');
@@ -104,7 +111,7 @@ class AtWorkflowActions extends ConsumerWidget {
       case StatutAt.atValidee:
       case StatutAt.validee:
         if (perm('START_INTERVENTION')) {
-          b.add(_primaire(context, Icons.play_arrow_rounded, "Démarrer l'intervention",
+          b.add(_primaire(context, Icons.play_arrow_rounded, "Étape 4 : Démarrer l'intervention",
               () async {
             await _executer(context, ref, (api) => api.demarrerIntervention(at.id),
                 'Intervention démarrée.',);
@@ -118,7 +125,7 @@ class AtWorkflowActions extends ConsumerWidget {
       case StatutAt.atReconduite:
       case StatutAt.renouvelee:
         if (perm('DECLARE_FIN_TRAVAUX')) {
-          b.add(_primaire(context, Icons.task_alt_rounded, 'Déclarer la fin des travaux',
+          b.add(_primaire(context, Icons.task_alt_rounded, 'Étape 5 : Déclarer la fin des travaux',
               () async {
             if (!await _confirmer(context, 'Confirmer la fin des travaux ?')) return;
             if (!context.mounted) return;
@@ -135,25 +142,22 @@ class AtWorkflowActions extends ConsumerWidget {
 
       case StatutAt.declareeTerminee:
       case StatutAt.finTravauxDeclaree:
-        if (perm('RECEIVE_AT') || perm('CLOSE_AT')) {
-          b.add(_primaire(context, Icons.handshake_rounded,
-              'Réception conjointe des travaux', () async {
-            if (!await _confirmer(context, 'Effectuer la réception conjointe ?')) return;
-            if (!context.mounted) return;
-            await _executer(context, ref, (api) => api.receptionStandard(at.id),
-                'Réception enregistrée.',);
+        if (perm('RECEIVE_AT') || perm('CLOSE_AT') || perm('VALIDATE_AT')) {
+          b.add(_primaire(context, Icons.verified_rounded,
+              'Étape 6 : Procéder à la réception conjointe', () async {
+            context.push('/at/${at.id}/reception');
           }),);
         }
         break;
 
       case StatutAt.receptionnees:
       case StatutAt.travauxReceptiones:
-        if (perm('CLOSE_AT')) {
-          b.add(_primaire(context, Icons.lock_clock_rounded,
-              "Clôturer définitivement l'AT", () async {
-            if (!await _confirmer(context, 'Clôturer définitivement cette AT ?')) return;
+        if (perm('ARCHIVE_AT') || perm('VALIDATE_AT')) {
+          b.add(_primaire(context, Icons.inventory_2_rounded,
+              "Étape 7 : Archiver l'AT (≥ 1 an)", () async {
+            if (!await _confirmer(context, 'Archiver officiellement cette AT pour conservation réglementaire (≥ 1 an) ?')) return;
             if (!context.mounted) return;
-            await _executer(context, ref, (api) => api.cloturer(at.id), 'AT clôturée.');
+            await _executer(context, ref, (api) => api.archiver(at.id), 'AT archivée avec succès.');
           }),);
         }
         break;

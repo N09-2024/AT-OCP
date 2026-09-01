@@ -74,7 +74,7 @@ abstract final class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: OcpColors.forest,
           foregroundColor: OcpColors.white,
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(64, 48),
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -84,7 +84,16 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: OcpColors.forest,
           side: const BorderSide(color: OcpColors.forest),
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(64, 48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: OcpColors.forest,
+          foregroundColor: OcpColors.white,
+          minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),

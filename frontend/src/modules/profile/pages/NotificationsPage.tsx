@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -20,47 +20,19 @@ import {
   CheckIcon,
   EnvelopeOpenIcon,
   ArrowTopRightOnSquareIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
-import { NotificationService, type NotificationItem } from '../../../services/NotificationService';
+import { useNotifications } from '../../../hooks/useNotifications';
+import type { NotificationItem } from '../../../services/NotificationService';
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [markingAll, setMarkingAll] = useState(false);
   const navigate = useNavigate();
-
-  const loadNotifications = () => {
-    setLoading(true);
-    NotificationService.getMyNotifications(0, 100)
-      .then((page) => setNotifications(page.content))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    await NotificationService.markAsRead(id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, lu: true, dateLecture: new Date().toISOString() } : n))
-    );
-  };
+  const { notifications, unreadCount, loading, refresh, markAsRead, markAllAsRead } = useNotifications();
+  const [markingAll, setMarkingAll] = useState(false);
 
   const handleMarkAllAsRead = async () => {
     setMarkingAll(true);
     try {
-      await NotificationService.markAllAsRead();
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, lu: true, dateLecture: n.dateLecture ?? new Date().toISOString() }))
-      );
-    } catch (err) {
-      console.error('Erreur markAllAsRead', err);
+      await markAllAsRead();
     } finally {
       setMarkingAll(false);
     }
@@ -68,10 +40,9 @@ export default function NotificationsPage() {
 
   const handleNotificationClick = async (notif: NotificationItem) => {
     if (!notif.lu) {
-      await handleMarkAsRead(notif.id);
+      await markAsRead(notif.id);
     }
     if (notif.lien) {
-      // Normaliser les URLs relatives backend (ex: /at/123 -> /autorisations/123)
       let target = notif.lien;
       if (target.startsWith('/at/')) {
         target = target.replace('/at/', '/autorisations/');
@@ -79,8 +50,6 @@ export default function NotificationsPage() {
       navigate(target);
     }
   };
-
-  const unreadCount = notifications.filter((n) => !n.lu).length;
 
   const getTypeChip = (type?: string) => {
     switch (type?.toUpperCase()) {
@@ -125,18 +94,28 @@ export default function NotificationsPage() {
             </Typography>
           </Box>
         </Box>
-        {unreadCount > 0 && (
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"
             size="small"
-            startIcon={<CheckIcon width={16} />}
-            onClick={handleMarkAllAsRead}
-            disabled={markingAll}
+            onClick={refresh}
             sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
           >
-            Tout marquer comme lu
+            Actualiser
           </Button>
-        )}
+          {unreadCount > 0 && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CheckIcon width={16} />}
+              onClick={handleMarkAllAsRead}
+              disabled={markingAll}
+              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+            >
+              Tout marquer comme lu
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {loading ? (
@@ -184,7 +163,10 @@ export default function NotificationsPage() {
                         <Tooltip title="Marquer comme lu">
                           <IconButton
                             size="small"
-                            onClick={(e) => handleMarkAsRead(notif.id, e)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(notif.id);
+                            }}
                             sx={{ color: '#5C6E67' }}
                           >
                             <EnvelopeOpenIcon width={18} />

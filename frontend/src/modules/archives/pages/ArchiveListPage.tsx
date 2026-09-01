@@ -25,13 +25,16 @@ import QrCodeIcon from '@mui/icons-material/QrCode';
 import { archiveApi } from '../../../services/archiveApi';
 import type { Archive } from '../../../types';
 
+import { usePopin } from '../../../contexts/PopinContext';
+
 export default function ArchiveListPage() {
-  const [loading, setLoading] = useState(true);
+  const popin = usePopin();
+  const [loading, setLoading] = useState(false);
   const [archives, setArchives] = useState<Archive[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [verificationState, setVerificationState] = useState<Record<string, boolean | null>>({});
+  const [verificationState, setVerificationState] = useState<{ [id: string]: boolean | null }>({});
 
   const loadData = async () => {
     setLoading(true);
@@ -39,8 +42,8 @@ export default function ArchiveListPage() {
       const res = await archiveApi.getAll(page, pageSize);
       setArchives(res.content || []);
       setTotal(res.totalElements || 0);
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error('Erreur chargement archives', e);
     } finally {
       setLoading(false);
     }
@@ -58,8 +61,13 @@ export default function ArchiveListPage() {
       a.href = url;
       a.download = `${numeroArchive || 'Archive'}.pdf`;
       a.click();
+      popin.toast({ message: 'Archive téléchargée avec succès.', severity: 'success' });
     } catch (e) {
-      alert('Erreur lors du téléchargement de l\'archive.');
+      popin.alert({
+        title: 'Téléchargement archive',
+        message: "Erreur lors du téléchargement de l'archive officielle.",
+        severity: 'error',
+      });
     }
   };
 

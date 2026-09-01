@@ -38,9 +38,11 @@ import { autorisationTravailApi } from '../../../services/autorisationTravailApi
 import { apiClient } from '../../../services/apiClient';
 import type { AutorisationTravail } from '../../../types';
 import { useAuthStore } from '../../../store/authStore';
+import { usePopin } from '../../../contexts/PopinContext';
 
 export default function AutorisationListPage() {
   const navigate = useNavigate();
+  const popin = usePopin();
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get('filtre') || searchParams.get('statut');
   const user = useAuthStore((s) => s.user);
@@ -528,7 +530,11 @@ export default function AutorisationListPage() {
                                     a.download = `${row.numero}.pdf`;
                                     a.click();
                                   } catch (e: any) {
-                                    alert(e.response?.data?.message || 'Erreur lors de l\'export PDF.');
+                                    popin.alert({
+                                      title: 'Export PDF',
+                                      message: e.response?.data?.message || "Erreur lors de l'export PDF.",
+                                      severity: 'warning',
+                                    });
                                   }
                                 }}
                                 color="error"
@@ -677,9 +683,19 @@ export default function AutorisationListPage() {
                     estTiers: false,
                     natureIntervention: "Intervention de routine interne",
                   });
-                  alert('Intervention classée Niveau 1 enregistrée en BDD : inscrite au registre F-HSE-SEC-31-01 des interventions de routine. Aucune AT nécessaire.');
+                  popin.alert({
+                    title: 'Registre Niveau 1 (F-HSE-SEC-31-01)',
+                    message:
+                      'Intervention classée Niveau 1 enregistrée : inscrite au registre F-HSE-SEC-31-01 des interventions de routine. Aucune Autorisation de Travail n\'est requise.',
+                    severity: 'info',
+                  });
                 } catch (e) {
-                  alert('Intervention classée Niveau 1 : inscrite au registre F-HSE-SEC-31-01 des interventions de routine.');
+                  popin.alert({
+                    title: 'Registre Niveau 1 (F-HSE-SEC-31-01)',
+                    message:
+                      'Intervention classée Niveau 1 : inscrite au registre F-HSE-SEC-31-01 des interventions de routine.',
+                    severity: 'info',
+                  });
                 }
                 setClassifyOpen(false);
               }}

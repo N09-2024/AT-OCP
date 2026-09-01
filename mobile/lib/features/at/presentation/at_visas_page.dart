@@ -56,21 +56,66 @@ class AtVisasPage extends ConsumerWidget {
           onRetry: () => ref.invalidate(visasProvider(atId)),
         ),
         data: (items) {
+          // Trier les visas par ordre séquentiel
+          final sortedItems = List<Visa>.from(items)
+            ..sort((a, b) => (a.ordre ?? 99).compareTo(b.ordre ?? 99));
+
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             children: [
+              // Bandeau explicatif de la séquence des visas
+              Card(
+                color: OcpColors.surfaceSoft,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: OcpColors.borderSoft),
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 18, color: OcpColors.forest),
+                          SizedBox(width: 8),
+                          Text(
+                            'Ordre séquentiel réglementaire (S-HSE-SEC-31)',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: OcpColors.forest),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        '1. CEEE (Exécutant) → 2. HCEP (Propriétaire) → 3. HCEE → 4. HMEP → 5. HMEE',
+                        style: TextStyle(fontSize: 12, color: OcpColors.ink, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
               if (peutAccuserReception &&
                   session != null &&
                   hasPermission('SIGN_AT')) ...[
                 _AccuseReceptionCard(onConfirm: () => _accuserReception(context, ref)),
                 const SizedBox(height: 8),
               ],
-              ...items.map((v) => _VisaTile(
-                    visa: v,
-                    canSign: canSign,
-                    onSign: () => _signer(context, ref, v),
-                  ),),
-              if (items.isEmpty)
+              ...sortedItems.map((v) {
+                // Vérifier si tous les visas d'ordre inférieur sont déjà signés/validés
+                final isPrecedentValide = sortedItems
+                    .where((other) => (other.ordre ?? 0) < (v.ordre ?? 0))
+                    .every((other) => other.signaturePresente || other.statut == StatutVisa.valide);
+
+                return _VisaTile(
+                  visa: v,
+                  canSign: canSign,
+                  isPrecedentValide: isPrecedentValide,
+                  onSign: () => _signer(context, ref, v),
+                );
+              }),
+              if (sortedItems.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: EmptyState(message: 'Aucun visa créé pour cette AT.', icon: Icons.draw_outlined),
@@ -152,9 +197,15 @@ class _AccuseReceptionCard extends StatelessWidget {
 class _VisaTile extends StatelessWidget {
   final Visa visa;
   final bool canSign;
+  final bool isPrecedentValide;
   final VoidCallback? onSign;
 
-  const _VisaTile({required this.visa, required this.canSign, this.onSign});
+  const _VisaTile({
+    required this.visa,
+    required this.canSign,
+    required this.isPrecedentValide,
+    this.onSign,
+  });
 
   Color get _statusColor {
     switch (visa.statut) {
@@ -168,11 +219,18 @@ class _VisaTile extends StatelessWidget {
     }
   }
 
-  bool get _peutEtreSigne => canSign && visa.statut == StatutVisa.enAttente;
+  bool get _peutEtreSigne => canSign && visa.statut == StatutVisa.enAttente && isPrecedentValide;
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: _peutEtreSigne ? OcpColors.forest : OcpColors.borderSoft,
+          width: _peutEtreSigne ? 1.5 : 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -187,9 +245,19 @@ class _VisaTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    visa.utilisateurNomComplet ?? 'Visa',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        visa.utilisateurNomComplet ?? 'Visa',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+                      if (visa.ordre != null)
+                        Text(
+                          'Étape ${visa.ordre} dans l\'ordre des visas',
+                          style: const TextStyle(fontSize: 11, color: OcpColors.slate),
+                        ),
+                    ],
                   ),
                 ),
                 Container(
@@ -218,15 +286,40 @@ class _VisaTile extends StatelessWidget {
               children: [
                 _meta('Visa', AppDate.dateHeure(visa.dateVisa)),
                 _meta('Signature', AppDate.dateHeure(visa.dateSignature)),
-                if (visa.ordre != null) _meta('Ordre', '${visa.ordre}'),
               ],
             ),
+            if (!isPrecedentValide && visa.statut == StatutVisa.enAttente) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: OcpColors.surfaceSoft,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.lock_clock_outlined, size: 16, color: OcpColors.slate),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'En attente de la signature du visa précédent dans l\'ordre.',
+                        style: TextStyle(fontSize: 11, color: OcpColors.slate),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (_peutEtreSigne) ...[
               const SizedBox(height: 12),
               FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: OcpColors.forest,
+                  minimumSize: const Size.fromHeight(44),
+                ),
                 onPressed: onSign,
                 icon: const Icon(Icons.draw_rounded),
-                label: Text(visa.signaturePresente ? 'Re-signer' : 'Signer ce visa'),
+                label: Text(visa.signaturePresente ? 'Re-signer' : 'Signer ce visa maintenant'),
               ),
             ],
           ],
@@ -243,3 +336,4 @@ class _VisaTile extends StatelessWidget {
         ],
       );
 }
+

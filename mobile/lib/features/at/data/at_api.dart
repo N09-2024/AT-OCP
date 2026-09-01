@@ -151,6 +151,10 @@ class AtApi {
   Future<AutorisationTravail> receptionStandard(String id) =>
       _transition(id, 'reception-standard');
 
+  Future<void> archiver(String id) async {
+    await _client.post<dynamic>('/archives/archive/$id');
+  }
+
   Future<AutorisationTravail> accuserReceptionCeee(String id) =>
       _putTransition(id, 'accuser-reception-ceee');
 

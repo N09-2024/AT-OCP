@@ -1070,9 +1070,10 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         Font fv = FontFactory.getFont(FontFactory.HELVETICA, 7.2f, Color.BLACK);
 
         String site = at.getZoneProprietaire() != null ? at.getZoneProprietaire().getNomZone() : "...............";
-        String entite = at.getProprietaireBrouillon() != null && at.getProprietaireBrouillon().getService() != null
+        // Entité = service du propriétaire. Ne pas dupliquer le site si le service est absent.
+        String entite = (at.getProprietaireBrouillon() != null && at.getProprietaireBrouillon().getService() != null)
                 ? at.getProprietaireBrouillon().getService().getNomService()
-                : (at.getZoneProprietaire() != null ? at.getZoneProprietaire().getNomZone() : "...............");
+                : "...............";
         String numeroAT = at.getNumero() != null ? at.getNumero() : "N/A";
 
         // Row 1: Site + Entité (span 2) / Encadré AT n° (col 3, rowspan 2)
@@ -1142,7 +1143,10 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         table.addCell(cLieu);
 
         // Row 4: Description (span 2) + Date intervention (col 3)
-        String desc = at.getDescriptionTravaux() != null && !at.getDescriptionTravaux().isBlank() ? at.getDescriptionTravaux() : (at.getObjet() != null ? at.getObjet() : "...............");
+        // Utiliser uniquement descriptionTravaux ; ne pas injecter l'objet qui est une donnée différente.
+        String desc = (at.getDescriptionTravaux() != null && !at.getDescriptionTravaux().isBlank())
+                ? at.getDescriptionTravaux()
+                : "...............";
         String dateInt = at.getDateDebut() != null ? at.getDateDebut().format(DATE_FMT) : "...../...../..........";
 
         Paragraph pDesc = new Paragraph();
@@ -1342,9 +1346,10 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         PdfPCell header = createHeaderSectionCell("F-  Mesures de sécurité prises par l'exécutant (Référence du mode opératoire, ....)");
         table.addCell(header);
 
-        String mesures = at.getMesuresSecuriteExecutant() != null && !at.getMesuresSecuriteExecutant().isBlank()
+        // Section F : ne jamais injecter de texte générique. Laisser vide si non renseigné.
+        String mesures = (at.getMesuresSecuriteExecutant() != null && !at.getMesuresSecuriteExecutant().isBlank())
                 ? at.getMesuresSecuriteExecutant()
-                : "Conformité stricte aux consignes HSE OCP, balisage du périmètre d'intervention et port complet des EPIs obligatoires.";
+                : "...............";
 
         Paragraph p = new Paragraph(mesures, FontFactory.getFont(FontFactory.HELVETICA, 7.2f, Color.BLACK));
         p.setLeading(8.5f);
@@ -1468,9 +1473,14 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
         table.addCell(createGridCell(createCheckboxParagraph(false, "Autres à préciser : .........."), 1, null));
         table.addCell(createGridCell(createCheckboxParagraph(false, "Autres à préciser : .........."), 1, null));
 
-        // Essai concluant row
-        boolean essaiOui = rec != null && (Boolean.TRUE.equals(rec.getEssaisConformes()) || Boolean.TRUE.equals(rec.getEssaisEffectues()) || Boolean.TRUE.equals(rec.getTravauxConformes()));
-        boolean essaiNon = rec != null && Boolean.FALSE.equals(rec.getEssaisConformes()) && Boolean.TRUE.equals(rec.getEssaisEffectues());
+        // Essai concluant : les deux conditions doivent être vraies (essais effectués ET conformes).
+        // travauxConformes seul ne suffit pas à cocher "Oui".
+        boolean essaiOui = rec != null
+                && Boolean.TRUE.equals(rec.getEssaisEffectues())
+                && Boolean.TRUE.equals(rec.getEssaisConformes());
+        boolean essaiNon = rec != null
+                && Boolean.TRUE.equals(rec.getEssaisEffectues())
+                && Boolean.FALSE.equals(rec.getEssaisConformes());
 
         Paragraph pEssai = new Paragraph();
         pEssai.setLeading(8f);
@@ -1775,6 +1785,11 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
                 if (matchesKeywords(nom, keywords)) return true;
             }
         }
+
+        // Source 3 : fallback sur descriptionTravaux (AT sans données de formulaire structurées)
+        if (at.getDescriptionTravaux() != null && !at.getDescriptionTravaux().isBlank()) {
+            if (matchesKeywords(at.getDescriptionTravaux(), keywords)) return true;
+        }
         return false;
     }
 
@@ -1800,6 +1815,11 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
             for (String nom : noms) {
                 if (matchesKeywords(nom, keywords)) return true;
             }
+        }
+
+        // Source 3 : fallback sur descriptionTravaux
+        if (at.getDescriptionTravaux() != null && !at.getDescriptionTravaux().isBlank()) {
+            if (matchesKeywords(at.getDescriptionTravaux(), keywords)) return true;
         }
         return false;
     }
@@ -1827,6 +1847,11 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
                 if (matchesKeywords(nom, keywords)) return true;
             }
         }
+
+        // Source 3 : fallback sur descriptionTravaux
+        if (at.getDescriptionTravaux() != null && !at.getDescriptionTravaux().isBlank()) {
+            if (matchesKeywords(at.getDescriptionTravaux(), keywords)) return true;
+        }
         return false;
     }
 
@@ -1852,6 +1877,11 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
             for (String nom : noms) {
                 if (matchesKeywords(nom, keywords)) return true;
             }
+        }
+
+        // Source 3 : fallback sur descriptionTravaux
+        if (at.getDescriptionTravaux() != null && !at.getDescriptionTravaux().isBlank()) {
+            if (matchesKeywords(at.getDescriptionTravaux(), keywords)) return true;
         }
         return false;
     }
@@ -1983,15 +2013,8 @@ public class PdfGeneratorServiceImpl implements PdfGeneratorService {
             }
         }
 
-        // Fallback CEEP Poste 1 si demandeur défini
-        if (isCeep && posteNum == 1 && pv.nomSignataire == null && at != null && at.getProprietaireBrouillon() != null) {
-            Utilisateur u = at.getProprietaireBrouillon();
-            pv.nomSignataire = u.getPrenom() + " " + u.getNom() + (u.getMatricule() != null ? " (" + u.getMatricule() + ")" : "");
-            if (at.getDateCreation() != null) {
-                pv.dateHeure = at.getDateCreation().format(DATETIME_FMT);
-            }
-        }
-
+        // Pas de fallback automatique sur proprietaireBrouillon : seuls les visas réels signés
+        // par le bon rôle doivent apparaître dans le formulaire officiel. Laisser vide sinon.
         return pv;
     }
 
