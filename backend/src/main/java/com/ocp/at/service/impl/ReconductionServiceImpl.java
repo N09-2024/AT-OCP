@@ -118,8 +118,8 @@ public class ReconductionServiceImpl implements ReconductionService {
         historiqueRepository.save(histo);
 
         // Notification envoyée au HMEP (Responsable OCP)
-        notificationService.sendNotificationToRole(
-                "HMEP",
+        notificationService.sendNotificationToRoleForAt(
+                "HMEP", at,
                 "Demande de reconduction AT " + at.getNumero(),
                 "Le CEEE " + currentUser.getPrenom() + " " + currentUser.getNom() + " demande une reconduction jusqu'au " + request.getNouvelleDateFin() + " pour l'AT " + at.getNumero() + ".",
                 "ACTION",

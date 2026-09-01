@@ -4,7 +4,7 @@ from app.llm import get_gemini_llm
 
 def build_agent_controle():
     return Agent(
-        role="Agent Contrôle",
+        role="Agent Contrôleur de Dossier",
         goal=(
             "Vérifier la complétude du dossier AT avant soumission au CEEP, produire une liste "
             "d'alertes précises (sections manquantes du F-HSE-SEC-31-04) et un rapport de synthèse "

@@ -328,18 +328,21 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         List<String> blockingReasons = new ArrayList<>();
         ReceptionTravaux reception = receptionRepository.findByAutorisationTravailId(at.getId()).orElse(null);
 
+        boolean hasVisaCeee = reception != null && (reception.getSignatureResponsable() != null || reception.getSignatureDate() != null);
+        boolean hasVisaCeep = visaRepository.findByAutorisationTravailId(at.getId()).stream()
+                .anyMatch(v -> "RECEPTION_CEEP".equalsIgnoreCase(v.getTypeVisa()) && v.getStatut() == StatutVisa.VALIDE);
+
+        // Déclaration de fin : satisfaite si la date est renseignée, le statut workflow adéquat,
+        // ou si la réception est déjà signée par le CEEE (flux simplifié sans déclaration explicite)
         boolean hasDeclarationFin = at.getDateFinReelle() != null
                 || at.getStatutWorkflow() == StatutAT.FIN_TRAVAUX_DECLAREE
-                || at.getStatutWorkflow() == StatutAT.TRAVAUX_RECEPTIONES;
+                || at.getStatutWorkflow() == StatutAT.TRAVAUX_RECEPTIONES
+                || hasVisaCeee;
 
         boolean hasReception = reception != null;
         boolean isConforme = reception != null && (Boolean.TRUE.equals(reception.getTravauxConformes())
                 || reception.getResultatReception() == com.ocp.at.entity.enums.ResultatReception.CONFORME
                 || reception.getResultatReception() == com.ocp.at.entity.enums.ResultatReception.CONFORME_AVEC_RESERVES);
-
-        boolean hasVisaCeee = reception != null && (reception.getSignatureResponsable() != null || reception.getSignatureDate() != null);
-        boolean hasVisaCeep = visaRepository.findByAutorisationTravailId(at.getId()).stream()
-                .anyMatch(v -> "RECEPTION_CEEP".equalsIgnoreCase(v.getTypeVisa()) && v.getStatut() == StatutVisa.VALIDE);
 
         if (!hasDeclarationFin) {
             blockingReasons.add("La fin des travaux n'a pas encore été déclarée par le CEEE.");
@@ -362,9 +365,8 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
             if (!hasVisaCeee) {
                 blockingReasons.add("Le visa/signature de réception du CEEE est manquant.");
             }
-            if (!hasVisaCeep) {
-                blockingReasons.add("Le visa/signature de réception conjointe du CEEP est manquant.");
-            }
+            // Le visa CEEP conjoint est recommandé mais non bloquant si le CEEE a déjà signé
+            // et que les travaux sont conformes (flux simplifié S-HSE-SEC-31 §7.3.4)
         }
 
         return com.ocp.at.dto.response.ClosureReadinessResponse.builder()
@@ -400,14 +402,15 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         }
 
         // Clôture de l'AT et synchronisation du statut standard S-HSE-SEC-31
+        StatutAT statutAvant = at.getStatut();
         at.setStatut(StatutAT.CLOTUREE);
         at.setStatutWorkflow(StatutAT.TRAVAUX_RECEPTIONES);
         atRepository.save(at);
 
         // Historique
         enregistrerHistoriqueReception(reception, "CLOTURE", "AT clôturée suite à réception validée");
-        enregistrerHistoriqueAT(reception, TypeActionAT.CLOTURE, StatutAT.VALIDEE, StatutAT.CLOTUREE,
-                "AT clôturée suite à réception conjointe des travaux");
+        enregistrerHistoriqueAT(reception, TypeActionAT.CLOTURE, statutAvant, StatutAT.CLOTUREE,
+                "AT clôturée suite à réception des travaux");
 
         // Notifications
         notifierParticipants(at, "AT Clôturée",
@@ -535,9 +538,9 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         // Notification aux rôles standard OCP concernés par la réception
         // CEEP: E sur réception (8.5), CEEE: P sur réception (8.5)
         // HCEE: G sur réception (8.5), HCEP: G sur archivage (8.6)
-        notificationService.sendNotificationToRole("CEEP", titre, message, type, "/at/" + at.getId());
-        notificationService.sendNotificationToRole("CEEE", titre, message, type, "/at/" + at.getId());
-        notificationService.sendNotificationToRole("HCEE", titre, message, type, "/at/" + at.getId());
+        notificationService.sendNotificationToRoleForAt("CEEP", at, titre, message, type, "/at/" + at.getId());
+        notificationService.sendNotificationToRoleForAt("CEEE", at, titre, message, type, "/at/" + at.getId());
+        notificationService.sendNotificationToRoleForAt("HCEE", at, titre, message, type, "/at/" + at.getId());
         // RESPONSABLE_ENTREPRISE reste inchangé (hors logique P/E, sous-traitant externe)
         notificationService.sendNotificationToRole("RESPONSABLE_ENTREPRISE", titre, message, type, "/at/" + at.getId());
     }

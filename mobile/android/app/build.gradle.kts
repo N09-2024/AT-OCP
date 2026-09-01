@@ -14,12 +14,14 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.ocp.at.mobile"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        // AGP 9 (Kotlin intégré) cible JVM 21 par défaut → aligner Java sur 21
+        // pour la validation de cohérence des targets.
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     defaultConfig {

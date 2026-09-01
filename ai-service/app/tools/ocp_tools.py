@@ -1,6 +1,26 @@
 from langchain_core.tools import tool
 from app.rag.retriever import rag_retriever
 from app.referentiel import RISQUES_OFFICIELS, MESURES_OFFICIELLES, EPIS_OFFICIELS, PERMIS_OFFICIELS, REGLES_HSE
+from app.sql.connector import run_readonly_query, list_available_tables
+
+
+@tool
+def query_ocp_database(query: str) -> str:
+    """Interroge la base PostgreSQL OCP en LECTURE SEULE (SELECT uniquement).
+
+    Tables disponibles (référentiels AT) : risque, mesure_preparation, epi,
+    moyen_acces, type_permis, zone, service, equipement, entreprise_externe,
+    autorisations_travail, permis.
+    Exemple : SELECT nom_risque, description_risque FROM risque
+    Une clause LIMIT est ajoutée automatiquement (20 lignes max).
+    """
+    return run_readonly_query(query)
+
+
+@tool
+def list_ocp_tables(dummy: str = "") -> str:
+    """Liste les tables référentielles OCP réellement présentes dans PostgreSQL."""
+    return list_available_tables()
 
 
 @tool

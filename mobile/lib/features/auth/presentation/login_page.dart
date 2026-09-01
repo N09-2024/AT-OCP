@@ -63,20 +63,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // --- Identité OCP ---
-                    Container(
-                      width: 84,
-                      height: 84,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [OcpColors.deep, OcpColors.forest, OcpColors.moss],
+                    // --- Identité OCP (logo officiel transparent, comme le web) ---
+                    Center(
+                      child: Image.asset(
+                        'assets/images/logo-ocp.png',
+                        height: 130,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 84,
+                          height: 84,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                OcpColors.deep,
+                                OcpColors.forest,
+                                OcpColors.moss,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(Icons.security_rounded,
+                              size: 42, color: OcpColors.white),
                         ),
-                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(Icons.security_rounded,
-                          size: 42, color: OcpColors.white,),
                     ),
                     const SizedBox(height: 20),
                     const Text(

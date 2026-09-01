@@ -97,9 +97,14 @@ services:
     build: ./ai-service
     container_name: at-ocp-ai-service
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      # Connecteur SQL LangChain (lecture seule) vers les référentiels AT :
+      - DATABASE_URL=postgresql+psycopg2://at_ocp_user:${DB_PASSWORD:-at_ocp_secret_password}@postgres:5432/at_ocp_db
     ports:
       - "8000:8000"
     healthcheck:

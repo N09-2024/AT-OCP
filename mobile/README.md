@@ -35,51 +35,84 @@ mobile/lib/
 
 ## Démarrage
 
-Le SDK Flutter n'est pas encore installé sur ce poste. Après installation :
+Prérequis : SDK Flutter **3.47+** installé (`flutter doctor`), Android Studio (SDK Android 36, licences acceptées).
 
 ```bash
 cd mobile
-
-# 1. Générer les dossiers de plateforme manquants (android/, ios/...) :
-flutter create --org com.ocp.at --project-name ocp_at_mobile .
-
-# 2. Récupérer les dépendances :
 flutter pub get
+flutter analyze          # 0 erreur attendue
+flutter test             # suites modèles / logique / auth / widgets
+```
 
-# 3. Placer les polices (Inter, Space Grotesk) dans assets/fonts/
-#    (sinon commenter la section fonts de pubspec.yaml)
+## A. Lancer sur l'émulateur Android Studio (développement)
 
-# 4. Lancer (émulateur Android → 10.0.2.2 = localhost de l'hôte) :
+1. Démarrer le backend (local ou Docker) : `docker-compose up -d backend postgres` (ou `mvn spring-boot:run` dans `backend/`).
+2. Ouvrir **Android Studio → Device Manager → ▶** pour démarrer un émulateur (API 34+ recommandé).
+3. Depuis `mobile/` :
+
+```bash
 flutter run --dart-define=ENV=dev
 ```
 
-## Intégration Docker & Émulateur Android Studio
+- L'émulateur joint le backend via **`http://10.0.2.2:8080`** (10.0.2.2 = localhost de l'hôte), URL par défaut de `ENV=dev`.
+- HTTP en clair autorisé **en debug/profile uniquement** (manifest `debug/`), pas en release.
+- Hot reload inclus ; comptes de test ci-dessous.
 
-### 1. Développement local avec l'Émulateur Android Studio
-Lorsque le backend tourne dans Docker (`docker-compose up -d backend postgres`), vous pouvez exécuter l'application mobile depuis Android Studio ou le terminal :
-- L'émulateur Android résout automatiquement le backend Docker via **`http://10.0.2.2:8080`** (configuré par défaut avec `--dart-define=ENV=dev`).
-- Aucune configuration réseau complexe n'est nécessaire.
+## B. Générer l'APK dans Docker (sans SDK Android local)
 
-### 2. Build de l'APK Release dans Docker (sans installer Flutter/Android SDK localement)
-Pour générer l'APK release dans un conteneur et l'exporter directement dans `./mobile/output/` :
+Le `Dockerfile` multi-stage compile l'APK release dans un conteneur (Flutter 3.47 + JDK 21 + SDK Android 36) :
+
 ```bash
-# Via le Makefile à la racine :
+# Depuis la racine du projet :
 make build-apk
-
-# Ou via Docker Compose directement :
+# équivalent à :
 docker-compose -f docker-compose.mobile-build.yml run --rm apk-builder
 ```
-Le fichier `app-release.apk` sera généré dans `mobile/output/`.
 
-### 3. Exécution Flutter Web dans Docker
-Pour compiler et servir la version Web du mobile via Nginx :
+L'APK est exporté dans **`mobile/output/app-release.apk`**.
+
+Variables utiles (avant la commande) :
 ```bash
-make mobile-web
-# Accessible sur http://localhost:3000
+ENV=dev API_BASE_URL=http://10.0.2.2:8080 make build-apk   # APK pointant vers le backend local
+ENV=prod make build-apk                                     # URL de production
 ```
 
+Notes :
+- Sans `key.properties`, l'APK release est signé avec le keystore debug (installable en test/CI). Pour la production : `mobile/android/app/key.properties` + keystore dédié.
+- Le contexte Docker exclut build/, secrets (`.dockerignore`).
 
-### Environnements
+## C. Installer l'APK sur un appareil / émulateur
+
+```bash
+# Émulateur lancé ou appareil branché (débogage USB activé) :
+adb install mobile/output/app-release.apk
+
+# Backend joignable depuis un appareil PHYSIQUE : utiliser l'IP LAN de l'hôte
+ENV=dev API_BASE_URL=http://192.168.x.x:8080 make build-apk
+```
+
+## D. Notifications ciblées par rôle de l'AT
+
+Conformément au standard S-HSE-SEC-31 (logique P/E contextuelle), les notifications
+métier sont désormais adressées **aux acteurs de l'AT concernée, pas à tous les
+porteurs du rôle** :
+
+| Rôle | Destinataires réels |
+|---|---|
+| CEEP, HCEP, HMEP (côté P) | Utilisateurs actifs de ce rôle dont le service est rattaché à la **zone propriétaire** de l'AT |
+| CEEE, HCEE, HMEE (côté E) | Zone **exécutante** de l'AT |
+| CEEP / CEEE désignés | Toujours inclus s'ils portent le rôle (même service sur autre zone) |
+| ADMIN, RESPONSABLE_EXTERIEUR | Diffusion globale par rôle (hors logique P/E) |
+| Aucun porteur du rôle sur la zone | **Aucune notification** (isolation garantie — pas de repli global) |
+
+Implémentation backend : `NotificationService.sendNotificationToRoleForAt(role, at, ...)`
+(`UtilisateurRepository.findActiveByRoleNomAndZoneId`) — 16 points d'émission migrés
+(soumission, validation/rejet, démarrage, fin travaux, reconduction, incident,
+réception, visas HCEP/HCEE/HMEP/HMEE). Un HCEP ne reçoit donc jamais les
+notifications destinées au HCEE d'une même AT, ni celles d'autres AT.
+L'app mobile n'a rien à changer : elle affiche les notifications de l'utilisateur connecté.
+
+## Environnements
 
 | ENV | baseUrl par défaut | Utilisation |
 |---|---|---|

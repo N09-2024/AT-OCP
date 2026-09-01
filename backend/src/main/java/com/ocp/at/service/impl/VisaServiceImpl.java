@@ -281,11 +281,11 @@ public class VisaServiceImpl implements VisaService {
 
             case "CEEE":
                 // Après visa CEEE : notifier HCEP et HCEE pour signature Hors Cadre (Étapes 3 & 4)
-                notificationService.sendNotificationToRole("HCEP",
+                notificationService.sendNotificationToRoleForAt("HCEP", at,
                         "AT " + atNumero + " - Visa HCEP requis (Étape 3)",
                         "Le CEEP et CEEE ont signé l'AT " + atNumero + ". Vous devez apposer votre visa Hors Cadre Émetteur (HCEP, Étape 3).",
                         "ACTION", lienAt);
-                notificationService.sendNotificationToRole("HCEE",
+                notificationService.sendNotificationToRoleForAt("HCEE", at,
                         "AT " + atNumero + " - Visa HCEE requis (Étape 4)",
                         "Le CEEP et CEEE ont signé l'AT " + atNumero + ". Vous devez apposer votre visa Hors Cadre Exécutant (HCEE, Étape 4) après le HCEP.",
                         "INFO", lienAt);
@@ -301,7 +301,7 @@ public class VisaServiceImpl implements VisaService {
 
             case "HCEP":
                 // Après visa HCEP : notifier HCEE pour sa signature (Étape 4)
-                notificationService.sendNotificationToRole("HCEE",
+                notificationService.sendNotificationToRoleForAt("HCEE", at,
                         "AT " + atNumero + " - Visa HCEE requis (Étape 4)",
                         "Le HCEP a signé l'AT " + atNumero + ". Votre visa Hors Cadre Exécutant est maintenant requis (Étape 4).",
                         "ACTION", lienAt);
@@ -309,11 +309,11 @@ public class VisaServiceImpl implements VisaService {
 
             case "HCEE":
                 // Après visa HCEE : notifier HMEP et HMEE pour signature Haute Maîtrise (Étapes 5 & 6)
-                notificationService.sendNotificationToRole("HMEP",
+                notificationService.sendNotificationToRoleForAt("HMEP", at,
                         "AT " + atNumero + " - Visa HMEP requis (Étape 5)",
                         "Les Hors Cadre ont signé l'AT " + atNumero + ". Votre visa Haute Maîtrise Émetteur (HMEP, Étape 5) est requis.",
                         "ACTION", lienAt);
-                notificationService.sendNotificationToRole("HMEE",
+                notificationService.sendNotificationToRoleForAt("HMEE", at,
                         "AT " + atNumero + " - Visa HMEE requis (Étape 6)",
                         "Les Hors Cadre ont signé l'AT " + atNumero + ". Votre visa Haute Maîtrise Exécutant (HMEE, Étape 6) sera requis après le HMEP.",
                         "INFO", lienAt);
@@ -321,7 +321,7 @@ public class VisaServiceImpl implements VisaService {
 
             case "HMEP":
                 // Après visa HMEP : notifier HMEE pour sa signature (Étape 6)
-                notificationService.sendNotificationToRole("HMEE",
+                notificationService.sendNotificationToRoleForAt("HMEE", at,
                         "AT " + atNumero + " - Visa HMEE requis (Étape 6)",
                         "Le HMEP a signé l'AT " + atNumero + ". Votre visa Haute Maîtrise Exécutant est maintenant requis (Étape 6).",
                         "ACTION", lienAt);
@@ -336,7 +336,7 @@ public class VisaServiceImpl implements VisaService {
                             "L'AT " + atNumero + " a été visée par toutes les parties (CEEP, CEEE, HCEP, HCEE, HMEP, HMEE). L'intervention peut démarrer.",
                             "SUCCESS", lienAt);
                 }
-                notificationService.sendNotificationToRole("CEEE",
+                notificationService.sendNotificationToRoleForAt("CEEE", at,
                         "AT " + atNumero + " - Prête au démarrage",
                         "L'AT " + atNumero + " a reçu l'ensemble des visas requis. L'intervention peut maintenant démarrer.",
                         "SUCCESS", lienAt);

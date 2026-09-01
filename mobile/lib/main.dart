@@ -81,19 +81,29 @@ class _SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF0E2A21), Color(0xFF1F4D3E), Color(0xFF3C7A5C)],
+            // Logo officiel OCP (transparent, identique au frontend web).
+            Image.asset(
+              'assets/images/logo-ocp.png',
+              height: 110,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF0E2A21),
+                      Color(0xFF1F4D3E),
+                      Color(0xFF3C7A5C),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                borderRadius: BorderRadius.circular(18),
+                child: const Icon(Icons.security_rounded,
+                    size: 36, color: Colors.white),
               ),
-              child: const Icon(Icons.security_rounded,
-                  size: 36, color: Colors.white,),
             ),
             const SizedBox(height: 16),
             const CircularProgressIndicator(),

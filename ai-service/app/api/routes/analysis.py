@@ -7,6 +7,10 @@ from app.schemas.analysis import (
     AnalyseInterventionIAResponse,
 )
 from app.services.analysis_service import AnalysisService
+from app.langchain_direct import (
+    langchain_analyser_intervention,
+    langchain_controler_dossier,
+)
 
 router = APIRouter(tags=["Analysis"])
 
@@ -26,19 +30,41 @@ def analyze_at(request: AnalyzeAtRequest):
 
 @router.post("/analyse-intervention", response_model=AnalyseInterventionIAResponse)
 def legacy_langchain_analyse_intervention(req: AnalyseInterventionRequest):
-    return AnalysisService.analyze_with_langchain(req)
+    """Chaîne LangChain directe (transformations prompt + référentiels)."""
+    return langchain_analyser_intervention(req.description)
 
 
 @router.post("/controler-dossier", response_model=AnalyseInterventionIAResponse)
 def legacy_langchain_controler_dossier(req: ControleDossierRequest):
-    return AnalysisService.analyze_with_langchain(req)
+    """Contrôle de complétude réel via la chaîne LangChain PROMPT_CONTROLE."""
+    return langchain_controler_dossier(
+        req.description,
+        req.visiteFaite,
+        req.nbRisques,
+        req.nbMesures,
+        req.nbEpis,
+        req.nbPermis,
+        req.sectionFRenseignee,
+    )
 
 
 @router.post("/crew/analyse-intervention", response_model=AnalyseInterventionIAResponse)
 def legacy_crew_analyse_intervention(req: AnalyseInterventionRequest):
-    return AnalysisService.analyze_with_crew(req)
+    """CrewAI : Agent Analyste Risques → Agent Inspecteur HSE."""
+    from app.crew import run_crew_analyse_intervention
+    return run_crew_analyse_intervention(req.description)
 
 
 @router.post("/crew/controler-dossier", response_model=AnalyseInterventionIAResponse)
 def legacy_crew_controler_dossier(req: ControleDossierRequest):
-    return AnalysisService.analyze_with_crew(req)
+    """CrewAI : pipeline complet + Agent Contrôleur de Dossier."""
+    from app.crew import run_crew_controler_dossier
+    return run_crew_controler_dossier(
+        req.description,
+        req.visiteFaite,
+        req.nbRisques,
+        req.nbMesures,
+        req.nbEpis,
+        req.nbPermis,
+        req.sectionFRenseignee,
+    )

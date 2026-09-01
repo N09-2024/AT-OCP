@@ -46,20 +46,6 @@ abstract final class OcpColors {
   static const Color successDark = Color(0xFF163C30);
   static const Color successLight = Color(0xFFE2F0E8);
 
-  // --- Statuts AT ---
-  static const Color statutBrouillon = Color(0xFF9E9E9E);
-  static const Color statutDemandee = Color(0xFF5C6BC0);
-  static const Color statutEnVisite = Color(0xFFA87532);
-  static const Color statutVisiteRealisee = Color(0xFFA87532);
-  static const Color statutRedigee = Color(0xFF5C6BC0);
-  static const Color statutSoumise = Color(0xFF2196F3);
-  static const Color statutValidee = Color(0xFF3C7A5C);
-  static const Color statutEnCours = Color(0xFF7FC8A9);
-  static const Color statutReconduite = Color(0xFF7FC8A9);
-  static const Color statutDeclareeTerminee = Color(0xFFFF9800);
-  static const Color statutFinTravaux = Color(0xFFFF9800);
-  static const Color statutReceptionnee = Color(0xFF1F4D3E);
-  static const Color statutArchivee = Color(0xFF78909C);
-  static const Color statutRejetee = Color(0xFF9A3D2F);
-  static const Color statutAnnulee = Color(0xFF616161);
+  // NB : les couleurs de statut AT vivent dans core/widgets/statut_chip.dart —
+  // réplique exacte de STATUT_CONFIG du frontend React (AtTable.tsx).
 }

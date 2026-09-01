@@ -78,10 +78,19 @@ FROM flutter-base AS android-builder
 ENV ANDROID_SDK_ROOT=/opt/android-sdk
 ENV PATH="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools:${PATH}"
 
-# Install OpenJDK 17
+# JDK 21 (Adoptium Temurin) : requis par AGP 9 / Kotlin intégré — cible JVM 21
+# alignée sur le build local (le JDK 17 de Debian bookworm ne suffit pas).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jdk-headless \
+        wget gpg apt-transport-https \
+    && wget -qO- https://packages.adoptium.net/artifactory/api/gpg/key/public \
+        | gpg --dearmor > /etc/apt/trusted.gpg.d/adoptium.gpg \
+    && echo "deb https://packages.adoptium.net/artifactory/deb bookworm main" \
+        > /etc/apt/sources.list.d/adoptium.list \
+    && apt-get update && apt-get install -y --no-install-recommends temurin-21-jdk \
+    && ln -s /usr/lib/jvm/temurin-21-jdk-* /usr/lib/jvm/jdk21 \
     && rm -rf /var/lib/apt/lists/*
+ENV JAVA_HOME=/usr/lib/jvm/jdk21
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # Install Android Command Line Tools & SDK components
 ARG ANDROID_TOOLS_VERSION=11076708
@@ -91,9 +100,9 @@ RUN mkdir -p ${ANDROID_SDK_ROOT}/cmdline-tools \
     && mv ${ANDROID_SDK_ROOT}/cmdline-tools/cmdline-tools ${ANDROID_SDK_ROOT}/cmdline-tools/latest \
     && rm /tmp/cmdline-tools.zip
 
-# Accept licenses and install platform packages
+# Accept licenses and install platform packages (compileSdk 36 requis par les plugins)
 RUN yes | sdkmanager --licenses > /dev/null \
-    && sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+    && sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
 RUN flutter precache --android
 

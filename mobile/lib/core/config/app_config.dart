@@ -27,24 +27,24 @@ class AppConfig {
   }
 
   /// Base URL du backend Spring Boot (sans le suffixe /api, ajoute par ApiClient).
+  ///
+  /// Toujours ABSOLUE : Flutter Web n'a pas de proxy en dev (`flutter run -d chrome`),
+  /// une URL relative tomberait sur le serveur de dev Flutter (404). Le backend
+  /// autorise CORS * (SecurityConfig).
   static String get baseUrl {
     const raw = String.fromEnvironment('API_BASE_URL');
     if (raw.isNotEmpty) return raw;
-    if (kIsWeb) {
-      // Sur le web, chemin relatif pour s'appuyer sur le reverse proxy nginx ou dev server
-      return '';
-    }
     switch (environment) {
       case AppEnv.prod:
         return 'https://at-ocp.ocp.ma';
       case AppEnv.staging:
         return 'https://staging-at-ocp.ocp.ma';
       case AppEnv.dev:
-        // 10.0.2.2 : hote local vu depuis l'emulateur Android.
-        // iOS simulateur / desktop : utiliser http://localhost:8080
-        return defaultTargetPlatform == TargetPlatform.android
-            ? 'http://10.0.2.2:8080'
-            : 'http://localhost:8080';
+        // Émulateur Android : 10.0.2.2 = localhost de l'hôte.
+        // Web (Chrome/Edge) et desktop : localhost direct.
+        return kIsWeb || defaultTargetPlatform != TargetPlatform.android
+            ? 'http://localhost:8080'
+            : 'http://10.0.2.2:8080';
     }
   }
 

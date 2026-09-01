@@ -51,4 +51,17 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, String
            "AND (u.compteVerrouille = false OR u.compteVerrouille IS NULL) " +
            "AND u.actif = true")
     List<Utilisateur> findActiveByRoleFragment(@Param("roleFragment") String roleFragment);
+
+    /**
+     * Utilisateurs actifs portant EXACTEMENT le rôle donné ET rattachés à la zone donnée.
+     * Utilisé par NotificationService.sendNotificationToRoleForAt() pour cibler les
+     * acteurs d'une AT précise (ex. : les HCEE dont le service est sur la zone
+     * exécutante de l'AT — et pas tous les HCEE du système).
+     */
+    @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.roles r JOIN u.service s JOIN s.zone z " +
+           "WHERE z.id = :zoneId AND UPPER(r.nom) = UPPER(:roleNom) " +
+           "AND (u.compteVerrouille = false OR u.compteVerrouille IS NULL) " +
+           "AND u.actif = true")
+    List<Utilisateur> findActiveByRoleNomAndZoneId(@Param("roleNom") String roleNom,
+                                                   @Param("zoneId") String zoneId);
 }

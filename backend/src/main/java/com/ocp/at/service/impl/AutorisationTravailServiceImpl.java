@@ -764,10 +764,10 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
         // 2) HM (HMEP / HMEE) - garants terrain
         try {
-            notificationService.sendNotificationToRole("HMEP", "AT soumise - garantie HMEP",
+            notificationService.sendNotificationToRoleForAt("HMEP", savedAt, "AT soumise - garantie HMEP",
                     "L'AT " + savedAt.getNumero() + " nécessite votre garantie (Haute Maîtrise Propriétaire).",
                     "ACTION", lienValider);
-            notificationService.sendNotificationToRole("HMEE", "AT soumise - garantie HMEE",
+            notificationService.sendNotificationToRoleForAt("HMEE", savedAt, "AT soumise - garantie HMEE",
                     "L'AT " + savedAt.getNumero() + " nécessite votre garantie (Haute Maîtrise Exécutante).",
                     "ACTION", lienValider);
         } catch (Exception e) {
@@ -776,10 +776,10 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
 
         // 3) HC (HCEE / HCEP) - validation / pilotage
         try {
-            notificationService.sendNotificationToRole("HCEE", "AT soumise - validation HCEE",
+            notificationService.sendNotificationToRoleForAt("HCEE", savedAt, "AT soumise - validation HCEE",
                     "L'AT " + savedAt.getNumero() + " est soumise. Garantir / valider le dossier.",
                     "ACTION", lienValider);
-            notificationService.sendNotificationToRole("HCEP", "AT soumise (info HCEP)",
+            notificationService.sendNotificationToRoleForAt("HCEP", savedAt, "AT soumise (info HCEP)",
                     "L'AT " + savedAt.getNumero() + " a été soumise dans votre périmètre.",
                     "INFO", lienAt);
         } catch (Exception e) {
@@ -888,7 +888,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         if (at.getProprietaireBrouillon() != null) {
             notificationService.createNotification(at.getProprietaireBrouillon(), "AT Annulée", "L'AT " + savedAt.getNumero() + " a été annulée.", "WARNING", "/autorisations/" + savedAt.getId());
         }
-        notificationService.sendNotificationToRole("CEEE", "AT " + savedAt.getNumero() + " Annulée", "L'AT " + savedAt.getNumero() + " a été annulée.", "WARNING", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRoleForAt("CEEE", savedAt, "AT " + savedAt.getNumero() + " Annulée", "L'AT " + savedAt.getNumero() + " a été annulée.", "WARNING", "/autorisations/" + savedAt.getId());
 
         return mapToResponse(savedAt);
     }
@@ -1001,7 +1001,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         if (at.getProprietaireBrouillon() != null) {
             notificationService.createNotification(at.getProprietaireBrouillon(), "Intervention Démarrée", "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré le " + now + ".", "INFO", "/autorisations/" + savedAt.getId());
         }
-        notificationService.sendNotificationToRole("CEEP", "Intervention Démarrée - AT " + savedAt.getNumero(), "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré.", "INFO", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRoleForAt("CEEP", savedAt, "Intervention Démarrée - AT " + savedAt.getNumero(), "L'intervention sur l'AT " + savedAt.getNumero() + " a démarré.", "INFO", "/autorisations/" + savedAt.getId());
 
         log.info("Intervention démarrée pour AT {} par CEEE {}", savedAt.getNumero(), ceee.getEmail());
         return mapToResponse(savedAt);
@@ -1062,7 +1062,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         if (at.getProprietaireBrouillon() != null) {
             notificationService.createNotification(at.getProprietaireBrouillon(), "Fin des Travaux Déclarée - AT " + savedAt.getNumero(), "Le CEEE a déclaré la fin des travaux sur l'AT " + savedAt.getNumero() + ". L'AT est prête pour réception conjointe.", "ACTION", "/autorisations/" + savedAt.getId());
         }
-        notificationService.sendNotificationToRole("CEEP", "AT " + savedAt.getNumero() + " prête pour réception", "Le CEEE a déclaré la fin des travaux. Veuillez procéder à la réception conjointe.", "ACTION", "/receptions?atId=" + savedAt.getId());
+        notificationService.sendNotificationToRoleForAt("CEEP", savedAt, "AT " + savedAt.getNumero() + " prête pour réception", "Le CEEE a déclaré la fin des travaux. Veuillez procéder à la réception conjointe.", "ACTION", "/receptions?atId=" + savedAt.getId());
 
         log.info("Fin des travaux déclarée pour AT {} par CEEE {}", savedAt.getNumero(), ceee.getEmail());
         return mapToResponse(savedAt);
@@ -1139,7 +1139,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         if (at.getProprietaireBrouillon() != null) {
             notificationService.createNotification(at.getProprietaireBrouillon(), "AT Reconduite", "L'AT " + savedAt.getNumero() + " a été reconduite (Version " + savedAt.getVersion() + ").", "INFO", "/autorisations/" + savedAt.getId());
         }
-        notificationService.sendNotificationToRole("CEEE", "AT " + savedAt.getNumero() + " Reconduite", "L'AT " + savedAt.getNumero() + " a été reconduite pour un nouveau poste de travail.", "INFO", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRoleForAt("CEEE", savedAt, "AT " + savedAt.getNumero() + " Reconduite", "L'AT " + savedAt.getNumero() + " a été reconduite pour un nouveau poste de travail.", "INFO", "/autorisations/" + savedAt.getId());
         return mapToResponse(savedAt);
     }
 
@@ -1156,7 +1156,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         if (at.getProprietaireBrouillon() != null) {
             notificationService.createNotification(at.getProprietaireBrouillon(), "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + ". Nouvelle visite requise.", "WARNING", "/autorisations/" + savedAt.getId());
         }
-        notificationService.sendNotificationToRole("CEEE", "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + ".", "WARNING", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRoleForAt("CEEE", savedAt, "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + ".", "WARNING", "/autorisations/" + savedAt.getId());
         notificationService.sendNotificationToRole("ADMIN", "Incident signalé - AT " + savedAt.getNumero(), "Un incident ou changement de condition a été signalé sur l'AT " + savedAt.getNumero() + (motif != null ? " : " + motif : "") + ".", "WARNING", "/autorisations/" + savedAt.getId());
         return mapToResponse(savedAt);
     }
@@ -1176,7 +1176,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
         if (at.getProprietaireBrouillon() != null) {
             notificationService.createNotification(at.getProprietaireBrouillon(), "Travaux Réceptionnés", "La réception conjointe de l'AT " + savedAt.getNumero() + " a été validée avec succès.", "SUCCESS", "/autorisations/" + savedAt.getId());
         }
-        notificationService.sendNotificationToRole("CEEE", "Travaux Réceptionnés - AT " + savedAt.getNumero(), "La réception conjointe des travaux est validée. L'AT est clôturée.", "SUCCESS", "/autorisations/" + savedAt.getId());
+        notificationService.sendNotificationToRoleForAt("CEEE", savedAt, "Travaux Réceptionnés - AT " + savedAt.getNumero(), "La réception conjointe des travaux est validée. L'AT est clôturée.", "SUCCESS", "/autorisations/" + savedAt.getId());
         return mapToResponse(savedAt);
     }
 

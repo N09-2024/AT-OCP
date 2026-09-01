@@ -2,6 +2,7 @@ import logging
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.rag.retriever import rag_retriever
 from app.chains.llm_factory import get_llm, MockChatModel
+from app.memory.chat_memory import chat_memory_manager
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from app.crews.at_crew import extract_json_from_output
@@ -17,11 +18,14 @@ Contexte documentaire OCP (Sources fiables) :
 Contexte de l'AT consultée :
 {at_context}
 
-Historique / Question utilisateur :
+Historique de la conversation (mémoire des échanges précédents) :
+{history}
+
+Question actuelle de l'utilisateur :
 {message}
 
 INSTRUCTIONS :
-1. Réponds de façon précise, bienveillante et professionnelle.
+1. Réponds de façon précise, bienveillante et professionnelle, en tenant compte de l'historique.
 2. Appuie-toi PRIORITAIREMENT sur le contexte documentaire ci-dessus.
 3. Si l'information n'existe pas dans les standards OCP fournis, dis-le clairement au lieu d'inventer une règle.
 4. Propose 2 ou 3 questions courtes et pertinentes pour approfondir.
@@ -71,6 +75,11 @@ class ChatService:
                 )
 
             # =========================
+            # 2bis. Mémoire conversationnelle (LangChain)
+            # =========================
+            history_str = chat_memory_manager.get_history_text(request.conversationId)
+
+            # =========================
             # 3. LLM
             # =========================
             llm = get_llm(temperature=0.2)
@@ -83,6 +92,7 @@ class ChatService:
                         or "Standard général S-HSE-SEC-31."
                     ),
                     "at_context": at_ctx_str,
+                    "history": history_str,
                     "message": request.message,
                 })
 
@@ -127,6 +137,11 @@ class ChatService:
                 "Quel est le rôle exact du CEEP et du CEEE ?",
                 "Quels sont les EPI obligatoires pour un travail en hauteur ?"
             ]
+
+            # Sauvegarde de l'échange dans la mémoire de la conversation.
+            chat_memory_manager.save_exchange(
+                request.conversationId, request.message, answer
+            )
 
             return ChatResponse(
                 answer=answer,
