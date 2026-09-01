@@ -3,8 +3,8 @@ import type { ReceptionTravaux, PhotoReception } from '../types';
 
 export interface ReceptionTravauxRequest {
   autorisationTravailId: string;
-  dateReelleDebut?: string;
-  dateReelleFin?: string;
+  dateDebutTravauxReelle?: string;   // ISO datetime string
+  dateFinTravauxReelle?: string;     // ISO datetime string
   travauxConformes: boolean;
   zoneNettoyee: boolean;
   consignationRetiree: boolean;
@@ -13,7 +13,7 @@ export interface ReceptionTravauxRequest {
   essaisEffectues: boolean;
   essaisConformes: boolean;
   travauxRealises?: string;
-  commentaires?: string;
+  commentaireResponsable?: string;
 }
 
 export const receptionApi = {

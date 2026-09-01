@@ -33,10 +33,16 @@ export default function ReceptionTravauxPage() {
 
   // Form State
   const todayStr = new Date().toISOString().split('T')[0];
+  const formatDateInput = (val?: string) => {
+    if (!val) return todayStr;
+    if (val.includes('T')) return val.split('T')[0];
+    return val.slice(0, 10);
+  };
+
   const [form, setForm] = useState<ReceptionTravauxRequest>({
     autorisationTravailId: atId || '',
-    dateReelleDebut: todayStr,
-    dateReelleFin: todayStr,
+    dateDebutTravauxReelle: todayStr,
+    dateFinTravauxReelle: todayStr,
     travauxConformes: true,
     zoneNettoyee: true,
     consignationRetiree: true,
@@ -45,7 +51,7 @@ export default function ReceptionTravauxPage() {
     essaisEffectues: true,
     essaisConformes: true,
     travauxRealises: '',
-    commentaires: '',
+    commentaireResponsable: '',
   });
 
   // Signature state
@@ -56,33 +62,37 @@ export default function ReceptionTravauxPage() {
   useEffect(() => {
     if (!atId) return;
     setLoading(true);
-    autorisationTravailApi
-      .findById(atId)
-      .then((data) => {
-        setAt(data);
-        return receptionApi.getByAtId(atId);
-      })
-      .then((rec) => {
+
+    const loadData = async () => {
+      try {
+        const atData = await autorisationTravailApi.findById(atId);
+        setAt(atData);
+        const rec = await receptionApi.getByAtId(atId).catch(() => null);
         if (rec) {
           setExistingReception(rec);
           setForm({
             autorisationTravailId: atId,
-            dateReelleDebut: rec.dateReelleDebut || todayStr,
-            dateReelleFin: rec.dateReelleFin || todayStr,
-            travauxConformes: rec.travauxConformes,
-            zoneNettoyee: rec.zoneNettoyee,
-            consignationRetiree: rec.consignationRetiree,
-            equipementRemisEnService: rec.equipementRemisEnService,
-            installationRemiseEnEtat: rec.installationRemiseEnEtat,
-            essaisEffectues: rec.essaisEffectues,
-            essaisConformes: rec.essaisConformes,
+            dateDebutTravauxReelle: formatDateInput(rec.dateDebutTravauxReelle || (atData as any)?.dateDebutReelle || todayStr),
+            dateFinTravauxReelle: formatDateInput(rec.dateFinTravauxReelle || (atData as any)?.dateFinReelle || todayStr),
+            travauxConformes: rec.travauxConformes ?? true,
+            zoneNettoyee: rec.zoneNettoyee ?? true,
+            consignationRetiree: rec.consignationRetiree ?? true,
+            equipementRemisEnService: rec.equipementRemisEnService ?? true,
+            installationRemiseEnEtat: rec.installationRemiseEnEtat ?? true,
+            essaisEffectues: rec.essaisEffectues ?? true,
+            essaisConformes: rec.essaisConformes ?? true,
             travauxRealises: rec.travauxRealises || '',
-            commentaires: rec.commentaires || '',
+            commentaireResponsable: rec.commentaireResponsable || '',
           });
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch (err) {
+        console.error('Erreur chargement AT/Réception:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [atId]);
 
   const handleCheckbox = (field: keyof ReceptionTravauxRequest) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,8 +187,8 @@ export default function ReceptionTravauxPage() {
               type="date"
               label="Date réelle de début des travaux"
               slotProps={{ inputLabel: { shrink: true } }}
-              value={form.dateReelleDebut}
-              onChange={handleText('dateReelleDebut')}
+              value={form.dateDebutTravauxReelle}
+              onChange={handleText('dateDebutTravauxReelle')}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -187,8 +197,8 @@ export default function ReceptionTravauxPage() {
               type="date"
               label="Date réelle de fin / Réception"
               slotProps={{ inputLabel: { shrink: true } }}
-              value={form.dateReelleFin}
-              onChange={handleText('dateReelleFin')}
+              value={form.dateFinTravauxReelle}
+              onChange={handleText('dateFinTravauxReelle')}
             />
           </Grid>
           <Grid size={12}>

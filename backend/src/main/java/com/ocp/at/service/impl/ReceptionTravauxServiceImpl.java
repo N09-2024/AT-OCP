@@ -60,9 +60,9 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     @Override
     @Transactional
     public ReceptionTravauxResponse create(ReceptionTravauxRequest request) {
-        // 1. Vérifier que l'AT existe et est dans un état prêt pour la réception
+        // 1. VÃ©rifier que l'AT existe et est dans un Ã©tat prÃªt pour la rÃ©ception
         AutorisationTravail at = atRepository.findById(request.getAutorisationTravailId())
-                .orElseThrow(() -> new ResourceNotFoundException("AutorisationTravail non trouvée avec l'ID : " + request.getAutorisationTravailId()));
+                .orElseThrow(() -> new ResourceNotFoundException("AutorisationTravail non trouvÃ©e avec l'ID : " + request.getAutorisationTravailId()));
 
         StatutAT st = at.getStatut();
         StatutAT stW = at.getStatutWorkflow();
@@ -75,55 +75,61 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
 
         if (!isEligible) {
             throw new BusinessException(
-                    "Une réception ne peut être créée que pour une AT en phase d'intervention ou de fin de travaux. Statut actuel : " + at.getStatut()
+                    "Une rÃ©ception ne peut Ãªtre crÃ©Ã©e que pour une AT en phase d'intervention ou de fin de travaux. Statut actuel : " + at.getStatut()
             );
         }
 
-        // 2. Vérifier que tous les visas requis sont validés s'ils existent
+        // 2. VÃ©rifier que tous les visas requis sont validÃ©s s'ils existent
         if (!visaRepository.existsByAutorisationTravailIdAndStatut(at.getId(), com.ocp.at.entity.enums.StatutVisa.VALIDE)) {
-            log.warn("Création de réception: aucun visa VALIDE explicite pour l'AT {}", at.getId());
+            log.warn("CrÃ©ation de rÃ©ception: aucun visa VALIDE explicite pour l'AT {}", at.getId());
         }
 
-        // 3. Vérifier la conformité des permis s'il en existe
+        // 3. VÃ©rifier la conformitÃ© des permis s'il en existe
         if (permisRepository.existsByAutorisationTravailId(at.getId())
                 && permisRepository.existsByAutorisationTravailIdAndStatutVerification(at.getId(), com.ocp.at.entity.enums.StatutPermis.INVALIDE)) {
-            throw new BusinessException("Certains permis attachés à cette AT sont non conformes.");
+            throw new BusinessException("Certains permis attachÃ©s Ã  cette AT sont non conformes.");
         }
 
-        // 4. Vérifier qu'il n'existe pas déjà une réception pour cette AT
+        // 4. VÃ©rifier qu'il n'existe pas dÃ©jÃ  une rÃ©ception pour cette AT
         if (receptionRepository.existsByAutorisationTravailId(at.getId())) {
-            throw new BusinessException("Une réception des travaux existe déjà pour l'AT " + at.getNumero());
+            throw new BusinessException("Une rÃ©ception des travaux existe dÃ©jÃ  pour l'AT " + at.getNumero());
         }
 
-        // 5. Construire l'entité
+        // 5. Construire l'entitÃ©
         ReceptionTravaux reception = receptionMapper.toEntity(request);
         reception.setAutorisationTravail(at);
-        reception.setDateReception(request.getDateReception() != null ? request.getDateReception() : LocalDateTime.now());
+        reception.setDateReception(parseDateToLocalDateTime(request.getDateReception(), LocalDateTime.now()));
+        if (request.getDateDebutTravauxReelle() != null) {
+            reception.setDateDebutTravauxReelle(parseDateToLocalDateTime(request.getDateDebutTravauxReelle(), null));
+        }
+        if (request.getDateFinTravauxReelle() != null) {
+            reception.setDateFinTravauxReelle(parseDateToLocalDateTime(request.getDateFinTravauxReelle(), null));
+        }
 
         // 6. Responsable
         if (request.getResponsableId() != null) {
             Utilisateur responsable = utilisateurRepository.findById(request.getResponsableId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec l'ID : " + request.getResponsableId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvÃ© avec l'ID : " + request.getResponsableId()));
             reception.setResponsable(responsable);
         }
 
         ReceptionTravaux saved = receptionRepository.save(reception);
 
-        // 7. Historique réception
-        enregistrerHistoriqueReception(saved, "CREATION", "Réception des travaux créée");
+        // 7. Historique rÃ©ception
+        enregistrerHistoriqueReception(saved, "CREATION", "RÃ©ception des travaux crÃ©Ã©e");
 
         // 8. Historique AT
         enregistrerHistoriqueAT(saved, TypeActionAT.RECEPTION_TRAVAUX, at.getStatut(), at.getStatut(),
-                "Réception des travaux créée");
+                "RÃ©ception des travaux crÃ©Ã©e");
 
         // 9. Notifications
-        notifierParticipants(at, "Réception des travaux créée",
-                "La réception des travaux pour l'AT " + at.getNumero() + " a été créée.", "INFO");
+        notifierParticipants(at, "RÃ©ception des travaux crÃ©Ã©e",
+                "La rÃ©ception des travaux pour l'AT " + at.getNumero() + " a Ã©tÃ© crÃ©Ã©e.", "INFO");
 
         // 10. Audit
         logAudit("CREATION_RECEPTION", "SUCCES");
 
-        log.info("Réception créée pour AT {} par {}", at.getNumero(), getCurrentMatricule());
+        log.info("RÃ©ception crÃ©Ã©e pour AT {} par {}", at.getNumero(), getCurrentMatricule());
         return receptionMapper.toResponse(saved);
     }
 
@@ -137,23 +143,30 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         ReceptionTravaux reception = getEntityById(id);
 
         if (isATCloturee(reception)) {
-            throw new BusinessException("Impossible de modifier une réception d'une AT clôturée.");
+            throw new BusinessException("Impossible de modifier une rÃ©ception d'une AT clÃ´turÃ©e.");
         }
 
         receptionMapper.updateFromRequest(request, reception);
 
-        // Mise à jour du responsable si fourni
+        if (request.getDateDebutTravauxReelle() != null) {
+            reception.setDateDebutTravauxReelle(parseDateToLocalDateTime(request.getDateDebutTravauxReelle(), reception.getDateDebutTravauxReelle()));
+        }
+        if (request.getDateFinTravauxReelle() != null) {
+            reception.setDateFinTravauxReelle(parseDateToLocalDateTime(request.getDateFinTravauxReelle(), reception.getDateFinTravauxReelle()));
+        }
+
+        // Mise Ã  jour du responsable si fourni
         if (request.getResponsableId() != null) {
             Utilisateur responsable = utilisateurRepository.findById(request.getResponsableId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec l'ID : " + request.getResponsableId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvÃ© avec l'ID : " + request.getResponsableId()));
             reception.setResponsable(responsable);
         }
 
         ReceptionTravaux saved = receptionRepository.save(reception);
-        enregistrerHistoriqueReception(saved, "MODIFICATION", "Réception des travaux mise à jour");
+        enregistrerHistoriqueReception(saved, "MODIFICATION", "RÃ©ception des travaux mise Ã  jour");
         logAudit("MODIFICATION_RECEPTION", "SUCCES");
 
-        log.info("Réception {} mise à jour par {}", id, getCurrentMatricule());
+        log.info("RÃ©ception {} mise Ã  jour par {}", id, getCurrentMatricule());
         return receptionMapper.toResponse(saved);
     }
 
@@ -171,7 +184,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     @Transactional(readOnly = true)
     public ReceptionTravauxResponse getByAutorisationTravailId(String atId) {
         ReceptionTravaux reception = receptionRepository.findByAutorisationTravailId(atId)
-                .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux non trouvée pour l'AT ID : " + atId));
+                .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux non trouvÃ©e pour l'AT ID : " + atId));
         return receptionMapper.toResponse(reception);
     }
 
@@ -190,11 +203,11 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     public void delete(String id) {
         ReceptionTravaux reception = getEntityById(id);
         if (isATCloturee(reception)) {
-            throw new BusinessException("Impossible de supprimer une réception d'une AT clôturée.");
+            throw new BusinessException("Impossible de supprimer une rÃ©ception d'une AT clÃ´turÃ©e.");
         }
         receptionRepository.delete(reception);
         logAudit("SUPPRESSION_RECEPTION", "SUCCES");
-        log.info("Réception {} supprimée.", id);
+        log.info("RÃ©ception {} supprimÃ©e.", id);
     }
 
     // =================================================================
@@ -207,17 +220,17 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         ReceptionTravaux reception = getEntityById(id);
 
         if (isATCloturee(reception)) {
-            throw new BusinessException("Impossible de signer une réception d'une AT clôturée.");
+            throw new BusinessException("Impossible de signer une rÃ©ception d'une AT clÃ´turÃ©e.");
         }
 
         reception.setSignatureResponsable(signaturePath);
         reception.setDateSignature(LocalDateTime.now());
 
         ReceptionTravaux saved = receptionRepository.save(reception);
-        enregistrerHistoriqueReception(saved, "SIGNATURE", "Réception signée par le responsable");
+        enregistrerHistoriqueReception(saved, "SIGNATURE", "RÃ©ception signÃ©e par le responsable");
         logAudit("SIGNATURE_RECEPTION", "SUCCES");
 
-        log.info("Réception {} signée par {}", id, getCurrentMatricule());
+        log.info("RÃ©ception {} signÃ©e par {}", id, getCurrentMatricule());
         return receptionMapper.toResponse(saved);
     }
 
@@ -228,13 +241,13 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         AutorisationTravail at = reception.getAutorisationTravail();
 
         if (isATCloturee(reception)) {
-            throw new BusinessException("Impossible d'évaluer la réception d'une AT déjà clôturée.");
+            throw new BusinessException("Impossible d'Ã©valuer la rÃ©ception d'une AT dÃ©jÃ  clÃ´turÃ©e.");
         }
 
         Utilisateur ceep = getCurrentUser();
         LocalDateTime now = LocalDateTime.now();
 
-        // 1. Mettre à jour les champs de contrôle sur ReceptionTravaux
+        // 1. Mettre Ã  jour les champs de contrÃ´le sur ReceptionTravaux
         reception.setResultatReception(request.getResultat());
         reception.setReservesDescription(request.getReservesDescription());
         reception.setActionsCorrectives(request.getActionsCorrectives());
@@ -247,7 +260,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         reception.setResultatEssais(request.getResultatEssais());
         reception.setDateReception(now);
 
-        // 2. Traiter la signature CEEP via le système Visa existant (aucun champ parallèle)
+        // 2. Traiter la signature CEEP via le systÃ¨me Visa existant (aucun champ parallÃ¨le)
         String signaturePath = null;
         if (signatureFile != null && !signatureFile.isEmpty()) {
             try {
@@ -258,7 +271,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
             }
         }
 
-        // Créer ou mettre à jour le Visa CEEP de réception
+        // CrÃ©er ou mettre Ã  jour le Visa CEEP de rÃ©ception
         Visa visaCeep = visaRepository.findByAutorisationTravailId(at.getId()).stream()
                 .filter(v -> "RECEPTION_CEEP".equalsIgnoreCase(v.getTypeVisa()) || (v.getCommentaire() != null && v.getCommentaire().contains("RECEPTION_CEEP")))
                 .findFirst()
@@ -276,7 +289,7 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         visaCeep.setStatut(StatutVisa.VALIDE);
         visaCeep.setDateVisa(now);
         visaCeep.setDateSignature(now);
-        visaCeep.setCommentaire("Visa Réception Conjointe CEEP : " + request.getResultat());
+        visaCeep.setCommentaire("Visa RÃ©ception Conjointe CEEP : " + request.getResultat());
         if (signaturePath != null && signatureFile != null) {
             try {
                 visaCeep.setSignaturePath(signaturePath);
@@ -294,27 +307,27 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
             atRepository.save(at);
 
             enregistrerHistoriqueAT(reception, TypeActionAT.RECEPTION_CONJOINTE, at.getStatut(), StatutAT.TRAVAUX_RECEPTIONES,
-                    "Réception conjointe validée par le CEEP (" + request.getResultat() + ")");
-            enregistrerHistoriqueReception(reception, "RECEPTION_VALIDEE", "Réception conjointe validée par le CEEP (" + request.getResultat() + ")");
+                    "RÃ©ception conjointe validÃ©e par le CEEP (" + request.getResultat() + ")");
+            enregistrerHistoriqueReception(reception, "RECEPTION_VALIDEE", "RÃ©ception conjointe validÃ©e par le CEEP (" + request.getResultat() + ")");
 
-            notifierParticipants(at, "Réception conjointe validée",
-                    "La réception conjointe pour l'AT " + at.getNumero() + " a été validée par le CEEP (" + request.getResultat() + ").", "SUCCESS");
+            notifierParticipants(at, "RÃ©ception conjointe validÃ©e",
+                    "La rÃ©ception conjointe pour l'AT " + at.getNumero() + " a Ã©tÃ© validÃ©e par le CEEP (" + request.getResultat() + ").", "SUCCESS");
         } else {
-            // NON CONFORME : l'AT reste en FIN_TRAVAUX_DECLAREE ou nécessite des reprises
+            // NON CONFORME : l'AT reste en FIN_TRAVAUX_DECLAREE ou nÃ©cessite des reprises
             reception.setReceptionConjointeValidee(false);
             reception.setValidee(false);
 
             enregistrerHistoriqueAT(reception, TypeActionAT.RECEPTION_CONJOINTE, at.getStatut(), at.getStatut(),
-                    "Réception conjointe refusée (NON_CONFORME) par le CEEP. Réserves : " + request.getReservesDescription());
-            enregistrerHistoriqueReception(reception, "RECEPTION_REFUSEE", "Réception non conforme. Réserves : " + request.getReservesDescription());
+                    "RÃ©ception conjointe refusÃ©e (NON_CONFORME) par le CEEP. RÃ©serves : " + request.getReservesDescription());
+            enregistrerHistoriqueReception(reception, "RECEPTION_REFUSEE", "RÃ©ception non conforme. RÃ©serves : " + request.getReservesDescription());
 
-            notifierParticipants(at, "Réception non conforme",
-                    "La réception conjointe pour l'AT " + at.getNumero() + " a été déclarée NON CONFORME par le CEEP.", "WARNING");
+            notifierParticipants(at, "RÃ©ception non conforme",
+                    "La rÃ©ception conjointe pour l'AT " + at.getNumero() + " a Ã©tÃ© dÃ©clarÃ©e NON CONFORME par le CEEP.", "WARNING");
         }
 
         ReceptionTravaux saved = receptionRepository.save(reception);
         logAudit("VALIDATION_RECEPTION_CEEP", "SUCCES");
-        log.info("Réception {} évaluée par CEEP {} avec résultat {}", id, ceep.getEmail(), request.getResultat());
+        log.info("RÃ©ception {} Ã©valuÃ©e par CEEP {} avec rÃ©sultat {}", id, ceep.getEmail(), request.getResultat());
 
         return receptionMapper.toResponse(saved);
     }
@@ -323,17 +336,17 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     @Transactional(readOnly = true)
     public com.ocp.at.dto.response.ClosureReadinessResponse verifierCloture(String atId) {
         AutorisationTravail at = atRepository.findById(atId)
-                .orElseThrow(() -> new ResourceNotFoundException("AT non trouvée avec l'ID : " + atId));
+                .orElseThrow(() -> new ResourceNotFoundException("AT non trouvÃ©e avec l'ID : " + atId));
 
         List<String> blockingReasons = new ArrayList<>();
         ReceptionTravaux reception = receptionRepository.findByAutorisationTravailId(at.getId()).orElse(null);
 
-        boolean hasVisaCeee = reception != null && (reception.getSignatureResponsable() != null || reception.getSignatureDate() != null);
+        boolean hasVisaCeee = reception != null && (reception.getSignatureResponsable() != null || reception.getDateSignature() != null);
         boolean hasVisaCeep = visaRepository.findByAutorisationTravailId(at.getId()).stream()
                 .anyMatch(v -> "RECEPTION_CEEP".equalsIgnoreCase(v.getTypeVisa()) && v.getStatut() == StatutVisa.VALIDE);
 
-        // Déclaration de fin : satisfaite si la date est renseignée, le statut workflow adéquat,
-        // ou si la réception est déjà signée par le CEEE (flux simplifié sans déclaration explicite)
+        // DÃ©claration de fin : satisfaite si la date est renseignÃ©e, le statut workflow adÃ©quat,
+        // ou si la rÃ©ception est dÃ©jÃ  signÃ©e par le CEEE (flux simplifiÃ© sans dÃ©claration explicite)
         boolean hasDeclarationFin = at.getDateFinReelle() != null
                 || at.getStatutWorkflow() == StatutAT.FIN_TRAVAUX_DECLAREE
                 || at.getStatutWorkflow() == StatutAT.TRAVAUX_RECEPTIONES
@@ -345,28 +358,28 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
                 || reception.getResultatReception() == com.ocp.at.entity.enums.ResultatReception.CONFORME_AVEC_RESERVES);
 
         if (!hasDeclarationFin) {
-            blockingReasons.add("La fin des travaux n'a pas encore été déclarée par le CEEE.");
+            blockingReasons.add("La fin des travaux n'a pas encore Ã©tÃ© dÃ©clarÃ©e par le CEEE.");
         }
         if (!hasReception) {
-            blockingReasons.add("Aucune réception des travaux n'a été créée pour cette AT.");
+            blockingReasons.add("Aucune rÃ©ception des travaux n'a Ã©tÃ© crÃ©Ã©e pour cette AT.");
         } else {
             if (!isConforme) {
-                blockingReasons.add("Les travaux ne sont pas déclarés conformes lors de la réception.");
+                blockingReasons.add("Les travaux ne sont pas dÃ©clarÃ©s conformes lors de la rÃ©ception.");
             }
             if (!Boolean.TRUE.equals(reception.getZoneNettoyee())) {
-                blockingReasons.add("La zone de travail n'est pas déclarée nettoyée.");
+                blockingReasons.add("La zone de travail n'est pas dÃ©clarÃ©e nettoyÃ©e.");
             }
             if (!Boolean.TRUE.equals(reception.getConsignationRetiree())) {
-                blockingReasons.add("La consignation n'a pas été retirée.");
+                blockingReasons.add("La consignation n'a pas Ã©tÃ© retirÃ©e.");
             }
             if (!Boolean.TRUE.equals(reception.getEquipementRemisEnService())) {
-                blockingReasons.add("L'équipement n'a pas été remis en service / protections non rétablies.");
+                blockingReasons.add("L'Ã©quipement n'a pas Ã©tÃ© remis en service / protections non rÃ©tablies.");
             }
             if (!hasVisaCeee) {
-                blockingReasons.add("Le visa/signature de réception du CEEE est manquant.");
+                blockingReasons.add("Le visa/signature de rÃ©ception du CEEE est manquant.");
             }
-            // Le visa CEEP conjoint est recommandé mais non bloquant si le CEEE a déjà signé
-            // et que les travaux sont conformes (flux simplifié S-HSE-SEC-31 §7.3.4)
+            // Le visa CEEP conjoint est recommandÃ© mais non bloquant si le CEEE a dÃ©jÃ  signÃ©
+            // et que les travaux sont conformes (flux simplifiÃ© S-HSE-SEC-31 Â§7.3.4)
         }
 
         return com.ocp.at.dto.response.ClosureReadinessResponse.builder()
@@ -392,34 +405,34 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         AutorisationTravail at = reception.getAutorisationTravail();
 
         if (isATCloturee(reception)) {
-            throw new BusinessException("L'AT est déjà clôturée.");
+            throw new BusinessException("L'AT est dÃ©jÃ  clÃ´turÃ©e.");
         }
 
-        // Vérification préalable déterministe
+        // VÃ©rification prÃ©alable dÃ©terministe
         com.ocp.at.dto.response.ClosureReadinessResponse readiness = verifierCloture(at.getId());
         if (!Boolean.TRUE.equals(readiness.getCanClose())) {
-            throw new BusinessException("Clôture impossible : " + String.join(", ", readiness.getBlockingReasons()));
+            throw new BusinessException("ClÃ´ture impossible : " + String.join(", ", readiness.getBlockingReasons()));
         }
 
-        // Clôture de l'AT et synchronisation du statut standard S-HSE-SEC-31
+        // ClÃ´ture de l'AT et synchronisation du statut standard S-HSE-SEC-31
         StatutAT statutAvant = at.getStatut();
         at.setStatut(StatutAT.CLOTUREE);
         at.setStatutWorkflow(StatutAT.TRAVAUX_RECEPTIONES);
         atRepository.save(at);
 
         // Historique
-        enregistrerHistoriqueReception(reception, "CLOTURE", "AT clôturée suite à réception validée");
+        enregistrerHistoriqueReception(reception, "CLOTURE", "AT clÃ´turÃ©e suite Ã  rÃ©ception validÃ©e");
         enregistrerHistoriqueAT(reception, TypeActionAT.CLOTURE, statutAvant, StatutAT.CLOTUREE,
-                "AT clôturée suite à réception des travaux");
+                "AT clÃ´turÃ©e suite Ã  rÃ©ception des travaux");
 
         // Notifications
-        notifierParticipants(at, "AT Clôturée",
-                "L'AT " + at.getNumero() + " a été clôturée suite à la réception des travaux.", "SUCCESS");
+        notifierParticipants(at, "AT ClÃ´turÃ©e",
+                "L'AT " + at.getNumero() + " a Ã©tÃ© clÃ´turÃ©e suite Ã  la rÃ©ception des travaux.", "SUCCESS");
 
         // Audit
         logAudit("CLOTURE_AT", "SUCCES");
 
-        log.info("AT {} clôturée suite à réception {}", at.getNumero(), id);
+        log.info("AT {} clÃ´turÃ©e suite Ã  rÃ©ception {}", at.getNumero(), id);
         return receptionMapper.toResponse(reception);
     }
 
@@ -433,14 +446,14 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         ReceptionTravaux reception = getEntityById(receptionId);
 
         if (isATCloturee(reception)) {
-            throw new BusinessException("Impossible d'ajouter une photo à une réception d'une AT clôturée.");
+            throw new BusinessException("Impossible d'ajouter une photo Ã  une rÃ©ception d'une AT clÃ´turÃ©e.");
         }
 
         PhotoReception photo = photoMapper.toEntity(request);
         photo.setReceptionTravaux(reception);
         PhotoReception saved = photoRepository.save(photo);
 
-        enregistrerHistoriqueReception(reception, "AJOUT_PHOTO", "Photo ajoutée : " + request.getNom());
+        enregistrerHistoriqueReception(reception, "AJOUT_PHOTO", "Photo ajoutÃ©e : " + request.getNom());
         logAudit("AJOUT_PHOTO_RECEPTION", "SUCCES");
 
         return photoMapper.toResponse(saved);
@@ -452,25 +465,25 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         ReceptionTravaux reception = getEntityById(receptionId);
 
         if (isATCloturee(reception)) {
-            throw new BusinessException("Impossible de supprimer une photo d'une réception d'une AT clôturée.");
+            throw new BusinessException("Impossible de supprimer une photo d'une rÃ©ception d'une AT clÃ´turÃ©e.");
         }
 
         PhotoReception photo = photoRepository.findById(photoId)
-                .orElseThrow(() -> new ResourceNotFoundException("PhotoReception non trouvée avec l'ID : " + photoId));
+                .orElseThrow(() -> new ResourceNotFoundException("PhotoReception non trouvÃ©e avec l'ID : " + photoId));
 
         if (!photo.getReceptionTravaux().getId().equals(receptionId)) {
-            throw new BusinessException("Cette photo n'appartient pas à la réception spécifiée.");
+            throw new BusinessException("Cette photo n'appartient pas Ã  la rÃ©ception spÃ©cifiÃ©e.");
         }
 
         photoRepository.delete(photo);
-        enregistrerHistoriqueReception(reception, "SUPPRESSION_PHOTO", "Photo supprimée : " + photo.getNom());
+        enregistrerHistoriqueReception(reception, "SUPPRESSION_PHOTO", "Photo supprimÃ©e : " + photo.getNom());
         logAudit("SUPPRESSION_PHOTO_RECEPTION", "SUCCES");
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PhotoReceptionResponse> getPhotos(String receptionId) {
-        getEntityById(receptionId); // Vérifie que la réception existe
+        getEntityById(receptionId); // VÃ©rifie que la rÃ©ception existe
         return photoRepository.findByReceptionTravauxIdOrderByOrdreAsc(receptionId)
                 .stream()
                 .map(photoMapper::toResponse)
@@ -478,12 +491,12 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
     }
 
     // =================================================================
-    // MÉTHODES PRIVÉES
+    // MÃ‰THODES PRIVÃ‰ES
     // =================================================================
 
     private ReceptionTravaux getEntityById(String id) {
         return receptionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux non trouvée avec l'ID : " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("ReceptionTravaux non trouvÃ©e avec l'ID : " + id));
     }
 
     private boolean isATCloturee(ReceptionTravaux reception) {
@@ -535,14 +548,29 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
             notificationService.createNotification(
                     at.getProprietaireBrouillon(), titre, message, type, "/at/" + at.getId());
         }
-        // Notification aux rôles standard OCP concernés par la réception
-        // CEEP: E sur réception (8.5), CEEE: P sur réception (8.5)
-        // HCEE: G sur réception (8.5), HCEP: G sur archivage (8.6)
+        // Notification aux rÃ´les standard OCP concernÃ©s par la rÃ©ception
+        // CEEP: E sur rÃ©ception (8.5), CEEE: P sur rÃ©ception (8.5)
+        // HCEE: G sur rÃ©ception (8.5), HCEP: G sur archivage (8.6)
         notificationService.sendNotificationToRoleForAt("CEEP", at, titre, message, type, "/at/" + at.getId());
         notificationService.sendNotificationToRoleForAt("CEEE", at, titre, message, type, "/at/" + at.getId());
         notificationService.sendNotificationToRoleForAt("HCEE", at, titre, message, type, "/at/" + at.getId());
-        // RESPONSABLE_ENTREPRISE reste inchangé (hors logique P/E, sous-traitant externe)
+        // RESPONSABLE_ENTREPRISE reste inchangÃ© (hors logique P/E, sous-traitant externe)
         notificationService.sendNotificationToRole("RESPONSABLE_ENTREPRISE", titre, message, type, "/at/" + at.getId());
+    }
+
+    private LocalDateTime parseDateToLocalDateTime(String dateStr, LocalDateTime defaultValue) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            if (dateStr.contains("T")) {
+                return LocalDateTime.parse(dateStr);
+            }
+            return java.time.LocalDate.parse(dateStr).atStartOfDay();
+        } catch (Exception e) {
+            log.warn("Impossible de parser la date '{}', fallback sur la valeur par défaut: {}", dateStr, defaultValue);
+            return defaultValue;
+        }
     }
 
     private void logAudit(String action, String resultat) {
@@ -550,3 +578,4 @@ public class ReceptionTravauxServiceImpl implements ReceptionTravauxService {
         auditService.logAction(action, resultat, user, "N/A", "System");
     }
 }
+

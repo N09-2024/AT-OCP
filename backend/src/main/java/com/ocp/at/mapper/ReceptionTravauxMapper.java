@@ -18,6 +18,15 @@ public interface ReceptionTravauxMapper {
     @Mapping(target = "historiques", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "dateReception", ignore = true)
+    @Mapping(target = "dateDebutTravauxReelle", ignore = true)
+    @Mapping(target = "dateFinTravauxReelle", ignore = true)
+    @Mapping(target = "signaturePath", ignore = true)
+    @Mapping(target = "signatureDate", ignore = true)
+    @Mapping(target = "signatureBy", ignore = true)
+    @Mapping(target = "signatureResponsable", ignore = true)
+    @Mapping(target = "dateSignature", ignore = true)
+    @Mapping(target = "validee", ignore = true)
     ReceptionTravaux toEntity(ReceptionTravauxRequest request);
 
     @Mapping(target = "autorisationTravailId", source = "autorisationTravail.id")
@@ -42,5 +51,14 @@ public interface ReceptionTravauxMapper {
     @Mapping(target = "historiques", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "dateReception", ignore = true)
+    @Mapping(target = "dateDebutTravauxReelle", ignore = true)
+    @Mapping(target = "dateFinTravauxReelle", ignore = true)
+    @Mapping(target = "signaturePath", ignore = true)
+    @Mapping(target = "signatureDate", ignore = true)
+    @Mapping(target = "signatureBy", ignore = true)
+    @Mapping(target = "signatureResponsable", ignore = true)
+    @Mapping(target = "dateSignature", ignore = true)
+    @Mapping(target = "validee", ignore = true)
     void updateFromRequest(ReceptionTravauxRequest request, @MappingTarget ReceptionTravaux reception);
 }

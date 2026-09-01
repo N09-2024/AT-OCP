@@ -195,6 +195,7 @@ export default function NotificationsPage() {
                   }
                 >
                   <ListItemText
+                    disableTypography
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
                         <Typography
@@ -226,7 +227,7 @@ export default function NotificationsPage() {
                         <Typography variant="caption" color="text.disabled">
                           {new Date(notif.dateCreation).toLocaleString('fr-FR')}
                           {notif.lu && notif.dateLecture
-                            ? ` · Lu le ${new Date(notif.dateLecture).toLocaleString('fr-FR')}`
+                            ? ` • Lu le ${new Date(notif.dateLecture).toLocaleString('fr-FR')}`
                             : ''}
                         </Typography>
                       </Box>

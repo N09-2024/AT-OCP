@@ -1,15 +1,11 @@
 package com.ocp.at.dto.request;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -22,14 +18,12 @@ public class ReceptionTravauxRequest {
 
     private String responsableId;
 
-    @PastOrPresent(message = "La date de réception ne peut pas être dans le futur")
-    private LocalDateTime dateReception;
+    private String dateReception;
 
-    @PastOrPresent(message = "La date de début réelle ne peut pas être dans le futur")
-    private LocalDateTime dateDebutTravauxReelle;
+    // Dates envoyées depuis le frontend au format YYYY-MM-DD
+    private String dateDebutTravauxReelle;
 
-    @PastOrPresent(message = "La date de fin réelle ne peut pas être dans le futur")
-    private LocalDateTime dateFinTravauxReelle;
+    private String dateFinTravauxReelle;
 
     @Size(max = 2000, message = "La description des travaux réalisés ne peut pas dépasser 2000 caractères")
     private String travauxRealises;
@@ -44,6 +38,11 @@ public class ReceptionTravauxRequest {
 
     private Boolean essaisEffectues = false;
 
+    // Champs additionnels (checklist frontend)
+    private Boolean essaisConformes = false;
+
+    private Boolean installationRemiseEnEtat = false;
+
     @Size(max = 1000, message = "Le résultat des essais ne peut pas dépasser 1000 caractères")
     private String resultatEssais;
 
@@ -51,5 +50,6 @@ public class ReceptionTravauxRequest {
     private String observations;
 
     @Size(max = 1000, message = "Le commentaire du responsable ne peut pas dépasser 1000 caractères")
+    @com.fasterxml.jackson.annotation.JsonAlias("commentaires")
     private String commentaireResponsable;
 }
