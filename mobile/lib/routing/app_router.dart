@@ -21,6 +21,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/widgets/app_shell.dart';
+import '../core/utils/role_applicatif.dart';
 import '../features/at/presentation/at_create_page.dart';
 import '../features/at/presentation/at_detail_page.dart';
 import '../features/at/presentation/at_form_page.dart';
@@ -92,6 +93,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 path: '/at',
                 builder: (context, state) => AtListPage(
                   initialFilter: state.uri.queryParameters['filter'],
+                  initialStatut: state.uri.queryParameters['statut'],
                 ),
               ),
             ],
@@ -119,6 +121,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/at/nouvelle',
         parentNavigatorKey: _rootNavigatorKey,
+        // Garde de rôle (INTERFACES_PAR_ROLE.md §2/§6) : création réservée au
+        // rôle CE (ADMIN inclus) ; RESPONSABLE_EXTERIEUR explicitement interdit.
+        redirect: (context, state) {
+          final authState = ref.read(authControllerProvider);
+          if (authState is! AuthAuthenticated) return '/login';
+          return peutCreerAt(authState.session.roles) ? null : '/';
+        },
         builder: (context, state) => const AtCreatePage(),
       ),
       GoRoute(

@@ -93,7 +93,15 @@ class AtCard extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: OcpColors.slate),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 12, color: OcpColors.slate)),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: OcpColors.slate),
+            ),
+          ),
         ],
       );
 }

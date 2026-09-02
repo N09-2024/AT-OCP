@@ -10,7 +10,9 @@ import '../../../core/errors/failures.dart';
 import '../../../core/network/api_providers.dart';
 import '../data/at_api.dart';
 import '../data/models/autorisation_travail.dart';
+import '../data/models/permis_document.dart';
 import '../data/models/reception_travaux.dart';
+import '../data/permis_document_api.dart';
 import '../data/reception_api.dart';
 
 final atApiProvider = Provider<AtApi>((ref) => AtApi(ref.watch(apiClientProvider)));
@@ -168,4 +170,18 @@ final atReceptionProvider =
     throw mapDioError(e);
   }
 });
+
+final permisDocumentApiProvider = Provider<PermisDocumentApi>(
+    (ref) => PermisDocumentApi(ref.watch(apiClientProvider)));
+
+final permisDocumentsProvider = FutureProvider.autoDispose
+    .family<List<PermisDocument>, String>((ref, atId) async {
+  final api = ref.watch(permisDocumentApiProvider);
+  try {
+    return await api.getPermisDocuments(atId);
+  } catch (e) {
+    throw mapDioError(e);
+  }
+});
+
 

@@ -20,6 +20,34 @@ class StatutVisa {
   static String libelle(String? s) => s == null ? '—' : libelles[s] ?? s;
 }
 
+class VisaUtilisateur {
+  final String? id;
+  final String? nomComplet;
+  final List<String> roles;
+
+  const VisaUtilisateur({this.id, this.nomComplet, this.roles = const []});
+
+  factory VisaUtilisateur.fromJson(Map<String, dynamic> json) {
+    final rawRoles = json['roles'];
+    List<String> roles = [];
+    if (rawRoles is List) {
+      for (final r in rawRoles) {
+        if (r is String) {
+          roles.add(r.toUpperCase());
+        } else if (r is Map) {
+          final nom = (r['nom'] ?? r['name'] ?? '').toString().toUpperCase();
+          if (nom.isNotEmpty) roles.add(nom);
+        }
+      }
+    }
+    return VisaUtilisateur(
+      id: json['id']?.toString(),
+      nomComplet: json['nomComplet']?.toString() ?? json['nom']?.toString(),
+      roles: roles,
+    );
+  }
+}
+
 class Visa {
   final String id;
   final DateTime? dateVisa;
@@ -33,6 +61,12 @@ class Visa {
   final String? utilisateurNomComplet;
   final String? autorisationTravailId;
 
+  /// Rôle direct du visa (ex: "CEEE", "HCEP") — peut venir du backend
+  final String? role;
+
+  /// Objet utilisateur signataire enrichi (avec ses rôles)
+  final VisaUtilisateur? utilisateur;
+
   const Visa({
     required this.id,
     this.dateVisa,
@@ -45,6 +79,8 @@ class Visa {
     this.utilisateurId,
     this.utilisateurNomComplet,
     this.autorisationTravailId,
+    this.role,
+    this.utilisateur,
   });
 
   factory Visa.fromJson(Map<String, dynamic> json) => Visa(
@@ -61,5 +97,9 @@ class Visa {
         utilisateurId: json['utilisateurId'] as String?,
         utilisateurNomComplet: json['utilisateurNomComplet'] as String?,
         autorisationTravailId: json['autorisationTravailId'] as String?,
+        role: (json['role'] ?? json['roleSignataire'] ?? json['utilisateurRole'])?.toString(),
+        utilisateur: json['utilisateur'] is Map<String, dynamic>
+            ? VisaUtilisateur.fromJson(json['utilisateur'] as Map<String, dynamic>)
+            : null,
       );
 }

@@ -1,7 +1,11 @@
-/// Visas d'une AT — GET /visa/at/{atId} + signature manuscrite
-/// (POST /visa/{id}/sign, multipart PNG) + accusé de réception CEEE.
-/// Permissions côté mobile = affichage ; le serveur reste l'autorité finale
-/// (qui peut signer et à quelle étape est vérifié côté backend).
+/// Visas et Signatures officielles d'une AT — Conforme au Standard OCP S-HSE-SEC-31 Section G
+/// CIRCUIT OFFICIEL : 1.CEEP → 2.CEEE → 3.HCEP → 4.HCEE → 5.HMEP → 6.HMEE
+/// - Rôles EFFECTIFS par AT (at_roles.dart) : chaque bouton n'apparaît que pour
+///   le rôle lié à CETTE AT (CEEP propriétaire, CEEE du service exécutant, etc.)
+///   et pour l'étape atteinte dans le circuit.
+/// - Signature manuscrite sur écran tactile (SignatureScreen) envoyée en multipart PNG
+/// - Création + signature du visa à la volée pour le rôle dont c'est le tour (comme le web)
+/// - Détection tri-niveau : commentaire → role direct → utilisateur.roles
 library;
 
 import 'package:flutter/material.dart';
@@ -14,7 +18,9 @@ import '../../../core/utils/app_date.dart';
 import '../../../core/widgets/states.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../at/data/models/autorisation_travail.dart';
+import '../../at/presentation/at_circuit_visas.dart';
 import '../../at/presentation/at_providers.dart';
+import '../../at/presentation/at_roles.dart';
 import '../../visas/data/visa.dart';
 import '../../visas/visa_api.dart';
 import '../../visas/presentation/signature_screen.dart';
@@ -37,89 +43,193 @@ class AtVisasPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final visas = ref.watch(visasProvider(atId));
     final detailAsync = ref.watch(atDetailProvider(atId));
-    final hasPermission = ref.watch(hasPermissionProvider);
-    final canSign = hasPermission('SIGN_AT') || hasPermission('VALIDATE_AT');
     final session = ref.watch(sessionProvider);
     final at = detailAsync.valueOrNull;
 
-    // Accusé de réception CEEE : affiché tant que non confirmé ; le serveur
-    // vérifie que l'utilisateur est bien le CEEE lié à l'AT.
-    final peutAccuserReception =
-        at != null && at.dateReceptionCeee == null && !_statutTropTot(at.statut);
+    // ── Rôles EFFECTIFS pour CETTE AT (propriété, Section G, service exécutant)
+    // — voir at_roles.dart. Un bouton CEEE n'apparaît que pour le CEEE de cette
+    // AT, jamais pour son CEEP (et réciproquement). ──
+    final roles = at == null
+        ? const AtRoles.vide()
+        : AtRoles.resolve(session: session, at: at);
+
+    bool autorisePour(String role) => roles.autorisePour(role);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Visas & signatures')),
+      backgroundColor: OcpColors.sage,
+      appBar: AppBar(
+        backgroundColor: OcpColors.forest,
+        foregroundColor: OcpColors.white,
+        elevation: 0,
+        title: Text(
+          at?.numero != null ? 'Visas — ${at!.numero}' : 'Visas & Signatures',
+          style: const TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: OcpColors.white,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Actualiser',
+            icon: const Icon(Icons.refresh_rounded, color: OcpColors.white),
+            onPressed: () {
+              ref.invalidate(visasProvider(atId));
+              ref.invalidate(atDetailProvider(atId));
+            },
+          ),
+        ],
+      ),
       body: visas.when(
-        loading: () => const LoadingState(message: 'Chargement des visas...'),
+        loading: () => const LoadingState(message: 'Chargement de la feuille des visas...'),
         error: (e, _) => ErrorState(
-          message: e is Failure ? e.message : 'Erreur de chargement.',
+          message: e is Failure ? e.message : 'Erreur de chargement des visas.',
           onRetry: () => ref.invalidate(visasProvider(atId)),
         ),
         data: (items) {
-          // Trier les visas par ordre séquentiel
+          final etat = CircuitVisasEtat.resolve(visas: items, at: at);
+          final statut = at?.statut;
+          final statutTerminal = statut == StatutAt.archivee ||
+              statut == StatutAt.rejetee ||
+              statut == StatutAt.annulee;
+          // Statuts pré-circuit : le visa CEEP (Étape 1) est signé puis l'AT soumise.
+          final enPhaseBrouillon = statut == StatutAt.brouillon ||
+              statut == StatutAt.demandeCreee ||
+              statut == StatutAt.classificationEffectuee ||
+              statut == StatutAt.enVisiteRedaction;
+
+          final peutAccuserReception = at != null &&
+              at.dateReceptionCeee == null &&
+              roles.isCeee &&
+              !_statutTropTot(at.statut) &&
+              etat.ceep;
+
+          // Prochaine étape actionnable : premier rôle (dans l'ordre officiel du
+          // circuit) autorisé pour l'utilisateur courant, sans ligne de visa
+          // existante et dont toutes les étapes précédentes sont acquises.
+          String? roleActionnable;
+          for (final role in kCircuitVisas) {
+            final aLigne = items.any((v) => roleDeVisa(v) == role);
+            if (!aLigne && autorisePour(role) && etat.precedentsSignes(role)) {
+              roleActionnable = role;
+              break;
+            }
+          }
+          final roleAction = roleActionnable;
+
           final sortedItems = List<Visa>.from(items)
             ..sort((a, b) => (a.ordre ?? 99).compareTo(b.ordre ?? 99));
 
           return ListView(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: const EdgeInsets.all(16),
             children: [
-              // Bandeau explicatif de la séquence des visas
+              // ── Bandeau Logigramme S-HSE-SEC-31 ──────────────────────────
               Card(
-                color: OcpColors.surfaceSoft,
+                color: OcpColors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   side: const BorderSide(color: OcpColors.borderSoft),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.all(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          Icon(Icons.info_outline_rounded, size: 18, color: OcpColors.forest),
+                          Icon(Icons.verified_user_rounded, size: 20, color: OcpColors.forest),
                           SizedBox(width: 8),
-                          Text(
-                            'Ordre séquentiel réglementaire (S-HSE-SEC-31)',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: OcpColors.forest),
+                          Expanded(
+                            child: Text(
+                              'Circuit séquentiel officiel des Visas (Section G)',
+                              style: TextStyle(
+                                fontFamily: 'SpaceGrotesk',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: OcpColors.forest,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        '1. CEEE (Exécutant) → 2. HCEP (Propriétaire) → 3. HCEE → 4. HMEP → 5. HMEE',
-                        style: TextStyle(fontSize: 12, color: OcpColors.ink, fontWeight: FontWeight.w600),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '1. Visa CEEP (Demandeur Propriétaire — signe l\'AT le premier)\n'
+                        '2. Visa CEEE (Chef d\'Équipe Exécutant Intervenant)\n'
+                        '3. Visa HCEP (Hors Cadre Propriétaire)\n'
+                        '4. Visa HCEE (Hors Cadre Exécutant)\n'
+                        '5. Visa HMEP (Haute Maîtrise Propriétaire)\n'
+                        '6. Visa HMEE (Haute Maîtrise Exécutante — Validation finale & Déblocage PDF)',
+                        style: TextStyle(fontSize: 12, color: OcpColors.ink, height: 1.4, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Le CEEP appose le premier visa (Étape 1) dès la soumission de l\'AT ; '
+                        'chaque visa suivant se débloque après le précédent.',
+                        style: TextStyle(fontSize: 11, color: OcpColors.slate, height: 1.3, fontStyle: FontStyle.italic),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
-              if (peutAccuserReception &&
-                  session != null &&
-                  hasPermission('SIGN_AT')) ...[
+              // ── Accusé de réception préalable pour CEEE ───────────────────
+              if (peutAccuserReception && session != null) ...[
                 _AccuseReceptionCard(onConfirm: () => _accuserReception(context, ref)),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
               ],
+
+              // ── Liste des Visas ───────────────────────────────────────────
               ...sortedItems.map((v) {
-                // Vérifier si tous les visas d'ordre inférieur sont déjà signés/validés
-                final isPrecedentValide = sortedItems
-                    .where((other) => (other.ordre ?? 0) < (v.ordre ?? 0))
-                    .every((other) => other.signaturePresente || other.statut == StatutVisa.valide);
+                final ordre = v.ordre ?? 1;
+                final detectedRole = roleDeVisa(v);
+                // Étape précédente : rôles antérieurs du circuit acquis (fallbacks
+                // statut inclus) ; fallback ordre pour les lignes sans rôle reconnu.
+                final isPrecedentValide = detectedRole.isNotEmpty
+                    ? etat.precedentsSignes(detectedRole)
+                    : sortedItems
+                        .where((other) => (other.ordre ?? 0) < ordre)
+                        .every((other) => other.signaturePresente || other.statut == StatutVisa.valide);
+
+                final bool isUserAuthorizedForThisVisa = autorisePour(detectedRole);
+
+                // Titre lisible : les marqueurs techniques (g1VisaCeep...) sont remplacés
+                final commentaireBrut = v.commentaire?.trim() ?? '';
+                final titre = (commentaireBrut.isEmpty ||
+                            commentaireBrut.toUpperCase().startsWith('G1VISA')) &&
+                        detectedRole.isNotEmpty
+                    ? 'Visa ${libelleRoleVisa(detectedRole)} (Étape ${ordreRoleVisa(detectedRole)})'
+                    : (commentaireBrut.isNotEmpty ? commentaireBrut : 'Visa réglementaire');
 
                 return _VisaTile(
                   visa: v,
-                  canSign: canSign,
+                  titre: titre,
+                  isUserAuthorized: isUserAuthorizedForThisVisa,
                   isPrecedentValide: isPrecedentValide,
                   onSign: () => _signer(context, ref, v),
                 );
               }),
-              if (sortedItems.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: EmptyState(message: 'Aucun visa créé pour cette AT.', icon: Icons.draw_outlined),
+
+              // ── Carte d'action : le rôle dont c'est le tour crée + signe ──
+              if (roleAction != null && !statutTerminal) ...[
+                const SizedBox(height: 4),
+                _CarteSignatureRole(
+                  role: roleAction,
+                  avecSoumission: enPhaseBrouillon && roleAction == 'CEEP',
+                  onSign: () => _actionSignerRole(
+                    context,
+                    ref,
+                    roleAction,
+                    enPhaseBrouillon && roleAction == 'CEEP',
+                  ),
                 ),
+                const SizedBox(height: 12),
+              ],
+
+              // ── Aucun visa : explication du circuit ───────────────────────
+              if (items.isEmpty) const _EmptyVisasTemplate(),
             ],
           );
         },
@@ -134,13 +244,23 @@ class AtVisasPage extends ConsumerWidget {
     try {
       await ref.read(atApiProvider).accuserReceptionCeee(atId);
       ref.invalidate(atDetailProvider(atId));
+      ref.invalidate(visasProvider(atId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Réception confirmée — vous pouvez signer.')),);
+          const SnackBar(
+            backgroundColor: OcpColors.success,
+            content: Text('Accusé de réception confirmé par le CEEE.'),
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mapDioError(e).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: OcpColors.errorSoft,
+            content: Text(mapDioError(e).message),
+          ),
+        );
       }
     }
   }
@@ -149,8 +269,9 @@ class AtVisasPage extends ConsumerWidget {
     final session = ref.read(sessionProvider);
     final result = await Navigator.of(context).push<SignatureResult>(
       MaterialPageRoute(
-        builder: (_) =>
-            SignatureScreen(signataireNom: session?.utilisateur.nomComplet ?? 'Signataire'),
+        builder: (_) => SignatureScreen(
+          signataireNom: session?.utilisateur.nomComplet ?? 'Signataire habilité',
+        ),
       ),
     );
     if (result == null || !context.mounted) return;
@@ -159,19 +280,73 @@ class AtVisasPage extends ConsumerWidget {
       await VisaApi(ref.read(apiClientProvider)).sign(
         visaId: visa.id,
         signaturePng: result.pngBytes,
+        commentaire: visa.commentaire,
       );
       ref.invalidate(visasProvider(atId));
+      ref.invalidate(atDetailProvider(atId));
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Signature enregistrée et scellée par le serveur.'),),);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: OcpColors.success,
+            content: Text('Signature manuscrite enregistrée et scellée avec succès.'),
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mapDioError(e).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: OcpColors.errorSoft,
+            content: Text(mapDioError(e).message),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Action de signature pour le rôle dont c'est le tour :
+  /// - CEEP en brouillon → signature du Visa CEEP (Étape 1) puis soumission ;
+  /// - sinon → création + signature du visa du rôle (comme le flux web).
+  Future<void> _actionSignerRole(
+    BuildContext context,
+    WidgetRef ref,
+    String role,
+    bool avecSoumission,
+  ) async {
+    try {
+      String message;
+      if (avecSoumission) {
+        final ok = await signerVisaCeepEtSoumettre(context, ref, atId);
+        if (!ok || !context.mounted) return;
+        message = 'Visa CEEP apposé — AT soumise et circuit des visas initialisé.';
+      } else {
+        await creerEtSignerVisa(context, ref, atId, role);
+        if (!context.mounted) return;
+        message = 'Visa $role apposé et scellé avec succès.';
+      }
+      ref.invalidate(visasProvider(atId));
+      ref.invalidate(atDetailProvider(atId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(backgroundColor: OcpColors.success, content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: OcpColors.errorSoft,
+            content: Text(mapDioError(e).message),
+          ),
+        );
       }
     }
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Composants Visuels
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _AccuseReceptionCard extends StatelessWidget {
   final VoidCallback onConfirm;
@@ -180,68 +355,80 @@ class _AccuseReceptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
         color: OcpColors.mintSoft,
-        child: ListTile(
-          leading: const Icon(Icons.mark_email_read_outlined, color: OcpColors.forest),
-          title: const Text('Accuser réception de l\'AT',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),),
-          subtitle: const Text('Préalable obligatoire avant votre signature.',
-              style: TextStyle(fontSize: 12),),
-          trailing: FilledButton.tonal(
-            onPressed: onConfirm,
-            child: const Text('OK'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: OcpColors.mint),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              const Icon(Icons.mark_email_read_rounded, color: OcpColors.forest, size: 24),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Accuser réception de l\'AT (CEEE)',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: OcpColors.forest),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Préalable obligatoire avant la signature du visa CEEE.',
+                      style: TextStyle(fontSize: 11, color: OcpColors.ink),
+                    ),
+                  ],
+                ),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: OcpColors.forest,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  minimumSize: const Size(0, 36),
+                ),
+                onPressed: onConfirm,
+                child: const Text('Confirmer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
         ),
       );
 }
 
-class _VisaTile extends StatelessWidget {
-  final Visa visa;
-  final bool canSign;
-  final bool isPrecedentValide;
-  final VoidCallback? onSign;
+/// Carte d'action pour le rôle dont c'est le tour dans le circuit :
+/// permet de créer ET signer son visa à la volée (même parcours que le web).
+class _CarteSignatureRole extends StatelessWidget {
+  final String role;
+  final bool avecSoumission;
+  final VoidCallback onSign;
 
-  const _VisaTile({
-    required this.visa,
-    required this.canSign,
-    required this.isPrecedentValide,
-    this.onSign,
+  const _CarteSignatureRole({
+    required this.role,
+    required this.avecSoumission,
+    required this.onSign,
   });
-
-  Color get _statusColor {
-    switch (visa.statut) {
-      case StatutVisa.valide:
-      case StatutVisa.validation:
-        return OcpColors.success;
-      case StatutVisa.refuse:
-        return OcpColors.error;
-      default:
-        return OcpColors.warning;
-    }
-  }
-
-  bool get _peutEtreSigne => canSign && visa.statut == StatutVisa.enAttente && isPrecedentValide;
 
   @override
   Widget build(BuildContext context) {
+    final ordre = ordreRoleVisa(role);
     return Card(
+      color: OcpColors.mintSoft,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: _peutEtreSigne ? OcpColors.forest : OcpColors.borderSoft,
-          width: _peutEtreSigne ? 1.5 : 1,
-        ),
+        side: const BorderSide(color: OcpColors.forest, width: 1.5),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
-                Icon(
-                  visa.signaturePresente ? Icons.verified_rounded : Icons.pending_actions_rounded,
-                  color: _statusColor,
-                  size: 22,
+                const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: OcpColors.white,
+                  child: Icon(Icons.draw_rounded, color: OcpColors.forest, size: 18),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -249,46 +436,142 @@ class _VisaTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        visa.utilisateurNomComplet ?? 'Visa',
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                      ),
-                      if (visa.ordre != null)
-                        Text(
-                          'Étape ${visa.ordre} dans l\'ordre des visas',
-                          style: const TextStyle(fontSize: 11, color: OcpColors.slate),
+                        'Étape $ordre — Visa ${libelleRoleVisa(role)}',
+                        style: const TextStyle(
+                          fontFamily: 'SpaceGrotesk',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: OcpColors.forest,
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        avecSoumission
+                            ? "C'est votre tour : signez l'AT (Visa CEEP) puis soumettez-la pour lancer le circuit des visas."
+                            : "C'est votre tour : créez et signez votre visa pour faire avancer le circuit.",
+                        style: const TextStyle(fontSize: 11, color: OcpColors.ink, height: 1.3),
+                      ),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _statusColor.withValues(alpha: 0.4)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: OcpColors.forest,
+                foregroundColor: OcpColors.white,
+                minimumSize: const Size.fromHeight(42),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: onSign,
+              icon: const Icon(Icons.draw_rounded, size: 18),
+              label: Text(
+                avecSoumission
+                    ? "Signer l'AT (Visa CEEP) & Soumettre l'AT"
+                    : "Signer l'AT (Visa $role — Étape $ordre)",
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VisaTile extends StatelessWidget {
+  final Visa visa;
+  final String titre;
+  final bool isUserAuthorized;
+  final bool isPrecedentValide;
+  final VoidCallback onSign;
+
+  const _VisaTile({
+    required this.visa,
+    required this.titre,
+    required this.isUserAuthorized,
+    required this.isPrecedentValide,
+    required this.onSign,
+  });
+
+  bool get _isSigned => visa.signaturePresente || visa.statut == StatutVisa.valide;
+  bool get _canSignNow => isUserAuthorized && !_isSigned && isPrecedentValide;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 10),
+      color: OcpColors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: _isSigned
+              ? OcpColors.success
+              : (_canSignNow ? OcpColors.forest : OcpColors.borderSoft),
+          width: _canSignNow ? 1.5 : 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: _isSigned
+                      ? OcpColors.forestSoft
+                      : (_canSignNow ? OcpColors.mintSoft : OcpColors.surfaceSoft),
+                  child: Icon(
+                    _isSigned ? Icons.verified_rounded : Icons.draw_rounded,
+                    color: _isSigned ? OcpColors.forest : (_canSignNow ? OcpColors.forest : OcpColors.slate),
+                    size: 18,
                   ),
-                  child: Text(
-                    StatutVisa.libelle(visa.statut),
-                    style: TextStyle(
-                        color: _statusColor, fontSize: 12, fontWeight: FontWeight.w700,),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        titre,
+                        style: const TextStyle(
+                          fontFamily: 'SpaceGrotesk',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: OcpColors.ink,
+                        ),
+                      ),
+                      Text(
+                        _isSigned
+                            ? 'Signé par ${visa.utilisateurNomComplet ?? 'Signataire'} le ${AppDate.dateHeure(visa.dateSignature ?? visa.dateVisa)}'
+                            : (isPrecedentValide
+                                ? 'Prêt pour signature'
+                                : 'En attente du visa précédent'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _isSigned ? OcpColors.forest : OcpColors.slate,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                Chip(
+                  label: Text(
+                    _isSigned ? 'Signé' : (_canSignNow ? 'À signer' : 'En attente'),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: _isSigned
+                      ? OcpColors.forestSoft
+                      : (_canSignNow ? OcpColors.mintSoft : OcpColors.warningSoft),
                 ),
               ],
             ),
-            if ((visa.commentaire ?? '').isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(visa.commentaire!, style: const TextStyle(fontSize: 13, color: OcpColors.ink)),
-            ],
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 16,
-              runSpacing: 4,
-              children: [
-                _meta('Visa', AppDate.dateHeure(visa.dateVisa)),
-                _meta('Signature', AppDate.dateHeure(visa.dateSignature)),
-              ],
-            ),
-            if (!isPrecedentValide && visa.statut == StatutVisa.enAttente) ...[
+
+            if (!_isSigned && !isPrecedentValide) ...[
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -298,11 +581,11 @@ class _VisaTile extends StatelessWidget {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.lock_clock_outlined, size: 16, color: OcpColors.slate),
+                    Icon(Icons.lock_clock_outlined, size: 14, color: OcpColors.slate),
                     SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'En attente de la signature du visa précédent dans l\'ordre.',
+                        'Ce visa sera débloqué dès que le visa précédent dans l\'ordre aura été apposé.',
                         style: TextStyle(fontSize: 11, color: OcpColors.slate),
                       ),
                     ),
@@ -310,16 +593,22 @@ class _VisaTile extends StatelessWidget {
                 ),
               ),
             ],
-            if (_peutEtreSigne) ...[
+
+            if (_canSignNow) ...[
               const SizedBox(height: 12),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: OcpColors.forest,
-                  minimumSize: const Size.fromHeight(44),
+                  foregroundColor: OcpColors.white,
+                  minimumSize: const Size.fromHeight(42),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: onSign,
-                icon: const Icon(Icons.draw_rounded),
-                label: Text(visa.signaturePresente ? 'Re-signer' : 'Signer ce visa maintenant'),
+                icon: const Icon(Icons.draw_rounded, size: 18),
+                label: const Text(
+                  'Apposer ma signature manuscrite sur ce Visa',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
               ),
             ],
           ],
@@ -327,13 +616,40 @@ class _VisaTile extends StatelessWidget {
       ),
     );
   }
-
-  Widget _meta(String label, String value) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: OcpColors.slate)),
-          Text(value, style: const TextStyle(fontSize: 12, color: OcpColors.ink)),
-        ],
-      );
 }
 
+class _EmptyVisasTemplate extends StatelessWidget {
+  const _EmptyVisasTemplate();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: OcpColors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: OcpColors.borderSoft),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(Icons.draw_outlined, size: 36, color: OcpColors.forest),
+            SizedBox(height: 8),
+            Text(
+              'Circuit des Visas S-HSE-SEC-31',
+              style: TextStyle(fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Les 6 visas réglementaires sont apposés séquentiellement :\n'
+              'CEEP → CEEE → HCEP → HCEE → HMEP → HMEE.\n'
+              'Le CEEP signe l\'AT le premier, dès la soumission officielle.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: OcpColors.slate, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

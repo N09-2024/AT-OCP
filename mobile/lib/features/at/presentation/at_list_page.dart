@@ -13,7 +13,8 @@ import 'at_providers.dart';
 
 class AtListPage extends ConsumerStatefulWidget {
   final String? initialFilter;
-  const AtListPage({super.key, this.initialFilter});
+  final String? initialStatut;
+  const AtListPage({super.key, this.initialFilter, this.initialStatut});
 
   @override
   ConsumerState<AtListPage> createState() => _AtListPageState();
@@ -26,15 +27,18 @@ class _AtListPageState extends ConsumerState<AtListPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialFilter != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.initialFilter != null) {
         if (widget.initialFilter == 'mine') {
           ref.read(atListProvider.notifier).setScope(AtFilterScope.mine);
         } else if (widget.initialFilter == 'aValider') {
           ref.read(atListProvider.notifier).setScope(AtFilterScope.aValider);
         }
-      });
-    }
+      }
+      if (widget.initialStatut != null && widget.initialStatut!.isNotEmpty) {
+        ref.read(atListProvider.notifier).setStatut(widget.initialStatut);
+      }
+    });
   }
 
   @override

@@ -64,6 +64,7 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     private final ATContextService atContextService;
     private final com.ocp.at.service.PermisDocumentService permisDocumentService;
     private final com.ocp.at.service.InterventionReadinessService interventionReadinessService;
+    private final com.ocp.at.repository.PermisDocumentRepository permisDocumentRepository;
     
     private final AutorisationTravailMapper atMapper;
     private final HistoriqueATMapper historiqueMapper;
@@ -627,13 +628,17 @@ public class AutorisationTravailServiceImpl implements AutorisationTravailServic
     public AutorisationTravailResponse soumettreAT(String id) {
         AutorisationTravail at = getEntityById(id);
 
-        // Garde IA : vérifier que tous les permis cochés en section E sont validés
-        if (at.getFormPermisIds() != null && !at.getFormPermisIds().isBlank()
-                && !at.getFormPermisIds().equals("[]") && !at.getFormPermisIds().equals("null")
-                && !permisDocumentService.tousPermisValides(id)) {
+        // Garde IA : bloquer uniquement si des documents ont été uploadés et ne sont pas
+        // encore validés. Si des permis sont cochés mais sans document uploadé, on laisse
+        // passer (les documents pourront être fournis après soumission de l'AT).
+        long docsNonValides = permisDocumentRepository.findByAutorisationTravailId(id).stream()
+                .filter(d -> d.getFilePath() != null
+                          && d.getStatut() != com.ocp.at.entity.enums.StatutPermisDocument.VALIDE)
+                .count();
+        if (docsNonValides > 0) {
             throw new com.ocp.at.exception.BusinessException(
-                "Soumission impossible : des permis requis ne sont pas encore validés "
-                + "par l'agent IA. Validez tous les permis cochés en section E.");
+                "Soumission impossible : " + docsNonValides + " document(s) de permis "
+                + "sont en cours d'analyse par l'agent IA. Patientez ou relancez l'analyse.");
         }
 
         // Verrou : prendre automatiquement si libre, sinon vérifier le propriétaire

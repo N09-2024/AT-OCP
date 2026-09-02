@@ -49,6 +49,12 @@ class AtFormData {
   final bool visiteEffectuee;
   final String visiteCommentaire;
 
+  final double? latitude;
+  final double? longitude;
+  final String? photoPath;
+  final String typeDocumentSource;
+  final String documentSourceNumero;
+
   const AtFormData({
     this.objet = '',
     this.descriptionTravaux = '',
@@ -71,6 +77,11 @@ class AtFormData {
     this.permisIds = const {},
     this.visiteEffectuee = false,
     this.visiteCommentaire = '',
+    this.latitude,
+    this.longitude,
+    this.photoPath,
+    this.typeDocumentSource = 'DI',
+    this.documentSourceNumero = '',
   });
 
   AtFormData copyWith({
@@ -95,6 +106,11 @@ class AtFormData {
     Set<String>? permisIds,
     bool? visiteEffectuee,
     String? visiteCommentaire,
+    double? latitude,
+    double? longitude,
+    String? photoPath,
+    String? typeDocumentSource,
+    String? documentSourceNumero,
     bool clearDateDebut = false,
     bool clearDateFin = false,
   }) =>
@@ -120,6 +136,11 @@ class AtFormData {
         permisIds: permisIds ?? this.permisIds,
         visiteEffectuee: visiteEffectuee ?? this.visiteEffectuee,
         visiteCommentaire: visiteCommentaire ?? this.visiteCommentaire,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+        photoPath: photoPath ?? this.photoPath,
+        typeDocumentSource: typeDocumentSource ?? this.typeDocumentSource,
+        documentSourceNumero: documentSourceNumero ?? this.documentSourceNumero,
       );
 
   /// Payload AutoSaveRequest exact du backend.
@@ -145,6 +166,11 @@ class AtFormData {
         'permisIds': permisIds.toList(),
         'visiteEffectuee': visiteEffectuee,
         'visiteCommentaire': visiteCommentaire,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (photoPath != null) 'photoPath': photoPath,
+        'typeDocumentSource': typeDocumentSource,
+        if (documentSourceNumero.isNotEmpty) 'documentSourceNumero': documentSourceNumero,
       };
 
   static String _isoDate(DateTime d) =>
@@ -167,6 +193,7 @@ class AtFormData {
         heureDebut: parseTime(at.heureDebut),
         heureFin: parseTime(at.heureFin),
         servicesIntervenants: at.servicesIntervenants ?? '',
+        serviceIntervenantId: null,
         entreprisesIntervenantes: at.entreprisesIntervenantes ?? '',
         mesuresSecuriteExecutant: at.mesuresSecuriteExecutant ?? '',
         zoneProprietaireId: at.zoneProprietaireId,
@@ -180,6 +207,11 @@ class AtFormData {
         permisIds: at.permisIds.toSet(),
         visiteEffectuee: at.visiteEffectuee ?? false,
         visiteCommentaire: at.visiteCommentaire ?? '',
+        latitude: at.latitude,
+        longitude: at.longitude,
+        photoPath: at.photoPath,
+        typeDocumentSource: at.typeDocumentSource ?? 'DI',
+        documentSourceNumero: at.documentSourceNumero ?? '',
       );
 }
 
@@ -400,7 +432,7 @@ class AtFormNotifier extends StateNotifier<AtFormState> {
     _debounceTimer?.cancel();
     if (_lockHeldByUs) {
       // Au minimum : ne jamais laisser le verrou orphelin volontairement.
-      _api.libererVerrou(atId).catchError((_) {});
+      _api.libererVerrou(atId).ignore();
     }
     super.dispose();
   }

@@ -172,3 +172,25 @@ final hasPermissionProvider = Provider<bool Function(String)>((ref) {
   final session = ref.watch(sessionProvider);
   return (permission) => session?.hasPermission(permission) ?? false;
 });
+
+/// Role helper prenant en compte les rôles stricts, synthétiques et ADMIN.
+final hasRoleProvider = Provider<bool Function(String)>((ref) {
+  final session = ref.watch(sessionProvider);
+  return (role) {
+    if (session == null) return false;
+    final rList = session.roles.map((r) => r.toUpperCase()).toList();
+    final roleUpper = role.toUpperCase();
+    if (rList.contains('ADMIN')) return true;
+    if (roleUpper == 'CEEP') return rList.contains('CEEP') || rList.contains('CE');
+    if (roleUpper == 'CEEE') return rList.contains('CEEE') || rList.contains('CE');
+    if (roleUpper == 'HCEP') return rList.contains('HCEP') || rList.contains('HC');
+    if (roleUpper == 'HCEE') return rList.contains('HCEE') || rList.contains('HC');
+    if (roleUpper == 'HMEP') return rList.contains('HMEP') || rList.contains('HM');
+    if (roleUpper == 'HMEE') return rList.contains('HMEE') || rList.contains('HM');
+    if (roleUpper == 'CE') return rList.contains('CE') || rList.contains('CEEP') || rList.contains('CEEE');
+    if (roleUpper == 'HC') return rList.contains('HC') || rList.contains('HCEP') || rList.contains('HCEE');
+    if (roleUpper == 'HM') return rList.contains('HM') || rList.contains('HMEP') || rList.contains('HMEE');
+    return rList.contains(roleUpper);
+  };
+});
+
