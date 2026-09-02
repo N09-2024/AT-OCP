@@ -1,4 +1,4 @@
-/// Écran de signature manuscrite — l'utilisateur signe avec son doigt.
+/// Écran de signature manuscrite - l'utilisateur signe avec son doigt.
 /// Le PNG généré est envoyé au backend via POST /visa/{id}/sign
 /// (multipart "signature" + "commentaire"). Le serveur enregistre
 /// hash + IP + horodatage (non-répudiation).

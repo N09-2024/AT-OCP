@@ -1,4 +1,4 @@
-/// Routeur principal (GoRouter) — arborescence :
+/// Routeur principal (GoRouter) - arborescence :
 ///
 /// /login                         → LoginPage (publique)
 /// /  (shell avec bottom nav)
@@ -91,10 +91,17 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/at',
-                builder: (context, state) => AtListPage(
-                  initialFilter: state.uri.queryParameters['filter'],
-                  initialStatut: state.uri.queryParameters['statut'],
-                ),
+                builder: (context, state) {
+                  final filter = state.uri.queryParameters['filter'];
+                  final statut = state.uri.queryParameters['statut'];
+                  // Clé par paramètres : re-naviguer depuis le dashboard avec
+                  // d'autres filtres recrée la page et applique les filtres.
+                  return AtListPage(
+                    key: ValueKey('at-list|$filter|$statut'),
+                    initialFilter: filter,
+                    initialStatut: statut,
+                  );
+                },
               ),
             ],
           ),

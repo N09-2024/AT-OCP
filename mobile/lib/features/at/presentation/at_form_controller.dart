@@ -1,4 +1,4 @@
-/// Contrôleur du formulaire AT mobile — Phases 6/7/8 :
+/// Contrôleur du formulaire AT mobile - Phases 6/7/8 :
 ///
 /// - Pré-remplissage depuis le détail AT réel.
 /// - VERROU : /prendre-verrou à l'entrée ; si tenu par un autre → lecture seule
@@ -54,6 +54,7 @@ class AtFormData {
   final String? photoPath;
   final String typeDocumentSource;
   final String documentSourceNumero;
+  final String? documentSourceId;
 
   const AtFormData({
     this.objet = '',
@@ -82,6 +83,7 @@ class AtFormData {
     this.photoPath,
     this.typeDocumentSource = 'DI',
     this.documentSourceNumero = '',
+    this.documentSourceId,
   });
 
   AtFormData copyWith({
@@ -111,8 +113,10 @@ class AtFormData {
     String? photoPath,
     String? typeDocumentSource,
     String? documentSourceNumero,
+    String? documentSourceId,
     bool clearDateDebut = false,
     bool clearDateFin = false,
+    bool clearDocumentSource = false,
   }) =>
       AtFormData(
         objet: objet ?? this.objet,
@@ -141,6 +145,8 @@ class AtFormData {
         photoPath: photoPath ?? this.photoPath,
         typeDocumentSource: typeDocumentSource ?? this.typeDocumentSource,
         documentSourceNumero: documentSourceNumero ?? this.documentSourceNumero,
+        documentSourceId:
+            clearDocumentSource ? null : (documentSourceId ?? this.documentSourceId),
       );
 
   /// Payload AutoSaveRequest exact du backend.
@@ -171,6 +177,8 @@ class AtFormData {
         if (photoPath != null) 'photoPath': photoPath,
         'typeDocumentSource': typeDocumentSource,
         if (documentSourceNumero.isNotEmpty) 'documentSourceNumero': documentSourceNumero,
+        if (documentSourceId != null && documentSourceId!.isNotEmpty)
+          'documentSourceId': documentSourceId,
       };
 
   static String _isoDate(DateTime d) =>
@@ -212,6 +220,7 @@ class AtFormData {
         photoPath: at.photoPath,
         typeDocumentSource: at.typeDocumentSource ?? 'DI',
         documentSourceNumero: at.documentSourceNumero ?? '',
+        documentSourceId: at.documentSourceId,
       );
 }
 
@@ -308,7 +317,7 @@ class AtFormNotifier extends StateNotifier<AtFormState> {
       _lastSavedJson = jsonEncode(state.data.toAutoSaveJson());
 
       if (!state.readOnly) {
-        // Verrou d'édition exclusif — la décision finale appartient au serveur :
+        // Verrou d'édition exclusif - la décision finale appartient au serveur :
         // si tenu par un autre utilisateur, l'API échoue → lecture seule.
         try {
           await _api.prendreVerrou(atId);

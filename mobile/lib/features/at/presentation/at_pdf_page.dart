@@ -1,4 +1,4 @@
-/// PDF officiel d'une AT — GET /autorisations-travail/{id}/export-pdf (byte[]).
+/// PDF officiel d'une AT - GET /autorisations-travail/{id}/export-pdf (byte[]).
 /// Le PDF est généré par le backend ; le mobile se contente de l'afficher.
 /// Accès conditionné par exportPdfAutorise côté détail AT (déjà contrôlé serveur).
 library;

@@ -1,4 +1,4 @@
-/// Modèle Utilisateur — reflète UtilisateurResponse du backend.
+/// Modèle Utilisateur - reflète UtilisateurResponse du backend.
 /// Champs JSON : id, matricule, nom, prenom, email, telephone, photo, actif,
 /// compteVerrouille, motDePasseExpire, enAttenteValidation, dateCreation,
 /// dateModification, derniereConnexion, service{...}, roles[{id, nom, description}].

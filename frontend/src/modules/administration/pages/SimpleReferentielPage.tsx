@@ -82,7 +82,7 @@ export default function SimpleReferentielPage({
 
   const handleDelete = async (id: string) => {
     const ok = await popin.confirm({
-      title: `Suppression — ${title}`,
+      title: `Suppression - ${title}`,
       message: 'Êtes-vous sûr de vouloir supprimer cet élément du référentiel ?',
       severity: 'error',
       confirmText: 'Supprimer',

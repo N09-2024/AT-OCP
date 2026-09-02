@@ -1,4 +1,4 @@
-/// API des Autorisations de Travail — endpoints réels du backend
+/// API des Autorisations de Travail - endpoints réels du backend
 /// (AutorisationTravailController, préfixe /api) :
 ///
 ///   GET  /autorisations-travail?statut=&search=&page=&size=&sort=
@@ -9,8 +9,10 @@
 ///   PUT  /autorisations-travail/{id}/autosave
 ///   PUT  /autorisations-travail/{id}/prendre-verrou | liberer-verrou | transferer-verrou
 ///   POST /autorisations-travail/{id}/submit | validate | reject | renew | close |
-///        demarrer-intervention | declarer-fin | visite | rediger | reconduire |
-///        incident | reception-standard | accuser-reception-ceee
+///        visite | rediger | incident | reception-standard | accuser-reception-ceee
+///   GET  /autorisations-travail/{id}/intervention/readiness
+///   POST /autorisations-travail/{id}/intervention/start | intervention/end
+///   POST /reconductions                                     (demande CEEE → HMEP)
 ///   GET  /autorisations-travail/{id}/historique
 ///   GET  /autorisations-travail/{id}/visas
 ///   GET  /autorisations-travail/{id}/export-pdf       (byte[])
@@ -86,7 +88,7 @@ class AtApi {
     return AutorisationTravail.fromJson(response.data!);
   }
 
-  /// Auto-save du brouillon — corps = AutoSaveRequest du backend.
+  /// Auto-save du brouillon - corps = AutoSaveRequest du backend.
   Future<AutorisationTravail> autoSave(String id, Map<String, dynamic> autoSaveRequest) async {
     final response =
         await _client.put<Map<String, dynamic>>('/autorisations-travail/$id/autosave', body: autoSaveRequest);
@@ -123,22 +125,65 @@ class AtApi {
 
   Future<AutorisationTravail> cloturer(String id) => _transition(id, 'close');
 
-  Future<AutorisationTravail> demarrerIntervention(String id) =>
-      _transition(id, 'demarrer-intervention');
+  // --- Cycle de vie intervention (InterventionLifecycleController - comme le web) ---
 
-  Future<AutorisationTravail> declarerFin(String id) => _transition(id, 'declarer-fin');
+  /// Readiness check §8.3 : les 13 contrôles serveur avant démarrage.
+  Future<ReadinessCheck> readiness(String id) async {
+    final response = await _client.get<Map<String, dynamic>>(
+        '/autorisations-travail/$id/intervention/readiness');
+    return ReadinessCheck.fromJson(response.data ?? const {});
+  }
+
+  /// Étape 4 - Démarrer l'intervention (CEEE) : POST /intervention/start
+  /// avec confirmationCeee (identique interventionApi.start du web).
+  Future<dynamic> demarrerIntervention(String id) async {
+    return _client.post<dynamic>(
+      '/autorisations-travail/$id/intervention/start',
+      body: {'confirmationCeee': true},
+    );
+  }
+
+  /// Étape 6 - Déclarer la fin des travaux (CEEE) : POST /intervention/end
+  /// avec le payload EndInterventionRequest (identique interventionApi.end du web).
+  Future<dynamic> declarerFinTravaux(
+    String id, {
+    String? travauxRealises,
+    required bool materielRetire,
+    required bool zoneNettoyee,
+    required bool protectionsRetablies,
+  }) async {
+    return _client.post<dynamic>(
+      '/autorisations-travail/$id/intervention/end',
+      body: {
+        if (travauxRealises != null && travauxRealises.trim().isNotEmpty)
+          'travauxRealises': travauxRealises.trim(),
+        'materielRetire': materielRetire,
+        'zoneNettoyee': zoneNettoyee,
+        'protectionsRetablies': protectionsRetablies,
+      },
+    );
+  }
+
+  /// Reconduction (§8.4) : POST /reconductions avec date + motif
+  /// (identique reconductionApi.demander du web - décision HMEP ensuite).
+  Future<dynamic> demanderReconduction({
+    required String atId,
+    required String nouvelleDateFin,
+    required String motif,
+  }) async {
+    return _client.post<dynamic>(
+      '/reconductions',
+      body: {
+        'atId': atId,
+        'nouvelleDateFin': nouvelleDateFin,
+        'motif': motif,
+      },
+    );
+  }
 
   Future<AutorisationTravail> marquerVisite(String id) => _transition(id, 'visite');
 
   Future<AutorisationTravail> rediger(String id) => _transition(id, 'rediger');
-
-  Future<AutorisationTravail> reconduire(String id, {bool depasse24h = false}) async {
-    final response = await _client.post<Map<String, dynamic>>(
-      '/autorisations-travail/$id/reconduire',
-      queryParameters: {'depasse24h': depasse24h},
-    );
-    return AutorisationTravail.fromJson(response.data!);
-  }
 
   Future<AutorisationTravail> signalerIncident(String id, String? motif) async {
     final response = await _client.post<Map<String, dynamic>>(
@@ -180,9 +225,70 @@ class AtApi {
     return (response.data ?? []).cast<Map<String, dynamic>>();
   }
 
-  /// PDF officiel (byte[]) — afficher uniquement si exportPdfAutorise.
+  /// PDF officiel (byte[]) - afficher uniquement si exportPdfAutorise.
   Future<Uint8List> exportPdf(String id) async {
     final response = await _client.downloadBytes('/autorisations-travail/$id/export-pdf');
     return Uint8List.fromList(response.data ?? []);
   }
+}
+
+/// Readiness check §8.3 - ReadinessCheckResponse backend.
+class ReadinessCheck {
+  final bool? ready;
+  final String? numero;
+  final String? zone;
+  final String? ceeeNomComplet;
+  final List<ReadinessCheckItem> checks;
+  final int passedCount;
+  final int totalCount;
+
+  const ReadinessCheck({
+    this.ready,
+    this.numero,
+    this.zone,
+    this.ceeeNomComplet,
+    this.checks = const [],
+    this.passedCount = 0,
+    this.totalCount = 0,
+  });
+
+  factory ReadinessCheck.fromJson(Map<String, dynamic> json) =>
+      ReadinessCheck(
+        ready: json['ready'] as bool?,
+        numero: json['numero']?.toString(),
+        zone: json['zone']?.toString(),
+        ceeeNomComplet: json['ceeeNomComplet']?.toString(),
+        checks: (json['checks'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(ReadinessCheckItem.fromJson)
+            .toList(),
+        passedCount: json['passedCount'] as int? ?? 0,
+        totalCount: json['totalCount'] as int? ?? 0,
+      );
+}
+
+/// Un contrôle unitaire du readiness check - ReadinessCheckItem backend.
+class ReadinessCheckItem {
+  final String? code;
+  final String? label;
+  final bool passed;
+  final bool blocking;
+  final String? message;
+
+  const ReadinessCheckItem({
+    this.code,
+    this.label,
+    this.passed = false,
+    this.blocking = false,
+    this.message,
+  });
+
+  factory ReadinessCheckItem.fromJson(Map<String, dynamic> json) =>
+      ReadinessCheckItem(
+        code: json['code']?.toString(),
+        label: json['label']?.toString(),
+        passed: json['passed'] as bool? ?? false,
+        blocking: json['blocking'] as bool? ?? false,
+        message: json['message']?.toString(),
+      );
 }

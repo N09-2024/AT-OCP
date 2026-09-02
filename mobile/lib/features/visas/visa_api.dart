@@ -1,4 +1,4 @@
-/// API visas — endpoints réels du backend (VisaController, préfixe /api/visa) :
+/// API visas - endpoints réels du backend (VisaController, préfixe /api/visa) :
 ///   POST /visa                          (VisaRequest{autorisationTravailId, commentaire, ordre})
 ///   POST /visa/{id}/sign                (multipart: signature PNG + commentaire)
 ///   GET  /visa/at/{atId}

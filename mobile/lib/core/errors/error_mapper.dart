@@ -38,7 +38,7 @@ Failure _fromResponse(Response? response) {
       return ApiFailure(message ?? 'Requête invalide. Vérifiez les informations saisies.', statusCode: 400);
     case 401:
       // Le backend envoie des messages utiles en 401 (ex. login :
-      // "Identifiants invalides ou compte verrouillé") — les conserver.
+      // "Identifiants invalides ou compte verrouillé") - les conserver.
       return ApiFailure(message ?? 'Non authentifié. Veuillez vous reconnecter.', statusCode: 401);
     case 403:
       return const ApiFailure("Vous n'avez pas les droits nécessaires pour cette action.", statusCode: 403);

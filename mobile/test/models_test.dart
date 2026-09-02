@@ -1,4 +1,4 @@
-// Tests des modèles — parsing des réponses JSON réelles du backend.
+// Tests des modèles - parsing des réponses JSON réelles du backend.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ocp_at_mobile/features/at/data/models/autorisation_travail.dart';
@@ -92,7 +92,7 @@ void main() {
       expect(StatutAt.libelle('BROUILLON'), 'Brouillon');
       expect(StatutAt.libelle('AT_VALIDEE'), 'AT validée');
       expect(StatutAt.libelle('INCONNU'), 'INCONNU');
-      expect(StatutAt.libelle(null), '—');
+      expect(StatutAt.libelle(null), '-');
     });
 
     test('verrou détecté', () {

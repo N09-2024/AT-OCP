@@ -1,4 +1,4 @@
-/// Connectivité — détection de la perte de réseau (spec §35, phase 1 :
+/// Connectivité - détection de la perte de réseau (spec §35, phase 1 :
 /// message global + reprise après reconnexion, PAS de synchronisation offline).
 /// Les données en cours de saisie sont de toute façon conservées par
 /// AtFormNotifier (état mémoire + flush à la reconnexion via retry).

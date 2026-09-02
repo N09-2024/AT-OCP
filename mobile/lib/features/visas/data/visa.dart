@@ -1,4 +1,4 @@
-/// Modèle Visa — reflète VisaResponse du backend.
+/// Modèle Visa - reflète VisaResponse du backend.
 /// Le hash de signature n'est jamais exposé par l'API (seul signaturePresente).
 library;
 
@@ -17,7 +17,7 @@ class StatutVisa {
     signature: 'Signature',
   };
 
-  static String libelle(String? s) => s == null ? '—' : libelles[s] ?? s;
+  static String libelle(String? s) => s == null ? '-' : libelles[s] ?? s;
 }
 
 class VisaUtilisateur {
@@ -61,7 +61,7 @@ class Visa {
   final String? utilisateurNomComplet;
   final String? autorisationTravailId;
 
-  /// Rôle direct du visa (ex: "CEEE", "HCEP") — peut venir du backend
+  /// Rôle direct du visa (ex: "CEEE", "HCEP") - peut venir du backend
   final String? role;
 
   /// Objet utilisateur signataire enrichi (avec ses rôles)

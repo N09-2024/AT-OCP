@@ -111,10 +111,10 @@ export function useNotifications(): UseNotificationsReturn {
         });
       },
       onDisconnect: () => {
-        // Silent disconnect — polling will handle continuity
+        // Silent disconnect - polling will handle continuity
       },
       onStompError: () => {
-        // Silent error — polling fallback is active
+        // Silent error - polling fallback is active
       },
     });
 
@@ -122,7 +122,7 @@ export function useNotifications(): UseNotificationsReturn {
       client.activate();
       stompClientRef.current = client;
     } catch {
-      // WebSocket unavailable — polling covers it
+      // WebSocket unavailable - polling covers it
     }
 
     return () => {

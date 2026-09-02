@@ -1,4 +1,4 @@
-/// Providers du dashboard — GET /api/dashboard/stats
+/// Providers du dashboard - GET /api/dashboard/stats
 /// et compteur notifications non lues (GET /api/notifications/count-unread).
 library;
 
@@ -25,7 +25,7 @@ final dashboardProvider = FutureProvider.autoDispose<DashboardData>((ref) async 
   }
 });
 
-/// Compteur de notifications non lues — rafraîchi périodiquement (polling,
+/// Compteur de notifications non lues - rafraîchi périodiquement (polling,
 /// pas de temps réel côté backend).
 final unreadCountProvider = StateNotifierProvider<UnreadCountNotifier, int>((ref) {
   return UnreadCountNotifier(ref.watch(notificationApiProvider));

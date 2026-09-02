@@ -1,4 +1,4 @@
-/// Historique d'une AT — GET /autorisations-travail/{id}/historique.
+/// Historique d'une AT - GET /autorisations-travail/{id}/historique.
 /// Champs réels de HistoriqueATResponse : dateAction, action, ancienStatut,
 /// nouveauStatut, commentaire, utilisateurNomComplet.
 library;

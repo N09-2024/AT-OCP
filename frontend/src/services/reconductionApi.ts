@@ -32,7 +32,7 @@ export interface ReconductionResponse {
 }
 
 export const reconductionApi = {
-  /** CEEE — Demander une reconduction */
+  /** CEEE - Demander une reconduction */
   demander: async (payload: DemandeReconductionRequest): Promise<ReconductionResponse> => {
     const { data } = await apiClient.post<ReconductionResponse>(
       `/reconductions`,
@@ -41,7 +41,7 @@ export const reconductionApi = {
     return data;
   },
 
-  /** HMEP — Décider d'une demande de reconduction */
+  /** HMEP - Décider d'une demande de reconduction */
   decider: async (id: string, payload: DecisionReconductionRequest): Promise<ReconductionResponse> => {
     const { data } = await apiClient.post<ReconductionResponse>(
       `/reconductions/${id}/decision`,
@@ -58,7 +58,7 @@ export const reconductionApi = {
     return data;
   },
 
-  /** HMEP — Liste des reconductions en attente de décision */
+  /** HMEP - Liste des reconductions en attente de décision */
   getPending: async (): Promise<ReconductionResponse[]> => {
     const { data } = await apiClient.get<ReconductionResponse[]>(
       `/reconductions/pending`

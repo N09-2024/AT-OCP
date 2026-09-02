@@ -108,7 +108,7 @@ export default function ReconductionDecisionPage() {
         🔄 Décisions de Reconduction
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Responsable OCP (HMEP) — Approuvez ou refusez les demandes de prolongation soumises par les CEEE.
+        Responsable OCP (HMEP) - Approuvez ou refusez les demandes de prolongation soumises par les CEEE.
       </Typography>
 
       {loading ? (
@@ -193,8 +193,8 @@ export default function ReconductionDecisionPage() {
                   icon={r.statut === 'APPROVED' ? <CheckCircleIcon /> : <CancelIcon />}
                 >
                   {r.statut === 'APPROVED'
-                    ? `Approuvée le ${r.dateDecision ? new Date(r.dateDecision).toLocaleString('fr-FR') : '—'} par ${r.decisionParPrenom} ${r.decisionParNom}`
-                    : `Refusée — Motif : ${r.motifRefus}`}
+                    ? `Approuvée le ${r.dateDecision ? new Date(r.dateDecision).toLocaleString('fr-FR') : '-'} par ${r.decisionParPrenom} ${r.decisionParNom}`
+                    : `Refusée - Motif : ${r.motifRefus}`}
                 </Alert>
               )}
             </Paper>
@@ -218,7 +218,7 @@ export default function ReconductionDecisionPage() {
             <>
               <Alert severity={dialogMode === 'approve' ? 'success' : 'warning'} sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  AT <strong>{selected.atNumero}</strong> — Nouvelle échéance demandée :{' '}
+                  AT <strong>{selected.atNumero}</strong> - Nouvelle échéance demandée :{' '}
                   <strong>{new Date(selected.nouvelleDateFin).toLocaleString('fr-FR')}</strong>
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 0.5 }}>

@@ -1,6 +1,6 @@
-/// Modèle Dashboard — reflète DashboardDataResponse du backend.
+/// Modèle Dashboard - reflète DashboardDataResponse du backend.
 /// NB : AtSummaryDto possede un champ texte "installation" (residu historique
-/// rempli avec le nom de l'equipement) — conserve tel quel pour compatibilite,
+/// rempli avec le nom de l'equipement) - conserve tel quel pour compatibilite,
 /// jamais utilise comme entite.
 library;
 

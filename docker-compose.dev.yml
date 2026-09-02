@@ -21,7 +21,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # AI Microservice (FastAPI - CrewAI / LangChain) — dev avec hot-reload
+  # AI Microservice (FastAPI - CrewAI / LangChain) - dev avec hot-reload
   ai-service:
     build:
       context: ./ai-service

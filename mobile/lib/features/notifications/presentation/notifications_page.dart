@@ -1,4 +1,4 @@
-/// Notifications — GET /api/notifications (paginé), PUT /{id}/read, PUT /read-all.
+/// Notifications - GET /api/notifications (paginé), PUT /{id}/read, PUT /read-all.
 /// Affichage lues/non lues, marquage individuel et global.
 library;
 
@@ -10,11 +10,17 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_date.dart';
 import '../../../core/widgets/states.dart';
 import '../data/notification.dart';
+import '../notification_api.dart';
 import '../../dashboard/presentation/dashboard_providers.dart';
 
-/// Extrait une route GoRouter du champ `lien` backend (ex. "/at/abc123",
-/// "at/abc123", "/autorisations/abc123" ou une URL web avec fragment "#/at/abc123").
-/// Retourne null si non exploitable ou hors périmètre mobile.
+/// Traduit le champ `lien` backend en route mobile réelle, comme le web route
+/// ses notifications. Liens émis côté serveur et leur équivalent mobile :
+///   /autorisations/{id}                      → /at/{id}
+///   /autorisations/{id}/editer?mode=viser    → /at/{id}/visas  (visa CEEE)
+///   /at/{id}/signature-ceee                  → /at/{id}/visas
+///   /visas/validation/{id}?role=…            → /at/{id}/visas  (visa HC/HM)
+///   /receptions?atId={id}                    → /at/{id}/reception
+/// Retourne null si le lien n'a pas d'équivalent mobile (jamais de push cassé).
 String? routeFromLien(String? lien) {
   if (lien == null || lien.trim().isEmpty) return null;
   var l = lien.trim();
@@ -30,19 +36,39 @@ String? routeFromLien(String? lien) {
     l = uri.path;
   }
 
-  // Nettoyage : query string + slash initial.
-  final queryIndex = l.indexOf('?');
-  if (queryIndex >= 0) l = l.substring(0, queryIndex);
-  if (!l.startsWith('/')) l = '/$l';
+  final uri = Uri.tryParse(l);
+  if (uri == null) return null;
+  final path = uri.path;
+  final lower = path.toLowerCase();
+  final query = uri.queryParameters;
 
-  // Seules les routes connues de l'app mobile sont suivies.
-  final lower = l.toLowerCase();
-  if (lower.startsWith('/autorisations/')) {
-    final id = l.substring('/autorisations/'.length).split('/').first;
-    return id.isNotEmpty ? '/at/$id' : null;
+  String premierSegment(String prefixe) {
+    final reste = path.substring(prefixe.length);
+    final id = reste.split('/').first;
+    return id;
   }
-  if (lower.startsWith('/at/') || lower == '/notifications' || lower.startsWith('/permis/')) {
-    return l;
+
+  // Détail / édition / visa d'une AT web.
+  if (lower.startsWith('/autorisations/')) {
+    final id = premierSegment('/autorisations/');
+    if (id.isEmpty) return null;
+    return lower.contains('/editer') || query.containsKey('mode')
+        ? '/at/$id/visas'
+        : '/at/$id';
+  }
+  if (lower.startsWith('/at/')) {
+    final id = premierSegment('/at/');
+    if (id.isEmpty) return null;
+    return '/at/$id/visas';
+  }
+  if (lower.startsWith('/visas/validation/')) {
+    final id = premierSegment('/visas/validation/');
+    return id.isNotEmpty ? '/at/$id/visas' : null;
+  }
+  // Réception conjointe : /receptions?atId=xxx.
+  if (lower.startsWith('/receptions')) {
+    final atId = query['atId'];
+    return (atId != null && atId.isNotEmpty) ? '/at/$atId/reception' : null;
   }
   return null;
 }
@@ -96,24 +122,47 @@ class NotificationsPage extends ConsumerWidget {
                     final n = items[index];
                     return _NotificationTile(
                       notification: n,
-                      onTap: () async {
-                        if (!n.lu) {
-                          await api.markAsRead(n.id);
-                          ref.invalidate(notificationsProvider);
-                          ref.read(unreadCountProvider.notifier).decrement();
-                        }
-                        // Navigation via le champ lien si exploitable.
-                        final route = routeFromLien(n.lien);
-                        if (route != null && context.mounted) {
-                          context.push(route);
-                        }
-                      },
+                      onTap: () => _ouvrirNotification(context, ref, api, n),
                     );
                   },
                 ),
               ),
       ),
     );
+  }
+
+  /// Ouverture d'une notification : marquage lu (non bloquant) puis navigation
+  /// vers la route mobile correspondant au champ `lien`. Toute erreur réseau ou
+  /// de navigation est interceptée et affichée proprement (jamais de crash).
+  Future<void> _ouvrirNotification(
+    BuildContext context,
+    WidgetRef ref,
+    NotificationApi api,
+    Notification n,
+  ) async {
+    if (!n.lu) {
+      try {
+        await api.markAsRead(n.id);
+        ref.invalidate(notificationsProvider);
+        ref.read(unreadCountProvider.notifier).decrement();
+      } catch (_) {
+        // Le marquage lu ne doit jamais empêcher l'ouverture : on continue.
+      }
+    }
+
+    final route = routeFromLien(n.lien);
+    if (route == null || !context.mounted) return;
+    try {
+      await context.push(route);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: OcpColors.errorSoft,
+          content: Text('Impossible d\'ouvrir la cible : ${n.titre ?? 'notification'}.'),
+        ),
+      );
+    }
   }
 }
 

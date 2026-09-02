@@ -164,7 +164,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-      {/* Route publique — Vérification QR Code (sans authentification) */}
+      {/* Route publique - Vérification QR Code (sans authentification) */}
       <Route path="/verification/:numero" element={<VerificationPublicPage />} />
       <Route path="/verification" element={<VerificationPublicPage />} />
 
@@ -225,7 +225,7 @@ export default function AppRoutes() {
         {/* Archives & PDF */}
         <Route path="archives" element={<ArchiveListPage />} />
 
-        {/* HMEP — Décisions de reconduction */}
+        {/* HMEP - Décisions de reconduction */}
         <Route
           path="reconductions"
           element={

@@ -1,4 +1,4 @@
-/// API notifications + dashboard — endpoints réels du backend :
+/// API notifications + dashboard - endpoints réels du backend :
 ///   GET  /notifications?page=&size=          (Page)
 ///   GET  /notifications/count-unread         → {count}
 ///   PUT  /notifications/{id}/read
@@ -18,7 +18,9 @@ class NotificationApi {
   Future<List<Notification>> findAll({int page = 0, int size = 20}) async {
     final response = await _client.get<Map<String, dynamic>>(
       '/notifications',
-      queryParameters: {'page': page, 'size': size},
+      // Tri identique au web (NotificationService.getMyNotifications) :
+      // les plus récentes en premier.
+      queryParameters: {'page': page, 'size': size, 'sort': 'dateCreation,desc'},
     );
     final pageData = Page.fromJson(response.data!, Notification.fromJson);
     return pageData.content;

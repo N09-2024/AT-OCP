@@ -1,4 +1,4 @@
-/// Providers des référentiels — toutes les données proviennent du backend
+/// Providers des référentiels - toutes les données proviennent du backend
 /// (aucune liste codée en dur). autoDispose + cache pendant le watch.
 library;
 

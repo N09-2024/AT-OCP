@@ -56,4 +56,31 @@ class AssistantApi {
       return AiChatResponse.fromJson(res.data!);
     }
   }
+
+  /// Contrôle IA de complétude avant soumission CEEP - identique au web
+  /// (iaApi.controlerDossier → POST /ia/controler-dossier).
+  /// Réponse : {complet: bool, alertes: [String], rapport?: String, ...}.
+  Future<Map<String, dynamic>> controlerDossier({
+    String? description,
+    required bool visiteFaite,
+    required int nbRisques,
+    required int nbMesures,
+    required int nbEpis,
+    required int nbPermis,
+    required bool sectionFRenseignee,
+  }) async {
+    final res = await _client.post<Map<String, dynamic>>(
+      '/ia/controler-dossier',
+      body: {
+        'description': ?description,
+        'visiteFaite': visiteFaite,
+        'nbRisques': nbRisques,
+        'nbMesures': nbMesures,
+        'nbEpis': nbEpis,
+        'nbPermis': nbPermis,
+        'sectionFRenseignee': sectionFRenseignee,
+      },
+    );
+    return res.data ?? const {};
+  }
 }

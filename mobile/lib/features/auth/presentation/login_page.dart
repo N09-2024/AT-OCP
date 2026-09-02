@@ -1,4 +1,4 @@
-/// Écran de connexion — POST /api/auth/login {email, motDePasse}.
+/// Écran de connexion - POST /api/auth/login {email, motDePasse}.
 /// Validation des champs, affichage des erreurs métier, redirection après login.
 library;
 
@@ -102,7 +102,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'OCP — Sécurité & HSE',
+                      'OCP - Sécurité & HSE',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: OcpColors.slate),
                     ),

@@ -1,20 +1,18 @@
-/// Rôles EFFECTIFS de l'utilisateur POUR UNE AT donnée — résolution contextuelle.
+/// Rôles EFFECTIFS de l'utilisateur POUR UNE AT donnée - résolution contextuelle.
 ///
 /// Les rôles ne se déduisent pas seulement des rôles globaux du compte : ils sont
 /// liés à l'AT (propriété du brouillon, affectations Section G, service exécutant).
-/// Un utilisateur = des rôles précis sur CETTE AT ; le CEEP de l'AT ne voit jamais
-/// les boutons CEEE et réciproquement (les services propriétaire et exécutant sont
-/// forcément différents — règle backend).
+/// Un utilisateur = des rôles précis sur CETTE AT ; le CEEP du dossier ne voit
+/// jamais les boutons CEEE et réciproquement (exclusivité du couple CEEP/CEEE).
 ///
-/// Règles de liaison (alignées backend `AutorisationTravailServiceImpl` / `VisaServiceImpl`) :
-/// - ADMIN ......................... tous les droits (identique web).
-/// - CEEP de CETTE AT .............. créateur/propriétaire du brouillon, ou nommé
-///   en Section G (`g1NomCeep`), ou rôle synthétique CE non-exécutant. Un CEEP
-///   strict qui n'est pas propriétaire de l'AT est spectateur (le backend refuse
-///   de toute façon : « Seul le CEEP rédacteur de cette AT peut modifier »).
-/// - CEEE de CETTE AT .............. nommé en Section G (`g1NomCeee`, liste possible
-///   « Prenom Nom / Prenom Nom »), ou chef d'équipe (CEEE strict ou CE synthétique)
-///   dont le service EST le service exécutant de l'AT.
+/// Règles de liaison (web-parité fail-open ; les garde-fous serveur
+/// `RoleUtils` / `ATContextService` / `VisaServiceImpl` restent l'arbitre) :
+/// - ADMIN ......................... tous les droits.
+/// - CEEP de CETTE AT .............. créateur/propriétaire du brouillon, nommé
+///   en Section G (`g1NomCeep`), ou rôle CEEP strict non-exécutant sur l'AT.
+/// - CEEE de CETTE AT .............. nommé en Section G (`g1NomCeee`, liste
+///   « Prenom Nom / Prenom Nom »), ou rôle CEEE strict / CE synthétique tant que
+///   cette personne n'est pas le CEEP du dossier.
 /// - HCEP / HCEE ................... rôles globaux stricts, ou HC synthétique
 ///   désambiguïisé par le service (exécutant → HCEE, sinon HCEP).
 /// - HMEP / HMEE ................... rôles globaux stricts, ou HM synthétique
@@ -78,6 +76,7 @@ class AtRoles {
     final isAdmin = userRoles.contains('ADMIN');
 
     // Rôles stricts & synthétiques du compte (identique web)
+    final isCeepStrict = userRoles.contains('CEEP');
     final isCeeeStrict = userRoles.contains('CEEE');
     final isHcepStrict = userRoles.contains('HCEP');
     final isHceeStrict = userRoles.contains('HCEE');
@@ -94,20 +93,23 @@ class AtRoles {
     final isAssignedAsCeee = _nomDansListe(at.g1NomCeee, user.nomComplet);
     final isExecutantService =
         _serviceLie(user.service?.nomService, at.servicesIntervenants);
+    final isCeepDuDossier = isCreatorOrOwner || isAssignedAsCeep;
 
-    // CEEE de CETTE AT : nommé en Section G, ou chef d'équipe (CEEE strict / CE
-    // synthétique) rattaché au service exécutant de l'AT.
+    // CEEE de CETTE AT - exclusif du CEEP du dossier :
+    // nommé en Section G, ou rôle CEEE strict / CE synthétique tant que cette
+    // personne n'est pas le CEEP du dossier (règle web fail-open : un CEEE qui
+    // n'est pas le CEEP de l'AT agit comme CEEE, même si le libellé de service
+    // diffère ; les garde-fous serveur restent l'arbitre).
     final isCeee = isAdmin ||
         isAssignedAsCeee ||
-        ((isCeeeStrict || isCeSynth) && isExecutantService);
+        ((isCeeeStrict || isCeSynth) && !isCeepDuDossier);
 
-    // CEEP de CETTE AT : propriétaire du brouillon ou nommé en Section G.
-    // Exclusif du CEEE (le service propriétaire ≠ service exécutant) : un
-    // exécutant de l'AT ne peut pas être son CEEP.
+    // CEEP de CETTE AT - exclusif du CEEE :
+    // propriétaire du brouillon, nommé en Section G, ou rôle CEEP strict
+    // tant que cette personne n'est pas liée à l'AT comme exécutant (CEEE).
     final isCeep = isAdmin ||
-        isCreatorOrOwner ||
-        isAssignedAsCeep ||
-        (isCeSynth && !isCeee && !isExecutantService);
+        isCeepDuDossier ||
+        ((isCeepStrict || isCeSynth) && !isCeee && !isExecutantService);
 
     // Hors Cadre / Haute Maîtrise : rôles hiérarchiques non affectés par AT ;
     // rôles synthétiques HC/HM désambiguïsés par le service exécutant.

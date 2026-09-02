@@ -1,4 +1,4 @@
-/// Photos d'une AT — les photos vivent sur les visites préalables
+/// Photos d'une AT - les photos vivent sur les visites préalables
 /// (filtrées par documentSourceId) et la réception des travaux.
 /// Ajout via caméra/galerie, prévisualisation, suppression avant/après envoi.
 library;

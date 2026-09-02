@@ -1,4 +1,4 @@
-/// Visas et Signatures officielles d'une AT — Conforme au Standard OCP S-HSE-SEC-31 Section G
+/// Visas et Signatures officielles d'une AT - Conforme au Standard OCP S-HSE-SEC-31 Section G
 /// CIRCUIT OFFICIEL : 1.CEEP → 2.CEEE → 3.HCEP → 4.HCEE → 5.HMEP → 6.HMEE
 /// - Rôles EFFECTIFS par AT (at_roles.dart) : chaque bouton n'apparaît que pour
 ///   le rôle lié à CETTE AT (CEEP propriétaire, CEEE du service exécutant, etc.)
@@ -47,11 +47,12 @@ class AtVisasPage extends ConsumerWidget {
     final at = detailAsync.valueOrNull;
 
     // ── Rôles EFFECTIFS pour CETTE AT (propriété, Section G, service exécutant)
-    // — voir at_roles.dart. Un bouton CEEE n'apparaît que pour le CEEE de cette
-    // AT, jamais pour son CEEP (et réciproquement). ──
-    final roles = at == null
-        ? const AtRoles.vide()
-        : AtRoles.resolve(session: session, at: at);
+    // - voir at_roles.dart. Résolus dès l'ouverture (fallback AT vide) pour que
+    // les boutons du rôle strict n'attendent pas le chargement du détail. ──
+    final roles = AtRoles.resolve(
+      session: session,
+      at: at ?? AutorisationTravail(id: atId),
+    );
 
     bool autorisePour(String role) => roles.autorisePour(role);
 
@@ -62,7 +63,7 @@ class AtVisasPage extends ConsumerWidget {
         foregroundColor: OcpColors.white,
         elevation: 0,
         title: Text(
-          at?.numero != null ? 'Visas — ${at!.numero}' : 'Visas & Signatures',
+          at?.numero != null ? 'Visas - ${at!.numero}' : 'Visas & Signatures',
           style: const TextStyle(
             fontFamily: 'SpaceGrotesk',
             fontWeight: FontWeight.w700,
@@ -155,12 +156,12 @@ class AtVisasPage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        '1. Visa CEEP (Demandeur Propriétaire — signe l\'AT le premier)\n'
+                        '1. Visa CEEP (Demandeur Propriétaire - signe l\'AT le premier)\n'
                         '2. Visa CEEE (Chef d\'Équipe Exécutant Intervenant)\n'
                         '3. Visa HCEP (Hors Cadre Propriétaire)\n'
                         '4. Visa HCEE (Hors Cadre Exécutant)\n'
                         '5. Visa HMEP (Haute Maîtrise Propriétaire)\n'
-                        '6. Visa HMEE (Haute Maîtrise Exécutante — Validation finale & Déblocage PDF)',
+                        '6. Visa HMEE (Haute Maîtrise Exécutante - Validation finale & Déblocage PDF)',
                         style: TextStyle(fontSize: 12, color: OcpColors.ink, height: 1.4, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 4),
@@ -224,6 +225,12 @@ class AtVisasPage extends ConsumerWidget {
                     roleAction,
                     enPhaseBrouillon && roleAction == 'CEEP',
                   ),
+                  onRefuse: (roleAction == 'HCEP' ||
+                          roleAction == 'HCEE' ||
+                          roleAction == 'HMEP' ||
+                          roleAction == 'HMEE')
+                      ? () => _refuserRole(context, ref, roleAction)
+                      : null,
                 ),
                 const SizedBox(height: 12),
               ],
@@ -282,6 +289,12 @@ class AtVisasPage extends ConsumerWidget {
         signaturePng: result.pngBytes,
         commentaire: visa.commentaire,
       );
+      // Identique au web : la signature d'un visa Hors Cadre / Haute Maîtrise
+      // déclenche la VALIDATION de l'AT (statut VALIDEE → débloque le démarrage).
+      final role = roleDeVisa(visa);
+      if (role == 'HCEP' || role == 'HCEE' || role == 'HMEP' || role == 'HMEE') {
+        await ref.read(atApiProvider).valider(atId);
+      }
       ref.invalidate(visasProvider(atId));
       ref.invalidate(atDetailProvider(atId));
       if (context.mounted) {
@@ -292,6 +305,71 @@ class AtVisasPage extends ConsumerWidget {
           ),
         );
       }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: OcpColors.errorSoft,
+            content: Text(mapDioError(e).message),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Refus d'une AT par un rôle HC/HM - identique au web
+  /// (ValidationOCPPage.handleRefuser : motif obligatoire + visa `Refus:` + reject).
+  Future<void> _refuserRole(BuildContext context, WidgetRef ref, String role) async {
+    final motifController = TextEditingController();
+    final conf = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("Refuser l'AT",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: TextField(
+            controller: motifController,
+            maxLines: 3,
+            autofocus: true,
+            onChanged: (_) => setDialogState(() {}),
+            decoration: const InputDecoration(
+              labelText: 'Motif du refus *',
+              hintText: 'Préciser le motif du rejet de l\'AT...',
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: OcpColors.errorSoft),
+              onPressed: motifController.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.pop(ctx, true),
+              child: const Text('Confirmer le refus'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (conf != true || !context.mounted) return;
+
+    try {
+      final ok = await refuserAt(
+        context,
+        ref,
+        atId,
+        role: role,
+        motif: motifController.text.trim(),
+      );
+      if (!ok || !context.mounted) return;
+      ref.invalidate(visasProvider(atId));
+      ref.invalidate(atDetailProvider(atId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: OcpColors.errorSoft,
+          content: Text('Autorisation de Travail rejetée.'),
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -318,11 +396,16 @@ class AtVisasPage extends ConsumerWidget {
       if (avecSoumission) {
         final ok = await signerVisaCeepEtSoumettre(context, ref, atId);
         if (!ok || !context.mounted) return;
-        message = 'Visa CEEP apposé — AT soumise et circuit des visas initialisé.';
+        message = 'Visa CEEP apposé - AT soumise et circuit des visas initialisé.';
       } else {
         await creerEtSignerVisa(context, ref, atId, role);
         if (!context.mounted) return;
-        message = 'Visa $role apposé et scellé avec succès.';
+        // Identique au web : après visa HC/HM l'AT est validée (statut VALIDEE).
+        final avecValidation =
+            role == 'HCEP' || role == 'HCEE' || role == 'HMEP' || role == 'HMEE';
+        message = avecValidation
+            ? 'Visa $role apposé - AT validée avec succès.'
+            : 'Visa $role apposé et scellé avec succès.';
       }
       ref.invalidate(visasProvider(atId));
       ref.invalidate(atDetailProvider(atId));
@@ -398,16 +481,24 @@ class _AccuseReceptionCard extends StatelessWidget {
 
 /// Carte d'action pour le rôle dont c'est le tour dans le circuit :
 /// permet de créer ET signer son visa à la volée (même parcours que le web).
+/// Pour les rôles HC/HM : la signature VALIDE l'AT (statut VALIDEE, comme
+/// ValidationOCPPage) et un bouton « Refuser » est proposé avec motif.
 class _CarteSignatureRole extends StatelessWidget {
   final String role;
   final bool avecSoumission;
   final VoidCallback onSign;
+  final VoidCallback? onRefuse;
 
   const _CarteSignatureRole({
     required this.role,
     required this.avecSoumission,
     required this.onSign,
+    this.onRefuse,
   });
+
+  static const Set<String> _rolesValidation = {'HCEP', 'HCEE', 'HMEP', 'HMEE'};
+
+  bool get _avecValidation => _rolesValidation.contains(role);
 
   @override
   Widget build(BuildContext context) {
@@ -436,7 +527,7 @@ class _CarteSignatureRole extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Étape $ordre — Visa ${libelleRoleVisa(role)}',
+                        'Étape $ordre - Visa ${libelleRoleVisa(role)}',
                         style: const TextStyle(
                           fontFamily: 'SpaceGrotesk',
                           fontWeight: FontWeight.w700,
@@ -448,7 +539,9 @@ class _CarteSignatureRole extends StatelessWidget {
                       Text(
                         avecSoumission
                             ? "C'est votre tour : signez l'AT (Visa CEEP) puis soumettez-la pour lancer le circuit des visas."
-                            : "C'est votre tour : créez et signez votre visa pour faire avancer le circuit.",
+                            : _avecValidation
+                                ? "C'est votre tour : signez votre visa pour VALIDER l'AT et la faire avancer (ou refusez-la avec motif)."
+                                : "C'est votre tour : créez et signez votre visa pour faire avancer le circuit.",
                         style: const TextStyle(fontSize: 11, color: OcpColors.ink, height: 1.3),
                       ),
                     ],
@@ -469,10 +562,29 @@ class _CarteSignatureRole extends StatelessWidget {
               label: Text(
                 avecSoumission
                     ? "Signer l'AT (Visa CEEP) & Soumettre l'AT"
-                    : "Signer l'AT (Visa $role — Étape $ordre)",
+                    : _avecValidation
+                        ? "Signer & Valider l'AT (Visa $role - Étape $ordre)"
+                        : "Signer l'AT (Visa $role - Étape $ordre)",
                 style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               ),
             ),
+            if (onRefuse != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: OcpColors.errorSoft,
+                  side: const BorderSide(color: OcpColors.errorSoft),
+                  minimumSize: const Size.fromHeight(42),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: onRefuse,
+                icon: const Icon(Icons.block_rounded, size: 18),
+                label: const Text(
+                  "Refuser l'AT (motif obligatoire)",
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+              ),
+            ],
           ],
         ),
       ),

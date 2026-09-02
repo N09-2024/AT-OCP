@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Flutter SDK (Stable channel) — version alignée sur le poste de dev
+# Install Flutter SDK (Stable channel) - version alignée sur le poste de dev
 ARG FLUTTER_VERSION=3.47.2
 RUN git clone --depth 1 --branch ${FLUTTER_VERSION} https://github.com/flutter/flutter.git ${FLUTTER_HOME} \
     && flutter config --no-analytics \
@@ -78,7 +78,7 @@ FROM flutter-base AS android-builder
 ENV ANDROID_SDK_ROOT=/opt/android-sdk
 ENV PATH="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools:${PATH}"
 
-# JDK 21 (Adoptium Temurin) : requis par AGP 9 / Kotlin intégré — cible JVM 21
+# JDK 21 (Adoptium Temurin) : requis par AGP 9 / Kotlin intégré - cible JVM 21
 # alignée sur le build local (le JDK 17 de Debian bookworm ne suffit pas).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         wget gpg apt-transport-https \

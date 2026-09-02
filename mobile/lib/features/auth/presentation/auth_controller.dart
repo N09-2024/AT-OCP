@@ -161,7 +161,7 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   );
 });
 
-/// Session courante (null si non connecté) — accès rapide pour l'UI et les gardes.
+/// Session courante (null si non connecté) - accès rapide pour l'UI et les gardes.
 final sessionProvider = Provider<AuthSession?>((ref) {
   final state = ref.watch(authControllerProvider);
   return state is AuthAuthenticated ? state.session : null;

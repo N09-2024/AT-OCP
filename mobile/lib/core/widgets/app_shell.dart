@@ -37,7 +37,7 @@ class AppShell extends ConsumerWidget {
                       child: Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          'Aucune connexion réseau — les données affichées peuvent '
+                          'Aucune connexion réseau - les données affichées peuvent '
                           'être obsolètes. Vos saisies sont conservées.',
                           style: TextStyle(color: OcpColors.white, fontSize: 12),
                         ),

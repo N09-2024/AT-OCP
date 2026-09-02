@@ -1,7 +1,7 @@
-/// API permis — endpoints réels du backend (PermisController, /api/permis) :
+/// API permis - endpoints réels du backend (PermisController, /api/permis) :
 ///   GET  /permis/at/{atId}
 ///   POST /permis                      (PermisRequest{typePermisId, estObligatoire, commentaire, autorisationTravailId})
-///   POST /permis/{id}/upload          (multipart "file" — PDF/PNG/JPEG/WEBP uniquement)
+///   POST /permis/{id}/upload          (multipart "file" - PDF/PNG/JPEG/WEBP uniquement)
 ///   GET  /permis/{id}/download        (byte[])
 ///   PUT  /permis/{id}/reanalyser      (analyse IA)
 ///   DELETE /permis/{id}
@@ -23,7 +23,7 @@ class StatutPermisVerif {
         conforme => 'Conforme',
         nonConforme => 'Non conforme',
         expire => 'Expiré',
-        _ => s ?? '—',
+        _ => s ?? '-',
       };
 }
 
@@ -100,7 +100,7 @@ class PermisApi {
     return Permis.fromJson(response.data!);
   }
 
-  /// Upload du fichier de permis — types MIME acceptés par le serveur :
+  /// Upload du fichier de permis - types MIME acceptés par le serveur :
   /// application/pdf, image/png, image/jpeg, image/webp.
   Future<void> uploadFichier(
     String permisId, {

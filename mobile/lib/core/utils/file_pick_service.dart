@@ -1,4 +1,4 @@
-/// Sélection de photos et documents — image_picker (caméra/galerie)
+/// Sélection de photos et documents - image_picker (caméra/galerie)
 /// et file_picker v12 (API statique). Validation locale des types MIME
 /// acceptés par le serveur (20 Mo max, PDF/PNG/JPEG/WEBP pour les permis).
 library;

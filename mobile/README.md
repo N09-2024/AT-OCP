@@ -1,8 +1,8 @@
-# OCP AT Mobile — Application Flutter
+# OCP AT Mobile - Application Flutter
 
 Application mobile de gestion des Autorisations de Travail (AT) et permis HSE OCP.
 Elle consomme **exclusivement** les API REST du backend Spring Boot existant
-(`../backend`) — aucune logique métier dupliquée côté mobile.
+(`../backend`) - aucune logique métier dupliquée côté mobile.
 
 > ⚠️ La notion « Installation » a été supprimée du projet : elle ne doit jamais
 > être réintroduite dans aucun modèle, écran ou filtre mobile.
@@ -103,10 +103,10 @@ porteurs du rôle** :
 | CEEE, HCEE, HMEE (côté E) | Zone **exécutante** de l'AT |
 | CEEP / CEEE désignés | Toujours inclus s'ils portent le rôle (même service sur autre zone) |
 | ADMIN, RESPONSABLE_EXTERIEUR | Diffusion globale par rôle (hors logique P/E) |
-| Aucun porteur du rôle sur la zone | **Aucune notification** (isolation garantie — pas de repli global) |
+| Aucun porteur du rôle sur la zone | **Aucune notification** (isolation garantie - pas de repli global) |
 
 Implémentation backend : `NotificationService.sendNotificationToRoleForAt(role, at, ...)`
-(`UtilisateurRepository.findActiveByRoleNomAndZoneId`) — 16 points d'émission migrés
+(`UtilisateurRepository.findActiveByRoleNomAndZoneId`) - 16 points d'émission migrés
 (soumission, validation/rejet, démarrage, fin travaux, reconduction, incident,
 réception, visas HCEP/HCEE/HMEP/HMEE). Un HCEP ne reçoit donc jamais les
 notifications destinées au HCEE d'une même AT, ni celles d'autres AT.
@@ -136,7 +136,7 @@ Override ponctuel : `--dart-define=API_BASE_URL=http://192.168.x.x:8080`.
 
 ## Endpoints consommés (source de vérité : backend)
 
-- `POST /api/auth/login` — `{email, motDePasse}` → tokens + utilisateur + rôles + permissions
+- `POST /api/auth/login` - `{email, motDePasse}` → tokens + utilisateur + rôles + permissions
 - `POST /api/auth/refresh-token`, `POST /api/auth/logout`, `GET /api/auth/me`
 - `GET /api/autorisations-travail?statut=&search=&page=&size=` (paginé)
 - `GET /api/autorisations-travail/{id}` (détail, `exportPdfAutorise`, verrou)
@@ -146,27 +146,27 @@ Rapport complet : `docs/RAPPORT_ANALYSE_MOBILE_FLUTTER.md`.
 
 ## Phases
 
-- [x] Phase 1 — Analyse du projet (rapport A→Q)
-- [x] Phase 2 — Initialisation Flutter (structure, thème, réseau, navigation, écrans de base)
-- [x] Phase 3 — Authentification (login/refresh/logout/restauration de session)
-- [x] Phase 4 — Dashboard (KPIs réels + accès rapides par permission)
-- [x] Phase 5 — Liste / recherche / filtres / détail AT (+ historique, visas, PDF)
-- [x] Phase 6 — Formulaire AT mobile en 9 étapes (Stepper)
-- [x] Phase 7 — Référentiels réels (zones P/E, risques, mesures, EPI, moyens d'accès, permis)
-- [x] Phase 8 — Auto-save (diff + debounce + anti-requêtes simultanées) et verrou d'édition
-- [x] Phase 9 — Photos (visite & réception : caméra/galerie, légende, suppression)
+- [x] Phase 1 - Analyse du projet (rapport A→Q)
+- [x] Phase 2 - Initialisation Flutter (structure, thème, réseau, navigation, écrans de base)
+- [x] Phase 3 - Authentification (login/refresh/logout/restauration de session)
+- [x] Phase 4 - Dashboard (KPIs réels + accès rapides par permission)
+- [x] Phase 5 - Liste / recherche / filtres / détail AT (+ historique, visas, PDF)
+- [x] Phase 6 - Formulaire AT mobile en 9 étapes (Stepper)
+- [x] Phase 7 - Référentiels réels (zones P/E, risques, mesures, EPI, moyens d'accès, permis)
+- [x] Phase 8 - Auto-save (diff + debounce + anti-requêtes simultanées) et verrou d'édition
+- [x] Phase 9 - Photos (visite & réception : caméra/galerie, légende, suppression)
       et permis complémentaires (création, upload multipart PDF/image, analyse IA)
-- [x] Phase 10 — Signature manuscrite des visas (PNG → multipart /visa/{id}/sign),
+- [x] Phase 10 - Signature manuscrite des visas (PNG → multipart /visa/{id}/sign),
       accusé de réception CEEE
-- [x] Phase 11 — Workflow complet selon statut réel : visite, rédaction, soumission,
+- [x] Phase 11 - Workflow complet selon statut réel : visite, rédaction, soumission,
       validation/rejet avec motif, démarrage intervention, fin travaux, reconduction
       (>24 h), incident, réception conjointe, clôture
-- [x] Phase 12 — Bandeau hors-ligne (connectivity_plus, saisies conservées),
+- [x] Phase 12 - Bandeau hors-ligne (connectivity_plus, saisies conservées),
       navigation depuis les notifications (champ `lien`), tests logique/modèles
       (payload AutoSaveRequest, mapping erreurs, dates, routes)
-- [x] Suite — interface TokenStorage testable, tests AuthController & widgets,
+- [x] Suite - interface TokenStorage testable, tests AuthController & widgets,
       icône placeholder + config flutter_launcher_icons/flutter_native_splash
-- [ ] À faire — remplacer l'icône placeholder par la version définitive OCP puis
+- [ ] À faire - remplacer l'icône placeholder par la version définitive OCP puis
       `dart run flutter_launcher_icons && dart run flutter_native_splash:create`,
       build release (keystore signé), tests providers supplémentaires
 

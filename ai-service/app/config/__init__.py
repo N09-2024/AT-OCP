@@ -7,7 +7,7 @@ compatibilité (app/llm.py : `from app.config import GOOGLE_API_KEY, GEMINI_MODE
 
 from app.config.settings import settings
 
-# Constantes historiques (utilisées par app/llm.py) — chaînes, jamais None.
+# Constantes historiques (utilisées par app/llm.py) - chaînes, jamais None.
 GOOGLE_API_KEY: str = settings.GOOGLE_API_KEY or ""
 GEMINI_MODEL: str = settings.LLM_MODEL
 

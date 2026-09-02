@@ -1,4 +1,4 @@
-# ANALYSE DU PROJET POUR FLUTTER — Phase 1
+# ANALYSE DU PROJET POUR FLUTTER - Phase 1
 
 > Rapport d'analyse du système existant (backend Spring Boot + frontend React) en vue du
 > développement de l'application mobile Flutter de gestion des Autorisations de Travail (AT) OCP.
@@ -30,7 +30,7 @@ Stockage fichiers : système de fichiers local (dossier uploads/), AUCUN MinIO/S
 **Cœur métier :**
 | Entité | Rôle |
 |---|---|
-| `AutorisationTravail` | L'AT (table `autorisations_travail`) — objet central |
+| `AutorisationTravail` | L'AT (table `autorisations_travail`) - objet central |
 | `DemandeIntervention` (DI) | Intervention ponctuelle, source possible d'une AT |
 | `OrdreTravail` (OT) | Intervention répétitive, source possible d'une AT |
 | `BonTravail` (BT) | Contrat OCP ↔ entreprise externe, source possible d'une AT |
@@ -87,14 +87,14 @@ Stockage fichiers : système de fichiers local (dossier uploads/), AUCUN MinIO/S
   moyensAccesIds, permisIds, typeDocumentSource, documentSourceId, documentSourceNumero,
   latitude, longitude, visiteCommentaire, visiteEffectuee, photoPath.
 - **VisaResponse** : id, dateVisa, dateSignature, statut, commentaire, ordre,
-  signaturePresente (bool — le hash n'est jamais exposé), adresseIP, utilisateurId,
+  signaturePresente (bool - le hash n'est jamais exposé), adresseIP, utilisateurId,
   utilisateurNomComplet, autorisationTravailId.
 - **NotificationResponse** : id, titre, message, dateCreation, dateLecture, lu, type, lien,
   utilisateurId.
 - **DashboardDataResponse** : kpis{autorisationsEnCours, visasEnAttente, permisActifs,
   receptionsEnAttente, totalArchives}, monthlyStats, statusDistribution, recentAutorisations.
 - **WorkflowResponse** : atId, atNumero, statutActuel, transitionsDisponibles[{action,
-  etatArrivee, roleAutorise, obligatoire}] — exploitable tel quel pour l'UI mobile.
+  etatArrivee, roleAutorise, obligatoire}] - exploitable tel quel pour l'UI mobile.
 - **ReadinessCheckResponse / ClosureReadinessResponse / ArchiveReadinessResponse** : listes de
   pré-conditions avant démarrage/clôture/archivage.
 
@@ -104,20 +104,20 @@ Stockage fichiers : système de fichiers local (dossier uploads/), AUCUN MinIO/S
 `POST /register`, `GET /me`.
 
 **AT (`/api`)** :
-- `POST /documents/{type}/{id}/creer-at` — créer l'AT depuis un DI/OT/BT ;
-- `POST /documents/{type}/{id}/classifier?niveau=2` — Étape 0, permission CLASSIFY_INTERVENTION (HCEP) ;
-- `POST /autorisations-travail` — création directe (brouillon vierge) ;
+- `POST /documents/{type}/{id}/creer-at` - créer l'AT depuis un DI/OT/BT ;
+- `POST /documents/{type}/{id}/classifier?niveau=2` - Étape 0, permission CLASSIFY_INTERVENTION (HCEP) ;
+- `POST /autorisations-travail` - création directe (brouillon vierge) ;
 - `PUT /autorisations-travail/{id}/accuser-reception-ceee` ;
-- `GET /autorisations-travail?statut=&search=&page=&size=&sort=` — liste paginée (Page<AutorisationTravailResponse>) ;
-- `GET /autorisations-travail/{id}` — détail ;
-- `PUT /autorisations-travail/{id}/autosave` — sauvegarde du brouillon ;
-- `PUT .../{id}/prendre-verrou` | `liberer-verrou` | `transferer-verrou` — verrou d'édition ;
+- `GET /autorisations-travail?statut=&search=&page=&size=&sort=` - liste paginée (Page<AutorisationTravailResponse>) ;
+- `GET /autorisations-travail/{id}` - détail ;
+- `PUT /autorisations-travail/{id}/autosave` - sauvegarde du brouillon ;
+- `PUT .../{id}/prendre-verrou` | `liberer-verrou` | `transferer-verrou` - verrou d'édition ;
 - Workflow : `POST .../{id}/submit` / `validate` / `reject {motif}` / `renew` / `close` /
   `demarrer-intervention` / `declarer-fin` / `visite` / `rediger` / `reconduire?depasse24h=` /
   `incident?motif=` / `reception-standard` ;
-- `GET .../{id}/historique` — List<HistoriqueATResponse> ;
-- `GET .../{id}/visas` — List<VisaResponse> ;
-- `GET .../{id}/export-pdf` — **byte[] PDF** (permission EXPORT_PDF, conditions métier vérifiées).
+- `GET .../{id}/historique` - List<HistoriqueATResponse> ;
+- `GET .../{id}/visas` - List<VisaResponse> ;
+- `GET .../{id}/export-pdf` - **byte[] PDF** (permission EXPORT_PDF, conditions métier vérifiées).
 
 **Cycle de vie (`/api/autorisations-travail/{id}`)** : `GET /intervention/readiness`,
 `POST /intervention/start`, `POST /intervention/end`, `GET /archive/readiness`.
@@ -130,7 +130,7 @@ Stockage fichiers : système de fichiers local (dossier uploads/), AUCUN MinIO/S
 
 **Dashboard** : `GET /api/dashboard/stats`.
 
-**Workflow** : `GET /api/workflow/{atId}` — transitions disponibles.
+**Workflow** : `GET /api/workflow/{atId}` - transitions disponibles.
 
 **Documents sources** : `/api/demandes-intervention`, `/api/ordres-travail`, `/api/bons-travail`
 (CRUD complet chacune).
@@ -164,7 +164,7 @@ Stockage fichiers : système de fichiers local (dossier uploads/), AUCUN MinIO/S
 `/actuator/health` (public), Swagger `/v3/api-docs` + `/swagger-ui`.
 
 > Controllers vides (stubs `/api/s`) : `ATController`, `FileController`, `AuditController`,
-> `HistoriqueATController` — la vraie logique vit dans les controllers listés ci-dessus.
+> `HistoriqueATController` - la vraie logique vit dans les controllers listés ci-dessus.
 
 ## E. Authentification
 
@@ -177,7 +177,7 @@ Stockage fichiers : système de fichiers local (dossier uploads/), AUCUN MinIO/S
   (`app.jwt.expiration-ms=86400000`, `refresh-expiration-ms=604800000`).
 - Compte verrouillé après 5 tentatives (`max-login-attempts: 5`).
 - Réponses 401/403 : `AuthEntryPointJwt` / `RestAccessDeniedHandler` → JSON d'erreur exploitable.
-- CORS ouvert (`*`) — compatible app mobile.
+- CORS ouvert (`*`) - compatible app mobile.
 - **Comptes de test (DataInitializer)** : `admin@ocp.ma` / `Admin@123` (ADMIN) ; `ceep@`,
   `ceee@`, `hcep@`, `hcee@`, `hmep@`, `hmee@ocp.ma` / `Password123!`.
 - ⚠️ Le client web React se déconnecte sur 401 sans tenter le refresh ; l'app mobile
@@ -189,7 +189,7 @@ Stockage fichiers : système de fichiers local (dossier uploads/), AUCUN MinIO/S
 génériques `CE`, `HM`, `HC` + `RESPONSABLE_EXTERIEUR` (entreprise extérieure, BT/permis uniquement).
 
 Principe **P/E contextuel** : la position Propriétaire/Exécutant dépend du territoire de l'AT
-(comparaison `utilisateur.service.zone` ↔ `zoneProprietaire`/`zoneExecutante` de l'AT) —
+(comparaison `utilisateur.service.zone` ↔ `zoneProprietaire`/`zoneExecutante` de l'AT) -
 résolue par `RoleUtils.userHasRolePattern` et `ATContextService`, jamais côté client.
 Le DTO AT expose `zoneProprietaireNom` / `zoneExecutanteNom` pour l'affichage.
 
@@ -230,11 +230,11 @@ ANNULATION possible depuis la plupart des états ; incident → retour visite
 ```
 Endpoint d'aide : `GET /api/workflow/{atId}` renvoie les transitions disponibles avec rôle autorisé.
 
-**Niveaux** : `NiveauIntervention` = NIVEAU_1, NIVEAU_2 — fixés à l'Étape 0 par HCEP
+**Niveaux** : `NiveauIntervention` = NIVEAU_1, NIVEAU_2 - fixés à l'Étape 0 par HCEP
 (`classifier?niveau=`), via le référentiel `ClassificationIntervention`.
 
 **Auto-save / verrou** : `PUT /{id}/autosave` (AutoSaveRequest complet) ; verrou
-`etatVerrou` LIBRE/EN_COURS_EDITION avec `proprietaireBrouillon` — prendre/libérer/transférer
+`etatVerrou` LIBRE/EN_COURS_EDITION avec `proprietaireBrouillon` - prendre/libérer/transférer
 (TRANSFER_AT). Une AT verrouillée par un autre utilisateur ne doit pas être modifiable côté mobile.
 
 ## I. Référentiels (tous exposés en API)
@@ -259,11 +259,11 @@ en dur dans Flutter.**
 ## K. Signatures & visas
 
 - `Visa` : statut (EN_ATTENTE, VALIDE, REFUSE, VALIDATION, SIGNATURE), ordre, commentaire,
-  dateVisa/dateSignature, `signaturePath` + `signatureHash` (jamais exposés en réponse —
+  dateVisa/dateSignature, `signaturePath` + `signatureHash` (jamais exposés en réponse -
   seul `signaturePresente` est renvoyé), adresseIP, navigateur, utilisateur, AT.
 - Parcours mobile : lister `GET /api/visa/at/{atId}` → créer si besoin `POST /api/visa`
   (VisaRequest{autorisationTravailId, commentaire, ordre}) → signer
-  `POST /api/visa/{id}/sign` (multipart PNG + commentaire) — permissions SIGN_AT/VALIDATE_AT.
+  `POST /api/visa/{id}/sign` (multipart PNG + commentaire) - permissions SIGN_AT/VALIDATE_AT.
 - L'accusé de réception CEEE (`accuser-reception-ceee`) est un préalable à sa signature.
 - Le hash + IP + user-agent enregistrés côté serveur servent à la non-répudiation.
 
@@ -322,7 +322,7 @@ le compteur (ex. toutes les 30–60 s) en phase 1.
 5. **`GET /api/services/search`, zones…** : vérifier le nom du paramètre de recherche
    (`q` ou `nom`) au moment du branchement (Swagger disponible).
 6. **Aucun endpoint d'annulation exposé** dans le controller AT (la transition ANNULEE existe
-   dans la machine à états mais aucune route publique ne la déclenche) — ne pas inventer de
+   dans la machine à états mais aucune route publique ne la déclenche) - ne pas inventer de
    bouton « Annuler » mobile.
 
 ## P. Architecture Flutter proposée
@@ -373,7 +373,7 @@ secondary `#3C7A5C` (moss) / `#2E624A`, accent mint `#7FC8A9`, fonds `#F7FAF8`/`
 texte `#16241E` / `#5C6E67`, bordures `#D6E3DC`, warning `#A87532`, error `#9A3D2F`,
 success mintSoft `#E2F0E8`. Rayons 8–12. Fonts : Space Grotesk (titres) / Inter (corps).
 Statuts : vert=soumise/validée, ambre=en cours/visite, rouge=rejetée/annulée,
-gris=brouillon/archivée — à caler sur `statusDistribution` du dashboard.
+gris=brouillon/archivée - à caler sur `statusDistribution` du dashboard.
 
 ---
-*Rapport généré le 2026-08-23 — Phase 1 (analyse) du développement mobile Flutter.*
+*Rapport généré le 2026-08-23 - Phase 1 (analyse) du développement mobile Flutter.*

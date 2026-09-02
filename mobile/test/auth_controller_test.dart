@@ -1,4 +1,4 @@
-// Tests du AuthController — login, logout, restauration, expiration de session.
+// Tests du AuthController - login, logout, restauration, expiration de session.
 // Fakes en mémoire : aucun canal de plateforme requis.
 
 import 'package:dio/dio.dart';

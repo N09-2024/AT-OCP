@@ -1,4 +1,4 @@
-/// Contrat du stockage sécurisé — permet de substituer une implémentation
+/// Contrat du stockage sécurisé - permet de substituer une implémentation
 /// en mémoire dans les tests (le JWT ne quitte jamais le secure storage en prod).
 library;
 

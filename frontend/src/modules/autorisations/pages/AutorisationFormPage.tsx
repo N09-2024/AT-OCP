@@ -192,7 +192,7 @@ export default function AutorisationFormPage() {
       });
       if (!ctrl.complet && ctrl.alertes?.length) {
         const ok = await popin.confirm({
-          title: 'Contrôle IA — Alertes de complétude',
+          title: 'Contrôle IA - Alertes de complétude',
           message:
             'Le contrôle de complétude par IA a identifié les points suivants :\n\n' +
             ctrl.alertes.map((a: string) => `• ${a}`).join('\n') +

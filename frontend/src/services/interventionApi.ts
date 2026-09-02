@@ -22,7 +22,7 @@ export interface StartInterventionRequest {
 }
 
 export interface EndInterventionRequest {
-    travauxRealises: string;          // required — @NotBlank on backend
+    travauxRealises: string;          // required - @NotBlank on backend
     travauxNonRealises?: string;
     anomalies?: string;
     observations?: string;
@@ -34,7 +34,7 @@ export interface EndInterventionRequest {
 }
 
 export const interventionApi = {
-  /** Étape 4 — Readiness check (13 contrôles) avant démarrage */
+  /** Étape 4 - Readiness check (13 contrôles) avant démarrage */
   getReadiness: async (atId: string): Promise<ReadinessCheckResponse> => {
     const { data } = await apiClient.get<ReadinessCheckResponse>(
       `/autorisations-travail/${atId}/intervention/readiness`
@@ -42,7 +42,7 @@ export const interventionApi = {
     return data;
   },
 
-  /** Étape 4 — Démarrer l'intervention (CEEE) */
+  /** Étape 4 - Démarrer l'intervention (CEEE) */
   start: async (atId: string, payload?: StartInterventionRequest): Promise<unknown> => {
     const { data } = await apiClient.post(
       `/autorisations-travail/${atId}/intervention/start`,
@@ -51,7 +51,7 @@ export const interventionApi = {
     return data;
   },
 
-  /** Étape 6 — Déclarer la fin des travaux (CEEE) */
+  /** Étape 6 - Déclarer la fin des travaux (CEEE) */
   end: async (atId: string, payload: EndInterventionRequest): Promise<unknown> => {
     const { data } = await apiClient.post(
       `/autorisations-travail/${atId}/intervention/end`,
@@ -60,7 +60,7 @@ export const interventionApi = {
     return data;
   },
 
-  /** Étape 8 — Contrôle de complétude avant archivage */
+  /** Étape 8 - Contrôle de complétude avant archivage */
   getArchiveReadiness: async (atId: string): Promise<unknown> => {
     const { data } = await apiClient.get(
       `/autorisations-travail/${atId}/archive/readiness`

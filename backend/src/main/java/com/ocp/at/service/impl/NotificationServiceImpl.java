@@ -118,11 +118,11 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("sendNotificationToRole '{}': {} destinataire(s)", roleName, users.size());
     }
 
-    /** Rôles du côté Propriétaire (P) du standard S-HSE-SEC-31 — zone propriétaire de l'AT. */
+    /** Rôles du côté Propriétaire (P) du standard S-HSE-SEC-31 - zone propriétaire de l'AT. */
     private static final java.util.Set<String> ROLES_COTE_PROPRIETAIRE =
             java.util.Set.of("CEEP", "HCEP", "HMEP");
 
-    /** Rôles du côté Exécutant (E) — zone exécutante de l'AT. */
+    /** Rôles du côté Exécutant (E) - zone exécutante de l'AT. */
     private static final java.util.Set<String> ROLES_COTE_EXECUTANT =
             java.util.Set.of("CEEE", "HCEE", "HMEE");
 

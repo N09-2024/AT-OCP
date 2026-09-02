@@ -59,10 +59,13 @@ class _MultiSelectStepState extends ConsumerState<MultiSelectStep> {
             ),
           ),
         TextField(
-          decoration: InputDecoration(hintText: widget.searchHint, prefixIcon: const Icon(Icons.search_rounded)),
+          decoration: InputDecoration(
+            hintText: widget.searchHint,
+            prefixIcon: const Icon(Icons.search_rounded),
+          ),
           onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Expanded(
           child: widget.items.when(
             loading: () => const LoadingState(),
@@ -77,25 +80,44 @@ class _MultiSelectStepState extends ConsumerState<MultiSelectStep> {
               if (filtered.isEmpty) {
                 return EmptyState(message: widget.emptyMessage, icon: Icons.rule_outlined);
               }
-              return ListView.builder(
+              return ListView.separated(
                 itemCount: filtered.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 4),
                 itemBuilder: (context, index) {
                   final item = filtered[index];
                   final checked = widget.selected.contains(item.id);
-                  return CheckboxListTile(
-                    value: checked,
-                    dense: true,
-                    activeColor: OcpColors.forest,
-                    title: Text(item.nom, style: const TextStyle(fontSize: 14)),
-                    subtitle: (item.description ?? '').isEmpty
-                        ? null
-                        : Text(
-                            item.description!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12, color: OcpColors.slate),
-                          ),
-                    onChanged: (_) => widget.onToggle(item.id),
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: checked ? OcpColors.forestSoft.withValues(alpha: 0.35) : OcpColors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: checked ? OcpColors.forest : OcpColors.borderSoft,
+                        width: checked ? 1.5 : 1,
+                      ),
+                    ),
+                    child: CheckboxListTile(
+                      value: checked,
+                      activeColor: OcpColors.forest,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      title: Text(
+                        item.nom,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: checked ? FontWeight.w700 : FontWeight.w500,
+                          color: OcpColors.ink,
+                        ),
+                      ),
+                      subtitle: (item.description ?? '').isEmpty
+                          ? null
+                          : Text(
+                              item.description!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13, color: OcpColors.slate, height: 1.35),
+                            ),
+                      onChanged: (_) => widget.onToggle(item.id),
+                    ),
                   );
                 },
               );

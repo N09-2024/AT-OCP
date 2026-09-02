@@ -46,6 +46,6 @@ abstract final class OcpColors {
   static const Color successDark = Color(0xFF163C30);
   static const Color successLight = Color(0xFFE2F0E8);
 
-  // NB : les couleurs de statut AT vivent dans core/widgets/statut_chip.dart —
+  // NB : les couleurs de statut AT vivent dans core/widgets/statut_chip.dart -
   // réplique exacte de STATUT_CONFIG du frontend React (AtTable.tsx).
 }

@@ -1,7 +1,7 @@
 """
 Tests de conformité au plan d'architecture IA :
-- Connecteur SQL PostgreSQL (lecture seule) — couche LangChain "[Connecteurs SQL]"
-- Mémoire conversationnelle — couche LangChain "[Gestion Mémoire]"
+- Connecteur SQL PostgreSQL (lecture seule) - couche LangChain "[Connecteurs SQL]"
+- Mémoire conversationnelle - couche LangChain "[Gestion Mémoire]"
 - CrewAI : agents "Agent Analyste Risques" et "Agent Inspecteur HSE" conformes au plan
 """
 
@@ -108,7 +108,7 @@ class TestAgentsConformitePlan:
         assert build_at_agent() is not None
 
     def test_crew_2_agents_analyse_intervention(self):
-        from app.crew import run_crew_analyse_intervention  # noqa: F401 — import utilisable
+        from app.crew import run_crew_analyse_intervention  # noqa: F401 - import utilisable
         import inspect as pyinspect
         from app import crew as crew_mod
         src = pyinspect.getsource(crew_mod.run_crew_analyse_intervention)

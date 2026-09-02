@@ -1,4 +1,4 @@
-/// Modèles d'authentification — reflètent EXACTEMENT les DTO backend :
+/// Modèles d'authentification - reflètent EXACTEMENT les DTO backend :
 /// LoginRequest{email, motDePasse} → JwtResponse{accessToken, refreshToken, type,
 /// utilisateur, roles[], permissions[]}.
 /// Source : backend/src/main/java/com/ocp/at/dto/ (cf. rapport Phase 1 §C-E).

@@ -1,4 +1,4 @@
-/// Liste des AT — GET /autorisations-travail (paginé).
+/// Liste des AT - GET /autorisations-travail (paginé).
 /// Recherche, filtre par statut, pull-to-refresh, chargement progressif.
 library;
 
@@ -27,18 +27,32 @@ class _AtListPageState extends ConsumerState<AtListPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.initialFilter != null) {
-        if (widget.initialFilter == 'mine') {
-          ref.read(atListProvider.notifier).setScope(AtFilterScope.mine);
-        } else if (widget.initialFilter == 'aValider') {
-          ref.read(atListProvider.notifier).setScope(AtFilterScope.aValider);
-        }
-      }
-      if (widget.initialStatut != null && widget.initialStatut!.isNotEmpty) {
-        ref.read(atListProvider.notifier).setStatut(widget.initialStatut);
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _appliquerFiltresInitiaux());
+  }
+
+  @override
+  void didUpdateWidget(covariant AtListPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Le lien dashboard → liste peut changer les paramètres alors que la page
+    // reste montée (StatefulShellRoute) : on ré-applique les filtres.
+    if (oldWidget.initialFilter != widget.initialFilter ||
+        oldWidget.initialStatut != widget.initialStatut) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _appliquerFiltresInitiaux());
+    }
+  }
+
+  void _appliquerFiltresInitiaux() {
+    final notifier = ref.read(atListProvider.notifier);
+    switch (widget.initialFilter) {
+      case 'mine':
+        notifier.setScope(AtFilterScope.mine);
+      case 'aValider':
+        notifier.setScope(AtFilterScope.aValider);
+    }
+    final statut = widget.initialStatut;
+    if (statut != null && statut.isNotEmpty) {
+      notifier.setStatut(statut);
+    }
   }
 
   @override
@@ -60,11 +74,16 @@ class _AtListPageState extends ConsumerState<AtListPage> {
     null,
     StatutAt.brouillon,
     StatutAt.demandeCreee,
+    StatutAt.enVisiteRedaction,
     StatutAt.visiteRealisee,
     StatutAt.atRedigee,
+    StatutAt.soumise,
     StatutAt.atValidee,
     StatutAt.interventionEnCours,
+    StatutAt.atReconduite,
     StatutAt.declareeTerminee,
+    StatutAt.finTravauxDeclaree,
+    StatutAt.travauxReceptiones,
     StatutAt.receptionnees,
     StatutAt.archivee,
     StatutAt.rejetee,

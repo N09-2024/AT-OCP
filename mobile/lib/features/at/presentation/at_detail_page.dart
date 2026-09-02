@@ -1,4 +1,4 @@
-/// Détail d'une Autorisation de Travail — Alignement 100 % avec le Web React & Spring Boot :
+/// Détail d'une Autorisation de Travail - Alignement 100 % avec le Web React & Spring Boot :
 /// - Header avec statut, numéro d'AT, actions rapides (PDF officiel si débloqué, Assistant IA)
 /// - Workflow Stepper officiel S-HSE-SEC-31
 /// - Actions prioritaires selon rôle dynamique (CEEP, CEEE, HMEP, HMEE, HCEP, HCEE, ADMIN)
@@ -19,9 +19,12 @@ import '../../../core/utils/app_date.dart';
 import '../../../core/widgets/states.dart';
 import '../../../core/widgets/statut_chip.dart';
 import '../../../core/widgets/workflow_stepper.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../visas/data/visa.dart';
 import '../data/models/autorisation_travail.dart';
+import 'at_circuit_visas.dart';
 import 'at_providers.dart';
+import 'at_roles.dart';
 import 'at_visas_page.dart';
 import 'at_workflow_actions.dart';
 
@@ -120,10 +123,17 @@ class _AtDetailBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ── Bouton PDF piloté par le DTO (rapport d'analyse §M) ────────────────
-    // exportPdfAutorise est calculé côté serveur (statut ≥ soumise ET permis
-    // conformes) : le mobile l'affiche/masque SANS dupliquer la règle métier.
-    final bool pdfAutorise = at.exportPdfAutorise == true;
+    // ── Bouton PDF - identique au web (showPdf = pdfUnlocked && participant) ─
+    final visas = ref.watch(visasProvider(at.id)).valueOrNull ?? [];
+    final etat = CircuitVisasEtat.resolve(visas: visas, at: at);
+    final roles = AtRoles.resolve(session: ref.watch(sessionProvider), at: at);
+    final bool pdfUnlocked = etat.hmee ||
+        etat.prochainRoleRequis == null ||
+        at.statut == StatutAt.travauxReceptiones ||
+        at.statut == StatutAt.archivee ||
+        at.statut == 'CLOTUREE';
+    final bool showPdf =
+        pdfUnlocked && at.exportPdfAutorise != false && roles.isWorkflowParticipant;
 
     return Column(
       children: [
@@ -138,7 +148,7 @@ class _AtDetailBody extends ConsumerWidget {
                 children: [
                   StatutChip(statut: at.statut),
                   const Spacer(),
-                  if (pdfAutorise)
+                  if (showPdf)
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: OcpColors.forest,
@@ -280,8 +290,8 @@ class _TabDetailsAndVisite extends StatelessWidget {
         _card(
           title: 'Description de l\'intervention',
           children: [
-            _row('Objet', at.objet ?? '—'),
-            _row('Description détaillée', at.descriptionTravaux ?? '—'),
+            _row('Objet', at.objet ?? '-'),
+            _row('Description détaillée', at.descriptionTravaux ?? '-'),
             _row('Document source', _sourceLabel(at)),
           ],
         ),
@@ -290,10 +300,10 @@ class _TabDetailsAndVisite extends StatelessWidget {
         _card(
           title: 'Périmètre & Affectation',
           children: [
-            _row('Zone Propriétaire (P)', at.zoneProprietaireNom ?? '—'),
-            _row('Zone Exécutante (E)', at.zoneExecutanteNom ?? '—'),
-            _row('Demandeur CEEP (P)', at.g1NomCeep ?? at.proprietaireBrouillonNomComplet ?? '—'),
-            _row('Service Intervenant (E)', at.servicesIntervenants ?? '—'),
+            _row('Zone Propriétaire (P)', at.zoneProprietaireNom ?? '-'),
+            _row('Zone Exécutante (E)', at.zoneExecutanteNom ?? '-'),
+            _row('Demandeur CEEP (P)', at.g1NomCeep ?? at.proprietaireBrouillonNomComplet ?? '-'),
+            _row('Service Intervenant (E)', at.servicesIntervenants ?? '-'),
             _row('Entreprise extérieure', at.entreprisesIntervenantes ?? 'Régie interne OCP'),
           ],
         ),
@@ -663,5 +673,5 @@ String _sourceLabel(AutorisationTravail at) {
   if (at.documentSourceNumero != null && at.documentSourceNumero!.isNotEmpty) {
     parts.add(at.documentSourceNumero!);
   }
-  return parts.isEmpty ? '—' : parts.join(' ');
+  return parts.isEmpty ? '-' : parts.join(' ');
 }

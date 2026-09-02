@@ -1,4 +1,4 @@
-/// Formulaire AT mobile par étapes — Design UI/UX Moderne OCP S-HSE-SEC-31 :
+/// Formulaire AT mobile par étapes - Design UI/UX Moderne OCP S-HSE-SEC-31 :
 /// - En-tête Wizard avec barre de progression animée et sélecteur d'étapes modal
 /// - Navigation fluide Page par Page avec barre d'actions épinglée en bas
 /// - Étape 1 : Général & Document source (DI, OT, BT) & Entreprises
@@ -12,14 +12,17 @@
 library;
 
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/errors/failures.dart';
+import '../../../core/network/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/states.dart';
+import '../../assistant/data/assistant_api.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../referentiels/data/referentiel_models.dart';
 import '../../referentiels/presentation/referentiels_providers.dart';
@@ -29,6 +32,14 @@ import 'at_circuit_visas.dart';
 import 'at_providers.dart';
 import 'widgets/multi_select_step.dart';
 import 'widgets/permis_upload_tile.dart';
+
+/// Numéro de document source auto-attribué : {TYPE}-{6 chiffres aléatoires}
+/// (ex. DI-483920). Principe web : le numéro est généré automatiquement,
+/// jamais saisi manuellement.
+String genererNumeroDocument(String type) {
+  final alea = Random().nextInt(900000) + 100000; // 100000..999999 (6 chiffres)
+  return '$type-$alea';
+}
 
 class AtFormPage extends ConsumerWidget {
   final String atId;
@@ -125,7 +136,7 @@ class _SaveStatusIndicator extends ConsumerWidget {
         );
       case SaveStatus.error:
         return IconButton(
-          tooltip: 'Échec de la sauvegarde — réessayer',
+          tooltip: 'Échec de la sauvegarde - réessayer',
           onPressed: () => ref.read(atFormProvider(state.at.id).notifier).retrySave(),
           icon: const Icon(Icons.cloud_off_rounded, color: OcpColors.errorSoft),
         );
@@ -156,26 +167,46 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
   int _step = 0;
   bool _gpsLoading = false;
   bool _submitting = false;
+  bool _numeroAutoGenere = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Nouvelle AT : attribuer automatiquement le numéro de document source
+    // ({TYPE}-{6 chiffres}) sans aucune saisie manuelle.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_numeroAutoGenere) return;
+      _numeroAutoGenere = true;
+      final d = widget.state.data;
+      if (d.documentSourceNumero.isEmpty && !widget.state.readOnly) {
+        ref.read(atFormProvider(widget.atId).notifier).update(
+              (d) => d.copyWith(
+                documentSourceNumero: genererNumeroDocument(d.typeDocumentSource),
+              ),
+            );
+      }
+    });
+  }
 
   static const List<_StepMeta> _steps = [
     _StepMeta(
-      title: 'Informations Générales',
+      title: 'Informations générales',
       subtitle: 'Objet, document source (DI/OT/BT) & entreprises',
       icon: Icons.description_outlined,
     ),
     _StepMeta(
-      title: 'Planning & Horaires',
+      title: 'Planning & horaires',
       subtitle: 'Période et créneau horaire prévisionnels',
       icon: Icons.schedule_outlined,
     ),
     _StepMeta(
-      title: 'Localisation & Services',
+      title: 'Localisation & services',
       subtitle: 'Zones P/E et séparation des services CEEP/CEEE',
       icon: Icons.apartment_outlined,
     ),
     _StepMeta(
-      title: 'Visite préalable (§8.2)',
-      subtitle: 'Géolocalisation GPS, photo chantier et contrôle',
+      title: 'Visite préalable conjointe (§8.2)',
+      subtitle: 'Géolocalisation GPS, photo du chantier et contrôle',
       icon: Icons.my_location_rounded,
     ),
     _StepMeta(
@@ -189,7 +220,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
       icon: Icons.shield_outlined,
     ),
     _StepMeta(
-      title: 'C. Moyens d\'accès',
+      title: "C. Moyens d'accès",
       subtitle: 'Échafaudages, nacelles, échelles et accès',
       icon: Icons.stairs_outlined,
     ),
@@ -204,13 +235,13 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
       icon: Icons.badge_outlined,
     ),
     _StepMeta(
-      title: 'F. Mesures exécutant',
+      title: "F. Mesures de l'exécutant",
       subtitle: 'Consignes et précautions de l\'équipe exécutante',
       icon: Icons.handyman_outlined,
     ),
     _StepMeta(
-      title: 'Récapitulatif & Soumission',
-      subtitle: 'Vérification globale et transmission aux visas',
+      title: 'Récapitulatif & soumission',
+      subtitle: 'Vérification globale, signature CEEP et transmission',
       icon: Icons.send_rounded,
     ),
   ];
@@ -546,7 +577,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
                                   )
                                 : const Icon(Icons.send_rounded, size: 18),
                             label: Text(
-                              _submitting ? 'Envoi...' : 'Valider & Soumettre',
+                              _submitting ? 'Transmission…' : 'Signer & Transmettre',
                               style: const TextStyle(fontWeight: FontWeight.w800),
                             ),
                           ),
@@ -662,51 +693,64 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
         const SizedBox(height: 14),
 
         _formCard(
-          title: 'Document source & Entreprises',
+          title: 'Document source & entreprises',
           children: [
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: data.typeDocumentSource,
-                    decoration: const InputDecoration(labelText: 'Type'),
-                    items: const [
-                      DropdownMenuItem(value: 'DI', child: Text('DI (Demande)')),
-                      DropdownMenuItem(value: 'OT', child: Text('OT (Ordre)')),
-                      DropdownMenuItem(value: 'BT', child: Text('BT (Bon)')),
-                    ],
-                    onChanged: readOnly
-                        ? null
-                        : (v) => notifier().update((d) => d.copyWith(typeDocumentSource: v ?? 'DI')),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 3,
-                  child: TextFormField(
-                    enabled: !readOnly,
-                    initialValue: data.documentSourceNumero,
-                    decoration: const InputDecoration(
-                      labelText: 'N° Document source',
-                      hintText: 'Ex: DI-2026-001',
-                    ),
-                    onChanged: (v) => notifier().update((d) => d.copyWith(documentSourceNumero: v)),
-                  ),
-                ),
+            DropdownButtonFormField<String>(
+              initialValue: data.typeDocumentSource,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Type de document source *',
+                prefixIcon: Icon(Icons.description_outlined, size: 20),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'DI', child: Text('DI (Demande d\'Intervention)')),
+                DropdownMenuItem(value: 'OT', child: Text('OT (Ordre de Travail)')),
+                DropdownMenuItem(value: 'BT', child: Text('BT (Bon de Travail)')),
               ],
+              onChanged: readOnly
+                  ? null
+                  : (v) {
+                      final type = v ?? 'DI';
+                      // Le numéro est ré-attribué automatiquement à chaque
+                      // changement de type (principe web).
+                      notifier().update((d) => d.copyWith(
+                            typeDocumentSource: type,
+                            documentSourceNumero: genererNumeroDocument(type),
+                            clearDocumentSource: true,
+                          ));
+                    },
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
+            // Numéro auto-attribué : {TYPE}-{6 chiffres aléatoires}, jamais
+            // saisi manuellement (principe web).
+            InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'N° du document source (auto-attribué)',
+                prefixIcon: Icon(Icons.tag_rounded, size: 20),
+                helperText: 'Généré automatiquement à partir du type de document.',
+              ),
+              child: Text(
+                data.documentSourceNumero.isEmpty
+                    ? 'Génération automatique…'
+                    : data.documentSourceNumero,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: OcpColors.ink,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             entreprisesAsync.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, st) => TextFormField(
                 enabled: !readOnly,
                 initialValue: data.entreprisesIntervenantes,
-                decoration: const InputDecoration(labelText: 'Entreprises intervenantes (Tiers)'),
+                decoration: const InputDecoration(labelText: 'Entreprises intervenantes (sous-traitant)'),
                 onChanged: (v) => notifier().update((d) => d.copyWith(entreprisesIntervenantes: v)),
               ),
               data: (entreprisesList) => _EntrepriseDropdown(
-                label: 'Entreprise extérieure (Tiers / Sous-traitant)',
+                label: 'Entreprise extérieure (sous-traitant)',
                 entreprises: entreprisesList,
                 value: data.entreprisesIntervenantes,
                 enabled: !readOnly,
@@ -727,7 +771,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
     final data = widget.state.data;
     AtFormNotifier notifier() => ref.read(atFormProvider(widget.atId).notifier);
     String h(TimeOfDay? t) =>
-        t == null ? '—' : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+        t == null ? '-' : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
     return _formCard(
       title: 'Planning prévisionnel de l\'intervention',
@@ -739,7 +783,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
           enabled: !readOnly,
           onPick: (d) => notifier().update((x) => x.copyWith(dateDebut: d)),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         _DateTile(
           icon: Icons.event_outlined,
           label: 'Date de fin de validité *',
@@ -748,7 +792,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
           firstDate: data.dateDebut,
           onPick: (d) => notifier().update((x) => x.copyWith(dateFin: d)),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
@@ -808,7 +852,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _formCard(
-            title: 'Zones géographiques & Périmètre',
+            title: 'Zones géographiques & périmètre',
             children: [
               _ZoneDropdown(
                 label: 'Zone propriétaire (P) *',
@@ -823,9 +867,9 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               _ZoneDropdown(
-                label: 'Zone intervenante / exécutante (E) *',
+                label: 'Zone exécutante (E) *',
                 zones: list,
                 valueId: data.zoneExecutanteId,
                 fallbackName: data.zoneExecutanteNom,
@@ -839,13 +883,13 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           _formCard(
-            title: 'Affectation des Services (Règle CEEP / CEEE)',
+            title: 'Affectation des services (règle CEEP / CEEE)',
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: OcpColors.surfaceSoft,
                   borderRadius: BorderRadius.circular(8),
@@ -860,7 +904,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Service demandeur / propriétaire (P)',
+                            'Service demandeur (P)',
                             style: TextStyle(fontSize: 11, color: OcpColors.slate),
                           ),
                           Text(
@@ -877,19 +921,19 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               servicesAsync.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (e, st) => TextFormField(
                   enabled: !readOnly,
                   initialValue: data.servicesIntervenants,
                   decoration: const InputDecoration(
-                    labelText: 'Service intervenant / exécutant (E) *',
+                    labelText: 'Service exécutant (E) *',
                   ),
                   onChanged: (v) => notifier().update((d) => d.copyWith(servicesIntervenants: v)),
                 ),
                 data: (servicesList) => _ServiceDropdown(
-                  label: 'Service intervenant / exécutant (E) *',
+                  label: 'Service exécutant (E) *',
                   services: servicesList,
                   valueId: data.serviceIntervenantId,
                   valueNom: data.servicesIntervenants,
@@ -962,7 +1006,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
       children: [
         // 1. GÉOLOCALISATION GPS
         _formCard(
-          title: '1. Géolocalisation GPS du Chantier (§8.2)',
+          title: '1. Géolocalisation GPS du chantier (§8.2)',
           children: [
             if (hasGps) ...[
               Container(
@@ -1018,7 +1062,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
                       )
                     : const Icon(Icons.my_location_rounded, size: 18),
                 label: Text(
-                  _gpsLoading ? 'Acquisition GPS en cours...' : 'Relever position GPS sur le chantier',
+                  _gpsLoading ? 'Acquisition GPS en cours…' : 'Relever la position GPS sur le chantier',
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 ),
               ),
@@ -1061,7 +1105,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
 
         // 2. PHOTO D'INSPECTION
         _formCard(
-          title: '2. Photo d\'Inspection du Chantier (§8.2)',
+          title: "2. Photo d'inspection du chantier (§8.2)",
           children: [
             if (data.photoPath != null && data.photoPath!.isNotEmpty) ...[
               ClipRRect(
@@ -1134,7 +1178,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
 
         // 3. CONSTATS TERRAIN
         _formCard(
-          title: '3. Constats & Remarques Terrain',
+          title: '3. Constats & remarques du terrain',
           children: [
             TextFormField(
               enabled: !readOnly,
@@ -1223,7 +1267,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
       title: title,
       children: [
         SizedBox(
-          height: MediaQuery.of(context).size.height * 0.52,
+          height: MediaQuery.of(context).size.height * 0.62,
           child: MultiSelectStep(
             items: items,
             selected: selected,
@@ -1254,10 +1298,10 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _formCard(
-          title: 'Sélection des Permis Requis',
+          title: 'E. Sélection des permis requis',
           children: [
             SizedBox(
-              height: MediaQuery.of(context).size.height * 0.32,
+              height: MediaQuery.of(context).size.height * 0.40,
               child: MultiSelectStep(
                 items: asyncItems,
                 selected: data.permisIds,
@@ -1278,7 +1322,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
 
         if (data.permisIds.isNotEmpty) ...[
           _formCard(
-            title: 'Documents de permis requis (Analyse IA Gemini)',
+            title: 'Documents de permis requis (analyse IA Gemini)',
             children: [
               permisDocsAsync.when(
                 loading: () => const LinearProgressIndicator(),
@@ -1323,13 +1367,13 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
     AtFormNotifier notifier() => ref.read(atFormProvider(widget.atId).notifier);
 
     return _formCard(
-      title: 'Section F — Mesures de Sécurité Exécutant',
+      title: "F. Mesures de l'exécutant",
       children: [
         const Text(
-          'Précautions spécifiques et consignes particulières établies par l\'équipe exécutante.',
-          style: TextStyle(fontSize: 12, color: OcpColors.slate),
+          "Précautions spécifiques et consignes particulières établies par l'équipe exécutante.",
+          style: TextStyle(fontSize: 13, color: OcpColors.slate, height: 1.4),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         TextFormField(
           enabled: !readOnly,
           initialValue: data.mesuresSecuriteExecutant,
@@ -1364,13 +1408,14 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
     final canSubmit = hasSubmit &&
         !isSameService &&
         (widget.state.at.statut == StatutAt.brouillon ||
-            widget.state.at.statut == StatutAt.demandeCreee);
+            widget.state.at.statut == StatutAt.demandeCreee ||
+            widget.state.at.statut == StatutAt.classificationEffectuee);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _formCard(
-          title: 'Synthèse du Dossier AT',
+          title: 'Synthèse du dossier AT',
           children: [
             _recapRow('Objet', d.objet),
             _recapRow('Document source', '${d.typeDocumentSource} ${d.documentSourceNumero}'),
@@ -1428,7 +1473,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: OcpColors.white))
                 : const Icon(Icons.send_rounded),
             label: Text(
-              _submitting ? 'Transmission en cours...' : 'Valider & Soumettre pour Visas',
+              _submitting ? 'Transmission en cours…' : "Signer l'AT & Transmettre au CEEE",
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
             ),
           ),
@@ -1460,13 +1505,101 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
       return;
     }
 
+    // §8.2 OCP S-HSE-SEC-31 - Visite préalable conjointe obligatoire avant
+    // transmission (identique au web : handleSignerEtTransmettre).
+    if (!d.visiteEffectuee) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: OcpColors.warning,
+          content: Text(
+            'Visite préalable obligatoire (§8.2) : effectuez la visite conjointe de chantier, '
+            'cochez la confirmation des mesures de prévention, puis transmettez l\'AT.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Contrôle IA de complétude (non bloquant) - identique au web
+    // (controlerAvantSoumission : si incomplet, confirmation « Soumettre quand même »).
+    try {
+      final ia = await AssistantApi(ref.read(apiClientProvider)).controlerDossier(
+        description: d.descriptionTravaux,
+        visiteFaite: d.visiteEffectuee,
+        nbRisques: d.risquesIds.length,
+        nbMesures: d.mesuresIds.length,
+        nbEpis: d.episIds.length,
+        nbPermis: d.permisIds.length,
+        sectionFRenseignee: d.mesuresSecuriteExecutant.trim().isNotEmpty,
+      );
+      final alertes =
+          (ia['alertes'] as List<dynamic>? ?? []).map((e) => e.toString()).toList();
+      final complet = ia['complet'] != false;
+      if ((!complet || alertes.isNotEmpty) && mounted) {
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.psychology_alt_rounded, color: OcpColors.moss, size: 22),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Contrôle IA - Alertes de complétude',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "L'analyse IA a identifié les points suivants :",
+                  style: TextStyle(fontSize: 12, color: OcpColors.slate),
+                ),
+                const SizedBox(height: 8),
+                ...alertes.map((a) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• ', style: TextStyle(fontSize: 12, color: OcpColors.ink)),
+                          Expanded(
+                            child: Text(a,
+                                style: const TextStyle(fontSize: 12, color: OcpColors.ink, height: 1.3)),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Compléter le formulaire'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: OcpColors.forest),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Soumettre quand même'),
+              ),
+            ],
+          ),
+        );
+        if (ok != true) return;
+      }
+    } catch (_) {
+      /* IA indisponible : on ne bloque jamais le workflow métier */
+    }
+
     setState(() => _submitting = true);
     final notifier = ref.read(atFormProvider(widget.atId).notifier);
     try {
       await notifier.flushSave();
       if (!mounted) return;
       // Étape 1 du circuit des visas : le CEEP signe l'AT (Visa CEEP, ordre 1)
-      // AVANT la transmission au CEEE — 1.CEEP → 2.CEEE → 3.HCEP → 4.HCEE → 5.HMEP → 6.HMEE.
+      // AVANT la transmission au CEEE - 1.CEEP → 2.CEEE → 3.HCEP → 4.HCEE → 5.HMEP → 6.HMEE.
       final signe = await signerVisaCeepEtSoumettre(context, ref, widget.atId);
       if (!signe) return; // signature annulée → pas de soumission
       ref.invalidate(atDetailProvider(widget.atId));
@@ -1474,7 +1607,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: OcpColors.success,
-            content: Text('Visa CEEP apposé — AT soumise et transmise au CEEE.'),
+            content: Text('Visa CEEP apposé - AT soumise et transmise au CEEE.'),
           ),
         );
         context.go('/at/${widget.atId}');
@@ -1484,7 +1617,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: OcpColors.errorSoft,
-            content: Text(e is Failure ? e.message : 'Échec de la soumission — vérifiez les données.'),
+            content: Text(e is Failure ? e.message : 'Échec de la soumission - vérifiez les données.'),
           ),
         );
       }
@@ -1493,9 +1626,9 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
     }
   }
 
-  static String _fr(DateTime? d) => d == null ? '—' :
+  static String _fr(DateTime? d) => d == null ? '-' :
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-  static String _h(TimeOfDay? t) => t == null ? '—'
+  static String _h(TimeOfDay? t) => t == null ? '-'
       : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   Widget _formCard({required String title, required List<Widget> children}) {
@@ -1507,7 +1640,7 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
         side: const BorderSide(color: OcpColors.borderSoft),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1516,11 +1649,13 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
               style: const TextStyle(
                 fontFamily: 'SpaceGrotesk',
                 fontWeight: FontWeight.w700,
-                fontSize: 14,
+                fontSize: 15,
+                letterSpacing: 0.2,
                 color: OcpColors.forest,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
+            const Divider(height: 16, color: OcpColors.borderSoft),
             ...children,
           ],
         ),
@@ -1529,18 +1664,18 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
   }
 
   Widget _recapRow(String label, String? value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(vertical: 7),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 140,
-              child: Text(label, style: const TextStyle(fontSize: 12, color: OcpColors.slate)),
+              width: 158,
+              child: Text(label, style: const TextStyle(fontSize: 13, color: OcpColors.slate, height: 1.35)),
             ),
             Expanded(
               child: Text(
-                value ?? '—',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: OcpColors.ink),
+                value ?? '-',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: OcpColors.ink, height: 1.35),
               ),
             ),
           ],
@@ -1557,23 +1692,28 @@ class _ReadOnlyBanner extends StatelessWidget {
   const _ReadOnlyBanner({required this.state});
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        color: OcpColors.warningSoft,
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          children: [
-            const Icon(Icons.lock_outline_rounded, size: 16, color: OcpColors.warning),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Lecture seule — édition indisponible (${state.lockHolderName ?? 'verrouillé'}).',
-                style: const TextStyle(fontSize: 12, color: OcpColors.ink),
-              ),
+  Widget build(BuildContext context) {
+    final verrouAutre = state.verrouilleParAutre;
+    return Container(
+      width: double.infinity,
+      color: OcpColors.warningSoft,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.lock_outline_rounded, size: 18, color: OcpColors.warning),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              verrouAutre
+                  ? 'Formulaire verrouillé : ce dossier est en cours d\'édition par ${state.lockHolderName}.'
+                  : 'AT signée et transmise : conformément au §8, le formulaire est verrouillé en lecture seule.',
+              style: const TextStyle(fontSize: 12, color: OcpColors.ink, height: 1.4),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DateTile extends StatelessWidget {
@@ -1598,16 +1738,15 @@ class _DateTile extends StatelessWidget {
         color: OcpColors.surfaceSoft,
         borderRadius: BorderRadius.circular(10),
         child: ListTile(
-          dense: true,
-          leading: Icon(icon, color: OcpColors.forest, size: 20),
+          leading: Icon(icon, color: OcpColors.forest, size: 22),
           title: Text(label, style: const TextStyle(fontSize: 12, color: OcpColors.slate)),
           subtitle: Text(
             value == null
                 ? 'Non définie'
                 : '${value!.day.toString().padLeft(2, '0')}/${value!.month.toString().padLeft(2, '0')}/${value!.year}',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: OcpColors.ink),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: OcpColors.ink),
           ),
-          trailing: enabled ? const Icon(Icons.edit_calendar_rounded, size: 18, color: OcpColors.forest) : null,
+          trailing: enabled ? const Icon(Icons.edit_calendar_rounded, size: 20, color: OcpColors.forest) : null,
           onTap: enabled
               ? () async {
                   final now = DateTime.now();
@@ -1650,14 +1789,13 @@ class _TimeTile extends StatelessWidget {
         color: OcpColors.surfaceSoft,
         borderRadius: BorderRadius.circular(10),
         child: ListTile(
-          dense: true,
-          leading: const Icon(Icons.access_time_rounded, color: OcpColors.forest, size: 20),
-          title: Text(label, style: const TextStyle(fontSize: 11, color: OcpColors.slate)),
+          leading: const Icon(Icons.access_time_rounded, color: OcpColors.forest, size: 22),
+          title: Text(label, style: const TextStyle(fontSize: 12, color: OcpColors.slate)),
           subtitle: Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: OcpColors.ink),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: OcpColors.ink),
           ),
-          trailing: enabled ? const Icon(Icons.edit_outlined, size: 16, color: OcpColors.forest) : null,
+          trailing: enabled ? const Icon(Icons.edit_outlined, size: 18, color: OcpColors.forest) : null,
           onTap: enabled
               ? () async {
                   final picked = await showTimePicker(
@@ -1697,6 +1835,7 @@ class _ZoneDropdown extends StatelessWidget {
 
     return DropdownButtonFormField<String>(
       initialValue: selectedValue,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: const Icon(Icons.place_outlined, size: 20),
@@ -1747,6 +1886,7 @@ class _ServiceDropdown extends StatelessWidget {
 
     return DropdownButtonFormField<String>(
       initialValue: selectedValue,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: const Icon(Icons.handyman_outlined, size: 20),
@@ -1799,6 +1939,7 @@ class _EntrepriseDropdown extends StatelessWidget {
 
     return DropdownButtonFormField<String>(
       initialValue: hasMatch ? value : '',
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: const Icon(Icons.domain_outlined, size: 20),

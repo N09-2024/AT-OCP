@@ -1,5 +1,5 @@
 -- ============================================================
--- V38 — Suppression du référentiel installations (jamais peuplé)
+-- V38 - Suppression du référentiel installations (jamais peuplé)
 --   - La notion de localisation est couverte par Zone
 --   - installationRemiseEnEtat (receptions_travaux) est conservée
 -- ============================================================

@@ -1,4 +1,4 @@
-// Tests étendus — spec §40 :
+// Tests étendus - spec §40 :
 //   - payload AutoSaveRequest exact attendu par le backend
 //   - mapping DioException → Failure (messages compréhensibles)
 //   - formatage des dates/heures
@@ -160,7 +160,7 @@ void main() {
   group('AppDate (affichage cohérent web)', () {
     test('heureSimple LocalTime', () {
       expect(AppDate.heureSimple('08:30:00'), '08:30');
-      expect(AppDate.heureSimple(null), '—');
+      expect(AppDate.heureSimple(null), '-');
     });
 
     test('dateHeure et relative', () {

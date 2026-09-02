@@ -1,4 +1,4 @@
-// Tests des modèles Phases 9-10 — permis, photos, visites préalables.
+// Tests des modèles Phases 9-10 - permis, photos, visites préalables.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ocp_at_mobile/features/permis/data/permis_api.dart';
@@ -30,7 +30,7 @@ void main() {
       expect(StatutPermisVerif.libelle('CONFORME'), 'Conforme');
       expect(StatutPermisVerif.libelle('NON_CONFORME'), 'Non conforme');
       expect(StatutPermisVerif.libelle('EXPIRE'), 'Expiré');
-      expect(StatutPermisVerif.libelle(null), '—');
+      expect(StatutPermisVerif.libelle(null), '-');
     });
   });
 

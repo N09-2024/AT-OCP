@@ -78,7 +78,7 @@ export default function VerificationPublicPage() {
             Vérification Dossier AT
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Système de Gestion des Autorisations de Travail — OCP Group
+            Système de Gestion des Autorisations de Travail - OCP Group
           </Typography>
         </Box>
 
@@ -119,11 +119,11 @@ export default function VerificationPublicPage() {
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
                   <Box>
                     <Typography variant="caption" color="text.secondary">Numéro AT</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{result.numeroAT || '—'}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{result.numeroAT || '-'}</Typography>
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">Numéro d'archive</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{result.numeroArchive || '—'}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{result.numeroArchive || '-'}</Typography>
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">Statut</Typography>
@@ -139,7 +139,7 @@ export default function VerificationPublicPage() {
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {result.dateArchivage
                         ? new Date(result.dateArchivage).toLocaleString('fr-FR')
-                        : '—'}
+                        : '-'}
                     </Typography>
                   </Box>
                   {result.installation && (

@@ -1,4 +1,4 @@
-/// Page de réception conjointe des travaux & clôture de l'AT — Mobile.
+/// Page de réception conjointe des travaux & clôture de l'AT - Mobile.
 /// Réplique exacte du comportement et des règles de ReceptionTravauxPage.tsx.
 library;
 
@@ -242,7 +242,7 @@ class _AtReceptionPageState extends ConsumerState<AtReceptionPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              at.objet ?? '—',
+                              at.objet ?? '-',
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                               overflow: TextOverflow.ellipsis,
                             ),

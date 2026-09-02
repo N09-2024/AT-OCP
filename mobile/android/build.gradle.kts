@@ -18,7 +18,7 @@ subprojects {
 
 // Plugins tiers (file_picker, flutter_plugin_android_lifecycle...) exigent un
 // compileSdk récent : on aligne tous les modules Android sur 36 minimum.
-// IMPORTANT : ce bloc DOIT précéder evaluationDependsOn(":app") — afterEvaluate
+// IMPORTANT : ce bloc DOIT précéder evaluationDependsOn(":app") - afterEvaluate
 // échoue sur un projet déjà évalué.
 subprojects {
     afterEvaluate {

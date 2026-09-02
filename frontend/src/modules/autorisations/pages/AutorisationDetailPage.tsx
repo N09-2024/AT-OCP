@@ -772,7 +772,7 @@ export default function AutorisationDetailPage() {
             }}
           >
             {/* ==================================================
-                ÉTAPE 0 — BROUILLON
+                ÉTAPE 0 - BROUILLON
             ================================================== */}
 
             {showEditDraft && (
@@ -927,7 +927,7 @@ export default function AutorisationDetailPage() {
             )}
 
             {/* ==================================================
-                ÉTAPE 4 — DÉMARRER
+                ÉTAPE 4 - DÉMARRER
             ================================================== */}
 
             {showDemarrer && (
@@ -950,7 +950,7 @@ export default function AutorisationDetailPage() {
             )}
 
             {/* ==================================================
-                ÉTAPE 5 — RECONDUCTION
+                ÉTAPE 5 - RECONDUCTION
                 CEEE -> HMEP
             ================================================== */}
 
@@ -974,7 +974,7 @@ export default function AutorisationDetailPage() {
             )}
 
             {/* ==================================================
-                ÉTAPE 6 — FIN TRAVAUX
+                ÉTAPE 6 - FIN TRAVAUX
             ================================================== */}
 
             {showDeclarerFin && (
@@ -997,7 +997,7 @@ export default function AutorisationDetailPage() {
             )}
 
             {/* ==================================================
-                ÉTAPE 7 — RÉCEPTION
+                ÉTAPE 7 - RÉCEPTION
             ================================================== */}
 
             {showReceptionner && (
@@ -1047,7 +1047,7 @@ export default function AutorisationDetailPage() {
             )}
 
             {/* ==================================================
-                ÉTAPE 8 — ARCHIVAGE
+                ÉTAPE 8 - ARCHIVAGE
             ================================================== */}
 
             {showArchiver && (
@@ -1131,7 +1131,7 @@ export default function AutorisationDetailPage() {
         </Box>
 
         {/* ======================================================
-            TAB 0 — FORMULAIRE
+            TAB 0 - FORMULAIRE
         ====================================================== */}
 
         {tabIndex === 0 && (
@@ -1142,7 +1142,7 @@ export default function AutorisationDetailPage() {
         )}
 
         {/* ======================================================
-            TAB 1 — VISAS
+            TAB 1 - VISAS
         ====================================================== */}
 
         {tabIndex === 1 && (
@@ -1245,7 +1245,7 @@ export default function AutorisationDetailPage() {
         )}
 
         {/* ======================================================
-            TAB 2 — HISTORIQUE
+            TAB 2 - HISTORIQUE
         ====================================================== */}
 
         {tabIndex === 2 && (

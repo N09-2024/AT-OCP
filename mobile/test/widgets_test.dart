@@ -1,4 +1,4 @@
-// Tests widgets — composants de base de l'UI.
+// Tests widgets - composants de base de l'UI.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,7 +26,7 @@ void main() {
         StatutChip(statut: null),
       ],),),);
       expect(find.text('STATUT_BIZARRE'), findsOneWidget);
-      expect(find.text('—'), findsOneWidget);
+      expect(find.text('-'), findsOneWidget);
     });
   });
 

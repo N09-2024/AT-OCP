@@ -41,7 +41,7 @@ countUnread: async (): Promise<number> => {
     const res = await apiClient.get<{ count: number }>('/notifications/count-unread');
     return res.data.count ?? 0;
   } catch {
-    return 0; // silencieux — ne jamais crasher la Topbar
+    return 0; // silencieux - ne jamais crasher la Topbar
   }
 
   },

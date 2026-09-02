@@ -1,4 +1,4 @@
-/// Profil utilisateur — GET /api/auth/me (données fraîches).
+/// Profil utilisateur - GET /api/auth/me (données fraîches).
 /// Affiche nom, rôle, service, et bouton de déconnexion.
 library;
 
@@ -131,7 +131,7 @@ class ProfilePage extends ConsumerWidget {
         child: Row(
           children: [
             SizedBox(width: 120, child: Text(label, style: const TextStyle(fontSize: 13, color: OcpColors.slate))),
-            Expanded(child: Text(value ?? '—', style: const TextStyle(fontSize: 13))),
+            Expanded(child: Text(value ?? '-', style: const TextStyle(fontSize: 13))),
           ],
         ),
       );

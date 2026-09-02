@@ -1,4 +1,4 @@
-/// API des référentiels — endpoints réels du backend :
+/// API des référentiels - endpoints réels du backend :
 ///   GET /zones, /zones/{id}/services
 ///   GET /services, /services/{id}/chefs-equipe
 ///   GET /equipements, /entreprises-externes, /risques, /mesures-preparation,

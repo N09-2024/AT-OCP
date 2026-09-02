@@ -1,4 +1,4 @@
-/// Chip de statut AT — RÉPLIQUE EXACTE de la configuration du frontend React
+/// Chip de statut AT - RÉPLIQUE EXACTE de la configuration du frontend React
 /// (`frontend/src/components/dashboard/AtTable.tsx` → STATUT_CONFIG :
 /// couple { bg, color }), étendue aux statuts du workflow standard
 /// S-HSE-SEC-31 absents du tableau web, dans le même langage visuel.

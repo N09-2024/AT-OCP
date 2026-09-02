@@ -41,7 +41,7 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.4
 
-# Icône de lancement — remplacer assets/images/app_icon.png par la version
+# Icône de lancement - remplacer assets/images/app_icon.png par la version
 # définitive OCP puis exécuter : dart run flutter_launcher_icons
 flutter_launcher_icons:
   image_path: 'assets/images/app_icon.png'
@@ -51,7 +51,7 @@ flutter_launcher_icons:
   adaptive_icon_background: '#1F4D3E'
   adaptive_icon_foreground: 'assets/images/app_icon.png'
 
-# Splash natif — dart run flutter_native_splash:create
+# Splash natif - dart run flutter_native_splash:create
 flutter_native_splash:
   color: '#F7FAF8'
   color_dark: '#0E2A21'

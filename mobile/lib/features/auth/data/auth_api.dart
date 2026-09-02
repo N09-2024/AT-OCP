@@ -1,4 +1,4 @@
-/// API d'authentification — endpoints réels du backend :
+/// API d'authentification - endpoints réels du backend :
 ///   POST /api/auth/login           {email, motDePasse}
 ///   POST /api/auth/refresh-token   {refreshToken}   (géré par l'intercepteur)
 ///   POST /api/auth/logout          {refreshToken}

@@ -56,7 +56,7 @@ class _AppState extends ConsumerState<App> {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'OCP — Autorisations de Travail',
+      title: 'OCP - Autorisations de Travail',
       theme: AppTheme.light(),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

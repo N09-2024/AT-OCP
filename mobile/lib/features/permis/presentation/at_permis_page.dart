@@ -1,4 +1,4 @@
-/// Permis d'une AT — GET /permis/at/{atId}, POST /permis, upload multipart
+/// Permis d'une AT - GET /permis/at/{atId}, POST /permis, upload multipart
 /// (PDF/PNG/JPEG/WEBP), relance d'analyse IA, suppression.
 /// Le statut CONFORME des permis obligatoires conditionne l'export PDF (serveur).
 library;
@@ -156,7 +156,7 @@ class AtPermisPage extends ConsumerWidget {
       ref.invalidate(atPermisProvider(atId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Fichier envoyé — analyse IA lancée.')),);
+            const SnackBar(content: Text('Fichier envoyé - analyse IA lancée.')),);
       }
     } catch (e) {
       if (context.mounted) {

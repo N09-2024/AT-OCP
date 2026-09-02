@@ -3,7 +3,7 @@ Gestion de la mémoire conversationnelle (couche LangChain du plan d'architectur
 
 Une mémoire fenêtrée par conversation (conversationId fourni par le backend
 Spring Boot) : l'assistant IA se souvient des derniers échanges de l'utilisateur.
-Stockage en mémoire process — suffisant pour une instance FastAPI unique ;
+Stockage en mémoire process - suffisant pour une instance FastAPI unique ;
 une persistance Redis/DB pourra s'y substituer sans changer l'API du manager.
 """
 
@@ -56,15 +56,15 @@ class ChatMemoryManager:
     def get_history_text(self, conversation_id: Optional[str]) -> str:
         """Historique fenêtré (k derniers échanges) formaté pour le prompt."""
         if not conversation_id:
-            return "(Nouvelle conversation — aucun historique.)"
+            return "(Nouvelle conversation - aucun historique.)"
         memory = self._memories.get(conversation_id)
         if memory is None:
-            return "(Nouvelle conversation — aucun historique.)"
+            return "(Nouvelle conversation - aucun historique.)"
         with self._lock:
             self._last_used[conversation_id] = time.time()
             messages = list(memory.chat_memory.messages)
         if not messages:
-            return "(Nouvelle conversation — aucun historique.)"
+            return "(Nouvelle conversation - aucun historique.)"
         # ConversationBufferWindowMemory stocke tout : la fenêtre s'applique ici.
         window = messages[-(self._k * 2):]
         lines = []

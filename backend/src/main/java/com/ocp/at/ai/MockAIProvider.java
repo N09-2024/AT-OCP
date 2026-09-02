@@ -31,7 +31,7 @@ public class MockAIProvider implements IAProvider {
 
     @Override
     public AnalyseIA analyserPermis(FichierJoint fichier, Permis permis) {
-        // OCRService.extractText attend un java.io.File — le FichierJoint n'expose pas de File directement.
+        // OCRService.extractText attend un java.io.File - le FichierJoint n'expose pas de File directement.
         // On remplit les champs réels de l'entité AnalyseIA (ocrText, resultat, commentaireIA, tauxConfiance).
         return AnalyseIA.builder()
                 .dateAnalyse(LocalDateTime.now())

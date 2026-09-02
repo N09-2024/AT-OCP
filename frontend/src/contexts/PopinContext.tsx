@@ -208,7 +208,7 @@ export const PopinProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             >
               {dialogConfig.title ||
                 (isAi
-                  ? 'Contrôle IA — Validation'
+                  ? 'Contrôle IA - Validation'
                   : dialogConfig.isConfirm
                   ? 'Confirmation'
                   : 'Information')}

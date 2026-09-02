@@ -1,4 +1,4 @@
-/// Rôle applicatif principal — INTERFACES_PAR_ROLE.md (S-HSE-SEC-31 v1.0).
+/// Rôle applicatif principal - INTERFACES_PAR_ROLE.md (S-HSE-SEC-31 v1.0).
 ///
 /// Rôles applicatifs : CE · HM · HC · ADMIN · RESPONSABLE_EXTERIEUR.
 /// Les positions contextuelles P/E sont résolues PAR AT (at_roles.dart), jamais
@@ -43,7 +43,7 @@ RoleApplicatif roleApplicatifPrincipal(Iterable<String> roles) {
   return RoleApplicatif.externe;
 }
 
-/// L'utilisateur peut-il créer une AT / une demande ? (§2 — « rôle CE »,
+/// L'utilisateur peut-il créer une AT / une demande ? (§2 - « rôle CE »,
 /// ADMIN inclus ; RESPONSABLE_EXTERIEUR explicitement interdit §6).
 bool peutCreerAt(Iterable<String> roles) {
   final all = roleApplicatifs(roles);

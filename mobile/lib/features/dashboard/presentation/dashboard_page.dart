@@ -1,4 +1,4 @@
-/// Dashboards par rôle applicatif — INTERFACES_PAR_ROLE.md (Standard S-HSE-SEC-31 v1.0).
+/// Dashboards par rôle applicatif - INTERFACES_PAR_ROLE.md (Standard S-HSE-SEC-31 v1.0).
 ///
 /// 5 espaces distincts, résolus par priorité ADMIN > HC > HM > CE > RESPONSABLE_EXTERIEUR :
 /// - CE   : cartes P (rédiger, réceptionner) + cartes E (viser, démarrer, en cours, reconduire).
@@ -6,7 +6,7 @@
 ///          Règle fail-closed : position E (HMEE) = lecture seule, aucune écriture.
 /// - HC   : classifier, garantir/valider (E), archivage (+ modules web habilitations/registre).
 /// - ADMIN: KPIs globaux + accès modules + administration (web).
-/// - RESPONSABLE_EXTERIEUR : consultation seule — création/rédaction/validation interdites.
+/// - RESPONSABLE_EXTERIEUR : consultation seule - création/rédaction/validation interdites.
 ///
 /// Rôles métier multiples (ex. CE + HC) → sélecteur de contexte (§1.3).
 /// Design system : tokens OcpColors, SpaceGrotesk, coins 8–12, textes clippés.
@@ -168,7 +168,7 @@ class DashboardPage extends ConsumerWidget {
                   ? 'Consultation des AT liées à vos BT'
                   : 'Rechercher et filtrer l\'ensemble des dossiers',
               accentColor: OcpColors.forest,
-              onTap: () => context.push('/at'),
+              onTap: () => context.go('/at'),
             ),
             _ActionTile(
               icon: Icons.psychology_alt_rounded,
@@ -264,15 +264,15 @@ class _CeDashboard extends StatelessWidget {
           title: 'AT propriétaire à rédiger',
           subtitle: 'DI / OT / BT · brouillons et visites en préparation',
           accentColor: OcpColors.warning,
-          onTap: () => context.push('/at?filter=mine&statut=BROUILLON'),
+          onTap: () => context.go('/at?filter=mine&statut=BROUILLON'),
         ),
         _ActionTile(
           icon: Icons.verified_rounded,
           title: 'AT propriétaire à réceptionner',
-          subtitle: 'Travaux déclarés finis — réception conjointe CEEP + CEEE',
+          subtitle: 'Travaux déclarés finis - réception conjointe CEEP + CEEE',
           accentColor: const Color(0xFF4F46E5),
           onTap: () =>
-              context.push('/at?filter=mine&statut=FIN_TRAVAUX_DECLAREE'),
+              context.go('/at?filter=mine&statut=FIN_TRAVAUX_DECLAREE'),
         ),
         const _SectionLabel(label: 'Position Exécutant (E)'),
         _ActionTile(
@@ -280,14 +280,14 @@ class _CeDashboard extends StatelessWidget {
           title: 'AT exécutant à viser',
           subtitle: 'Apposer votre visa CEEE (SOUMISE / AT_REDIGEE)',
           accentColor: const Color(0xFF2563EB),
-          onTap: () => context.push('/at?filter=aValider'),
+          onTap: () => context.go('/at?filter=aValider'),
         ),
         _ActionTile(
           icon: Icons.play_arrow_rounded,
           title: 'AT exécutant à démarrer',
-          subtitle: 'Visa HMEE apposé — readiness check puis démarrage',
+          subtitle: 'Visa HMEE apposé - readiness check puis démarrage',
           accentColor: const Color(0xFF059669),
-          onTap: () => context.push('/at?filter=mine&statut=AT_VALIDEE'),
+          onTap: () => context.go('/at?filter=mine&statut=AT_VALIDEE'),
         ),
         _ActionTile(
           icon: Icons.engineering_rounded,
@@ -295,14 +295,14 @@ class _CeDashboard extends StatelessWidget {
           subtitle: 'Déclarer la fin des travaux · signaler un incident',
           accentColor: OcpColors.forest,
           onTap: () =>
-              context.push('/at?filter=mine&statut=INTERVENTION_EN_COURS'),
+              context.go('/at?filter=mine&statut=INTERVENTION_EN_COURS'),
         ),
         _ActionTile(
           icon: Icons.update_rounded,
           title: 'AT à reconduire',
-          subtitle: 'Prolongation de poste (P ou E) — dépassement planifié',
+          subtitle: 'Prolongation de poste (P ou E) - dépassement planifié',
           accentColor: const Color(0xFF854D0E),
-          onTap: () => context.push('/at?filter=mine&statut=AT_RECONDUITE'),
+          onTap: () => context.go('/at?filter=mine&statut=AT_RECONDUITE'),
         ),
         const _SectionLabel(label: 'Actions globales'),
         _ActionTile(
@@ -317,7 +317,7 @@ class _CeDashboard extends StatelessWidget {
           title: 'Voir toutes mes AT (P + E)',
           subtitle: 'Mes dossiers propriétaires et exécutés',
           accentColor: OcpColors.moss,
-          onTap: () => context.push('/at?filter=mine'),
+          onTap: () => context.go('/at?filter=mine'),
         ),
       ],
     );
@@ -340,27 +340,27 @@ class _HmDashboard extends StatelessWidget {
           title: 'Visites à garantir',
           subtitle: 'Visites réalisées en attente de garantie HMEP',
           accentColor: const Color(0xFF2563EB),
-          onTap: () => context.push('/at?filter=mine&statut=VISITE_REALISEE'),
+          onTap: () => context.go('/at?filter=mine&statut=VISITE_REALISEE'),
         ),
         _ActionTile(
           icon: Icons.gavel_rounded,
           title: 'Démarrages à cautionner',
           subtitle: 'AT rédigées en attente de garantie avant travaux',
           accentColor: const Color(0xFF854D0E),
-          onTap: () => context.push('/at?filter=mine&statut=AT_REDIGEE'),
+          onTap: () => context.go('/at?filter=mine&statut=AT_REDIGEE'),
         ),
         const _SectionLabel(label: 'Consultation'),
         _ActionTile(
           icon: Icons.travel_explore_rounded,
           title: 'Consultation du périmètre',
-          subtitle: 'Toutes les AT de ma zone — lecture seule',
+          subtitle: 'Toutes les AT de ma zone - lecture seule',
           accentColor: OcpColors.forest,
-          onTap: () => context.push('/at'),
+          onTap: () => context.go('/at'),
         ),
         _banner(
           icon: Icons.lock_outline_rounded,
           message:
-              'Règle fail-closed : en position E (HMEE), aucune action d\'écriture — consultation seule.',
+              'Règle fail-closed : en position E (HMEE), aucune action d\'écriture - consultation seule.',
         ),
       ],
     );
@@ -381,23 +381,23 @@ class _HcDashboard extends StatelessWidget {
         _ActionTile(
           icon: Icons.category_rounded,
           title: 'Interventions à classifier',
-          subtitle: 'Nouvelles demandes — classifier Niveau 1 / Niveau 2',
+          subtitle: 'Nouvelles demandes - classifier Niveau 1 / Niveau 2',
           accentColor: const Color(0xFF1E3A8A),
-          onTap: () => context.push('/at?statut=DEMANDE_CREEE'),
+          onTap: () => context.go('/at?statut=DEMANDE_CREEE'),
         ),
         _ActionTile(
           icon: Icons.shield_rounded,
           title: 'AT en attente de garantie (E)',
-          subtitle: 'Visite · rédaction · démarrage · visa — HCEE garantir/valider',
+          subtitle: 'Visite · rédaction · démarrage · visa - HCEE garantir/valider',
           accentColor: const Color(0xFF2563EB),
-          onTap: () => context.push('/at?filter=aValider'),
+          onTap: () => context.go('/at?filter=aValider'),
         ),
         _ActionTile(
           icon: Icons.inventory_2_rounded,
           title: 'AT à archiver',
-          subtitle: 'Réception effectuée — archivage réglementaire (≥ 1 an)',
+          subtitle: 'Réception effectuée - archivage réglementaire (≥ 1 an)',
           accentColor: const Color(0xFF059669),
-          onTap: () => context.push('/at?statut=TRAVAUX_RECEPTIONES'),
+          onTap: () => context.go('/at?statut=TRAVAUX_RECEPTIONES'),
         ),
         const _SectionLabel(label: 'Référentiels HC'),
         _DisabledTile(
@@ -440,7 +440,7 @@ class _AdminDashboard extends ConsumerWidget {
                 label: 'AT en cours',
                 value: data.kpis.autorisationsEnCours,
                 color: OcpColors.forest,
-                route: '/at?statut=EN_COURS',
+                route: '/at?statut=INTERVENTION_EN_COURS',
               ),
               _KpiItem(
                 icon: Icons.draw_rounded,
@@ -472,7 +472,7 @@ class _AdminDashboard extends ConsumerWidget {
           title: 'Toutes les autorisations',
           subtitle: 'Supervision de l\'ensemble des dossiers AT',
           accentColor: OcpColors.forest,
-          onTap: () => context.push('/at'),
+          onTap: () => context.go('/at'),
         ),
         _DisabledTile(
           icon: Icons.manage_accounts_rounded,
@@ -508,9 +508,9 @@ class _ExterneDashboard extends StatelessWidget {
         _ActionTile(
           icon: Icons.visibility_rounded,
           title: 'AT liées à mes BT',
-          subtitle: 'Consultation seule — aucune action d\'écriture',
+          subtitle: 'Consultation seule - aucune action d\'écriture',
           accentColor: OcpColors.forest,
-          onTap: () => context.push('/at'),
+          onTap: () => context.go('/at'),
         ),
         _banner(
           icon: Icons.block_rounded,
@@ -699,7 +699,7 @@ class _KpiCell extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(kpi.route),
+        onTap: () => context.go(kpi.route),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Column(
@@ -859,7 +859,7 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-/// Tile non disponible sur mobile (module web uniquement) — explicite, non cliquable.
+/// Tile non disponible sur mobile (module web uniquement) - explicite, non cliquable.
 class _DisabledTile extends StatelessWidget {
   final IconData icon;
   final String title;

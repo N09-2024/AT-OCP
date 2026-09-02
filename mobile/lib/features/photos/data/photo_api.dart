@@ -1,4 +1,4 @@
-/// API photos — endpoints réels du backend :
+/// API photos - endpoints réels du backend :
 ///   GET    /visites-prealables                    (liste ; filtrable par documentSourceId)
 ///   POST   /visites-prealables/{id}/photos        (multipart file + legende)
 ///   DELETE /visites-prealables/{id}/photos/{photoId}

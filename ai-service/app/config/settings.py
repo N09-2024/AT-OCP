@@ -30,7 +30,7 @@ class Settings:
     TOP_K_DOCUMENTS: int = int(os.getenv("TOP_K_DOCUMENTS", "4"))
     SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.3"))
 
-    # Connecteur SQL (LangChain) — PostgreSQL du backend, LECTURE SEULE.
+    # Connecteur SQL (LangChain) - PostgreSQL du backend, LECTURE SEULE.
     # DATABASE_URL prioritaire ; sinon assemblé depuis DB_HOST/DB_PORT/...
     DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL")
     DB_HOST: Optional[str] = os.getenv("DB_HOST")

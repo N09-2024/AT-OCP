@@ -419,7 +419,7 @@ export default function FormulaireOCPInteractive({
 
     if ((found?.id && userServiceId && found.id === userServiceId) || (nomService && userNomService && nomService.toLowerCase().trim() === userNomService.toLowerCase().trim())) {
       popin.alert({
-        title: 'Règle HSE — Séparation des entités',
+        title: 'Règle HSE - Séparation des entités',
         message: `Une Autorisation de Travail ne peut pas être établie au sein d'un même service.\n\nLe service demandeur/propriétaire (${userNomService || 'votre service'}) et le service exécutant doivent être distincts.`,
         severity: 'error',
       });
@@ -658,7 +658,7 @@ export default function FormulaireOCPInteractive({
     const complet = await controlerAvantSoumission();
     if (!complet) {
       const confirmer = await popin.confirm({
-        title: 'Contrôle IA — Éléments potentiellement manquants',
+        title: 'Contrôle IA - Éléments potentiellement manquants',
         message:
           "L'analyse IA signale des éléments potentiellement manquants (voir le bandeau du formulaire).\n\nSouhaitez-vous quand même transmettre l'Autorisation de Travail ?",
         severity: 'ai',

@@ -1,4 +1,4 @@
-/// Modèle Notification — reflète NotificationResponse du backend.
+/// Modèle Notification - reflète NotificationResponse du backend.
 library;
 
 class Notification {

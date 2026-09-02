@@ -1,12 +1,12 @@
-/// Circuit officiel des Visas & Signatures — Standard OCP S-HSE-SEC-31 (Section G)
+/// Circuit officiel des Visas & Signatures - Standard OCP S-HSE-SEC-31 (Section G)
 ///
 /// Ordre séquentiel réglementaire (aligné sur VisaServiceImpl côté backend) :
-///   1. CEEP  (Demandeur Propriétaire) — signe l'AT le premier, dès la soumission
+///   1. CEEP  (Demandeur Propriétaire) - signe l'AT le premier, dès la soumission
 ///   2. CEEE  (Chef d'Équipe Exécutant Intervenant)
 ///   3. HCEP  (Hors Cadre Propriétaire)
 ///   4. HCEE  (Hors Cadre Exécutant)
 ///   5. HMEP  (Haute Maîtrise Propriétaire)
-///   6. HMEE  (Haute Maîtrise Exécutante — validation finale & déblocage PDF)
+///   6. HMEE  (Haute Maîtrise Exécutante - validation finale & déblocage PDF)
 library;
 
 import 'package:flutter/material.dart';
@@ -24,12 +24,12 @@ const List<String> kCircuitVisas = ['CEEP', 'CEEE', 'HCEP', 'HCEE', 'HMEP', 'HME
 
 /// Libellés métier des rôles (Section G).
 String libelleRoleVisa(String role) => switch (role) {
-      'CEEP' => 'CEEP — Demandeur Propriétaire',
-      'CEEE' => "CEEE — Chef d'Équipe Exécutant",
-      'HCEP' => 'HCEP — Hors Cadre Propriétaire',
-      'HCEE' => 'HCEE — Hors Cadre Exécutant',
-      'HMEP' => 'HMEP — Haute Maîtrise Propriétaire',
-      'HMEE' => 'HMEE — Haute Maîtrise Exécutante',
+      'CEEP' => 'CEEP - Demandeur Propriétaire',
+      'CEEE' => "CEEE - Chef d'Équipe Exécutant",
+      'HCEP' => 'HCEP - Hors Cadre Propriétaire',
+      'HCEE' => 'HCEE - Hors Cadre Exécutant',
+      'HMEP' => 'HMEP - Haute Maîtrise Propriétaire',
+      'HMEE' => 'HMEE - Haute Maîtrise Exécutante',
       _ => role,
     };
 
@@ -37,12 +37,16 @@ String libelleRoleVisa(String role) => switch (role) {
 int ordreRoleVisa(String role) => kCircuitVisas.indexOf(role) + 1;
 
 /// Commentaire-marqueur apposé sur le visa créé pour un rôle :
-/// CEEP → `g1VisaCeep` (identique web / générateur PDF), autres → `Visa {ROLE} - ...`
+/// CEEP → `g1VisaCeep`, CEEE → `g1VisaCeee` (marqueurs du web, reconnus par le
+/// générateur PDF), autres → `Visa {ROLE} - Signature officielle`
 /// (identique ValidationOCPPage web). Le backend résout le rôle via ce marqueur.
-String commentaireVisaPourRole(String role) =>
-    role == 'CEEP' ? 'g1VisaCeep' : 'Visa $role - Signature officielle';
+String commentaireVisaPourRole(String role) => switch (role) {
+      'CEEP' => 'g1VisaCeep',
+      'CEEE' => 'g1VisaCeee',
+      _ => 'Visa $role - Signature officielle',
+    };
 
-/// Détection tri-niveau d'un visa SIGNÉ pour un rôle — alignée sur detectVisa()
+/// Détection tri-niveau d'un visa SIGNÉ pour un rôle - alignée sur detectVisa()
 /// de AutorisationDetailPage.tsx et isRoleSigned() de VisaServiceImpl :
 ///   1) v.commentaire contient le rôle
 ///   2) v.role contient le rôle
@@ -150,7 +154,7 @@ class CircuitVisasEtat {
   }
 }
 
-/// Étape 1 du circuit : le CEEP signe l'AT (Visa CEEP — ordre 1, marqueur
+/// Étape 1 du circuit : le CEEP signe l'AT (Visa CEEP - ordre 1, marqueur
 /// `g1VisaCeep`) puis l'AT est soumise dans le circuit des visas (transmission
 /// au CEEE). Identique au flux web (AutorisationFormPage) : create + sign → soumettre.
 ///
@@ -180,6 +184,11 @@ Future<bool> signerVisaCeepEtSoumettre(BuildContext context, WidgetRef ref, Stri
 }
 
 /// Crée et signe un visa pour un rôle du circuit (create + sign, comme le web).
+///
+/// Fidèle à ValidationOCPPage : après la signature d'un visa Hors Cadre /
+/// Haute Maîtrise (HCEP, HCEE, HMEP, HMEE), l'AT est VALIDÉE
+/// (`POST /autorisations-travail/{id}/validate`) - c'est cette validation qui
+/// fait passer le statut à VALIDEE et débloque le démarrage par le CEEE.
 Future<void> creerEtSignerVisa(BuildContext context, WidgetRef ref, String atId, String role) async {
   final result = await _demanderSignature(
     context,
@@ -199,6 +208,44 @@ Future<void> creerEtSignerVisa(BuildContext context, WidgetRef ref, String atId,
     signaturePng: result.pngBytes,
     commentaire: commentaireVisaPourRole(role),
   );
+
+  // Validation de l'AT après visa HC/HM (identique au web : handleValider
+  // enchaîne createAndSignVisa puis autorisationTravailApi.valider).
+  if (role == 'HCEP' || role == 'HCEE' || role == 'HMEP' || role == 'HMEE') {
+    await ref.read(atApiProvider).valider(atId);
+  }
+}
+
+/// Refus d'une AT par un rôle HC/HM - identique ValidationOCPPage.handleRefuser :
+/// visa marqué `Refus: {motif}` + `POST /autorisations-travail/{id}/reject`
+/// → statut REJETEE. Retourne false si l'utilisateur annule (signature ou motif vide).
+Future<bool> refuserAt(
+  BuildContext context,
+  WidgetRef ref,
+  String atId, {
+  required String role,
+  required String motif,
+}) async {
+  final result = await _demanderSignature(
+    context,
+    ref,
+    signataireDefaut: libelleRoleVisa(role),
+  );
+  if (result == null) return false;
+
+  final visaApi = VisaApi(ref.read(apiClientProvider));
+  final visa = await visaApi.create(
+    autorisationTravailId: atId,
+    commentaire: 'Refus: $motif',
+    ordre: ordreRoleVisa(role),
+  );
+  await visaApi.sign(
+    visaId: visa.id,
+    signaturePng: result.pngBytes,
+    commentaire: 'Refus: $motif',
+  );
+  await ref.read(atApiProvider).refuser(atId, motif);
+  return true;
 }
 
 Future<SignatureResult?> _demanderSignature(

@@ -1,4 +1,4 @@
-/// Carte AT pour les listes — affiche les champs réellement présents
+/// Carte AT pour les listes - affiche les champs réellement présents
 /// dans AutorisationTravailResponse (AUCUNE notion Installation).
 library;
 
@@ -55,8 +55,8 @@ class AtCard extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 4,
                 children: [
-                  _meta(Icons.location_on_outlined, at.zoneExecutanteNom ?? 'Zone —'),
-                  _meta(Icons.account_tree_outlined, at.zoneProprietaireNom ?? 'Propriétaire —'),
+                  _meta(Icons.location_on_outlined, at.zoneExecutanteNom ?? 'Zone -'),
+                  _meta(Icons.account_tree_outlined, at.zoneProprietaireNom ?? 'Propriétaire -'),
                   if (at.typeDocumentSource != null)
                     _meta(Icons.description_outlined, at.typeDocumentSource!),
                 ],

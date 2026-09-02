@@ -1,4 +1,4 @@
-# Microservice IA — AT-OCP
+# Microservice IA - AT-OCP
 
 Microservice indépendant d'assistance intelligente pour le système d'Autorisation de Travail (AT) du Groupe OCP, conforme au **Standard S-HSE-SEC-31** et au formulaire **F-HSE-SEC-31-04**.
 
@@ -143,22 +143,22 @@ python -m unittest discover -s tests
 
 ---
 
-## 8. Conformité au plan d'architecture (vérifiée — voir tests/test_conformite_plan.py)
+## 8. Conformité au plan d'architecture (vérifiée - voir tests/test_conformite_plan.py)
 
 | Brique du plan | Implémentation | Statut |
 |---|---|---|
 | **CrewAI Orchestrator** | `app/crew.py` (duo du plan : **Agent Analyste Risques** → **Agent Inspecteur HSE**, contexte de tâche partagé, délégation activée) + `app/crews/at_crew.py` (pipeline étendu + Agent Contrôleur de Dossier / Synthèse AT) | ✅ |
-| **Agent Analyste Risques** | `app/agents/agent_risques.py` (+ `risk_agent.py` pour le crew principal) — référentiels officiels, outils SQL/RAG | ✅ |
-| **Agent Inspecteur HSE** | `app/agents/agent_hse.py` (+ `hse_agent.py`) — règles de croisement §10, outils SQL + verify_hse_rules | ✅ |
-| **LangChain — Transformations Prompt** | `ChatPromptTemplate` LCEL (`prompt \| llm`) : `analysis_service`, `chat_service`, `langchain_direct` | ✅ |
-| **LangChain — Gestion Mémoire** | `app/memory/chat_memory.py` : `ConversationBufferWindowMemory` par `conversationId` (fenêtre 6 échanges, TTL 1 h), injectée dans le prompt du chat | ✅ |
-| **LangChain — Connecteurs SQL** | `app/sql/connector.py` : SQLAlchemy + psycopg2 vers PostgreSQL du backend, **lecture seule** (SELECT uniquement, tables référentielles autorisées, LIMIT forcé) exposé aux agents via l'outil `query_ocp_database` | ✅ |
+| **Agent Analyste Risques** | `app/agents/agent_risques.py` (+ `risk_agent.py` pour le crew principal) - référentiels officiels, outils SQL/RAG | ✅ |
+| **Agent Inspecteur HSE** | `app/agents/agent_hse.py` (+ `hse_agent.py`) - règles de croisement §10, outils SQL + verify_hse_rules | ✅ |
+| **LangChain - Transformations Prompt** | `ChatPromptTemplate` LCEL (`prompt \| llm`) : `analysis_service`, `chat_service`, `langchain_direct` | ✅ |
+| **LangChain - Gestion Mémoire** | `app/memory/chat_memory.py` : `ConversationBufferWindowMemory` par `conversationId` (fenêtre 6 échanges, TTL 1 h), injectée dans le prompt du chat | ✅ |
+| **LangChain - Connecteurs SQL** | `app/sql/connector.py` : SQLAlchemy + psycopg2 vers PostgreSQL du backend, **lecture seule** (SELECT uniquement, tables référentielles autorisées, LIMIT forcé) exposé aux agents via l'outil `query_ocp_database` | ✅ |
 | **API REST JSON** | FastAPI : `POST /api/ai/analyze-at` (crew principal), `POST /api/ai/chat` (assistant + mémoire), `POST /crew/analyse-intervention`, `/crew/controler-dossier`, `/analyse-intervention`, `/controler-dossier` | ✅ |
 | **Backend Spring Boot ↔ IA** | `CrewAIProvider.java` → `OCP_AI_FASTAPI_URL` ; URLs alignées ; bascule MOCK / LANG_CHAIN / CREW_AI (`ocp.ai.provider`) | ✅ |
 
 Variable d'environnement ajoutée (docker-compose `ai-service`) :
 `DATABASE_URL=postgresql+psycopg2://at_ocp_user:***@postgres:5432/at_ocp_db`
-— sans elle, le connecteur SQL est désactivé proprement et le référentiel
+- sans elle, le connecteur SQL est désactivé proprement et le référentiel
 statique (`app/referentiel.py`) reste la source de repli.
 
 Tests : `python -m pytest tests/ -q` (19 tests, dont 17 de conformité au plan).

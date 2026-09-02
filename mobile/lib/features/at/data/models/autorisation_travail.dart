@@ -1,10 +1,10 @@
-/// Modèle AutorisationTravail — reflète AutorisationTravailResponse du backend.
+/// Modèle AutorisationTravail - reflète AutorisationTravailResponse du backend.
 /// Statuts = valeurs EXACTES de l'enum StatutAT (22 valeurs).
 /// AUCUNE notion "Installation" (supprimée du projet).
 library;
 
 class StatutAt {
-  // Valeurs de l'enum backend StatutAT — ne pas renommer.
+  // Valeurs de l'enum backend StatutAT - ne pas renommer.
   static const String brouillon = 'BROUILLON';
   static const String classificationEffectuee = 'CLASSIFICATION_EFFECTUEE';
   static const String demandeCreee = 'DEMANDE_CREEE';
@@ -53,7 +53,7 @@ class StatutAt {
   };
 
   static String libelle(String? statut) =>
-      statut == null ? '—' : libelles[statut] ?? statut;
+      statut == null ? '-' : libelles[statut] ?? statut;
 }
 
 class EtatVerrou {
@@ -120,7 +120,7 @@ class AutorisationTravail {
   final List<String> moyensAccesIds;
   final List<String> permisIds;
 
-  /// Export PDF conditionnel — décide de l'affichage du bouton PDF.
+  /// Export PDF conditionnel - décide de l'affichage du bouton PDF.
   final bool? exportPdfAutorise;
   final List<String> exportPdfMotifsRefus;
 

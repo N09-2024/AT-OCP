@@ -25,7 +25,7 @@ export const MaitriseDashboard: React.FC = () => {
   const cardsProprietaire = [
     {
       title: '🔄 Décisions de Reconduction (HMEP)',
-      subtitle: 'Approuver ou refuser les demandes de prolongation soumises par les CEEE — Responsable OCP',
+      subtitle: 'Approuver ou refuser les demandes de prolongation soumises par les CEEE - Responsable OCP',
       action: 'Traiter les reconductions',
       path: '/reconductions',
       icon: <AutorenewIcon sx={{ fontSize: 32, color: '#E65100' }} />,
