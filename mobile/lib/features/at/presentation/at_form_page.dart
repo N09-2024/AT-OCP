@@ -167,23 +167,40 @@ class _AtFormWizardState extends ConsumerState<_AtFormWizard> {
   int _step = 0;
   bool _gpsLoading = false;
   bool _submitting = false;
-  bool _numeroAutoGenere = false;
+  bool _initialisationFaite = false;
 
   @override
   void initState() {
     super.initState();
-    // Nouvelle AT : attribuer automatiquement le numéro de document source
-    // ({TYPE}-{6 chiffres}) sans aucune saisie manuelle.
+    // Initialisation automatique à l'ouverture :
+    //  1. Numéro de document source auto-attribué ({TYPE}-{6 chiffres}) ;
+    //  2. Zone propriétaire préremplie depuis la zone du service de l'utilisateur
+    //     (principe web : currentUser.service.zone).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_numeroAutoGenere) return;
-      _numeroAutoGenere = true;
-      final d = widget.state.data;
-      if (d.documentSourceNumero.isEmpty && !widget.state.readOnly) {
-        ref.read(atFormProvider(widget.atId).notifier).update(
-              (d) => d.copyWith(
-                documentSourceNumero: genererNumeroDocument(d.typeDocumentSource),
-              ),
-            );
+      if (_initialisationFaite) return;
+      _initialisationFaite = true;
+      final data = widget.state.data;
+      final notifier = ref.read(atFormProvider(widget.atId).notifier);
+      final readOnly = widget.state.readOnly;
+
+      if (!readOnly && data.documentSourceNumero.isEmpty) {
+        notifier.update(
+          (d) => d.copyWith(
+            documentSourceNumero: genererNumeroDocument(d.typeDocumentSource),
+          ),
+        );
+      }
+
+      if (data.zoneProprietaireId == null && data.zoneProprietaireNom == null) {
+        final zone = ref.read(sessionProvider)?.utilisateur.service?.zone;
+        if (zone != null) {
+          notifier.update(
+            (d) => d.copyWith(
+              zoneProprietaireId: zone.id,
+              zoneProprietaireNom: zone.nomZone,
+            ),
+          );
+        }
       }
     });
   }

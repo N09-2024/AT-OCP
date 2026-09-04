@@ -37,7 +37,7 @@ class UnreadCountNotifier extends StateNotifier<int> {
 
   UnreadCountNotifier(this._api) : super(0) {
     refresh();
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) => refresh());
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => refresh());
   }
 
   Future<void> refresh() async {

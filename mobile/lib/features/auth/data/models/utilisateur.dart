@@ -4,20 +4,44 @@
 /// dateModification, derniereConnexion, service{...}, roles[{id, nom, description}].
 library;
 
+class ZoneRef {
+  final String id;
+  final String? nomZone;
+
+  const ZoneRef({required this.id, this.nomZone});
+
+  factory ZoneRef.fromJson(Map<String, dynamic> json) => ZoneRef(
+        id: json['id'] as String,
+        nomZone: json['nomZone']?.toString(),
+      );
+}
+
 class ServiceRef {
   final String id;
   final String? nomService;
   final String? codeService;
 
-  const ServiceRef({required this.id, this.nomService, this.codeService});
+  /// Zone rattachée au service (ServiceResponse.zone du backend) - sert au
+  /// préremplissage de la zone propriétaire dans le formulaire AT.
+  final ZoneRef? zone;
+
+  const ServiceRef({required this.id, this.nomService, this.codeService, this.zone});
 
   factory ServiceRef.fromJson(Map<String, dynamic> json) => ServiceRef(
         id: json['id'] as String,
         nomService: json['nomService'] as String?,
         codeService: json['codeService'] as String?,
+        zone: json['zone'] is Map<String, dynamic>
+            ? ZoneRef.fromJson(json['zone'] as Map<String, dynamic>)
+            : null,
       );
 
-  Map<String, dynamic> toJson() => {'id': id, 'nomService': nomService, 'codeService': codeService};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'nomService': nomService,
+        'codeService': codeService,
+        'zone': zone,
+      };
 }
 
 class RoleRef {
